@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 const nextConfig = {
+  output: 'export',
+  trailingSlash: true,
+  basePath,
+  assetPrefix: basePath ? `${basePath}/` : undefined,
+  images: {
+    unoptimized: true,
+  },
   // 外部化 canvas 和 jsdom（Konva 依赖的原生模块）
   // 这些只在浏览器端需要，服务端渲染时会被替换为空
   webpack: (config, { isServer }) => {

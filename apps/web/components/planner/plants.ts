@@ -1,5 +1,7 @@
 import type { Plant, PlantAgronomy } from './plants.d';
 
+const withBasePath = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH || ''}${path}`;
+
 /**
  * 植物百科数据库
  * 每个植物定义其空间占用 (grid_span) 和生化关系 (companions/enemies)
@@ -12,7 +14,7 @@ export const plants: Plant[] = [
     naming: { en: 'Tomato', zh: '番茄', emoji: '🍅' },
     dimensions: { grid_span_x: 2, grid_span_y: 2, spacing_inch: 24 },
     styling: { bg_color: '#dc2626', border_color: '#991b1b' },
-    sprite: '/assets/tomato.png',
+    sprite: withBasePath('/assets/tomato.png'),
     relationships: { companions: ['basil', 'carrot', 'marigold'], enemies: ['cabbage', 'fennel', 'corn'] }
   },
   {
@@ -21,7 +23,7 @@ export const plants: Plant[] = [
     naming: { en: 'Basil', zh: '罗勒', emoji: '🌿' },
     dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 12 },
     styling: { bg_color: '#16a34a', border_color: '#15803d' },
-    sprite: '/assets/basil.png',
+    sprite: withBasePath('/assets/basil.png'),
     relationships: { companions: ['tomato', 'pepper'], enemies: ['sage'] }
   },
   {
@@ -38,7 +40,7 @@ export const plants: Plant[] = [
     naming: { en: 'Lettuce', zh: '生菜', emoji: '🥬' },
     dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 8 },
     styling: { bg_color: '#22c55e', border_color: '#16a34a' },
-    sprite: '/assets/lettuce.png',
+    sprite: withBasePath('/assets/lettuce.png'),
     relationships: { companions: ['carrot', 'radish', 'strawberry'], enemies: [] }
   },
   {
@@ -284,13 +286,13 @@ export interface TileConfig {
 }
 
 export const tiles: TileConfig[] = [
-  { id: 'dark_soil', name: '耕地', emoji: '🌱', bgColor: '#8B4513', sprite: '/assets/dark_soil.png' },
-  { id: 'wet_soil', name: '湿土', emoji: '💧', bgColor: '#654321', sprite: '/assets/wet_soil.png' },
-  { id: 'raised_bed', name: '苗床', emoji: '🪵', bgColor: '#DEB887', sprite: '/assets/raised_bed.png' },
-  { id: 'stone_path', name: '石板路', emoji: '🪨', bgColor: '#A9A9A9', sprite: '/assets/stone_path.png' },
-  { id: 'fence_h', name: '围栏(横)', emoji: '↔️', bgColor: '#8B7355', sprite: '/assets/fence.png' },
-  { id: 'fence_v', name: '围栏(纵)', emoji: '↕️', bgColor: '#8B7355', sprite: '/assets/fence.png' },
-  { id: 'fence_corner', name: '围栏(角)', emoji: '🔲', bgColor: '#8B7355', sprite: '/assets/fence.png' },
+  { id: 'dark_soil', name: '耕地', emoji: '🌱', bgColor: '#8B4513', sprite: withBasePath('/assets/dark_soil.png') },
+  { id: 'wet_soil', name: '湿土', emoji: '💧', bgColor: '#654321', sprite: withBasePath('/assets/wet_soil.png') },
+  { id: 'raised_bed', name: '苗床', emoji: '🪵', bgColor: '#DEB887', sprite: withBasePath('/assets/raised_bed.png') },
+  { id: 'stone_path', name: '石板路', emoji: '🪨', bgColor: '#A9A9A9', sprite: withBasePath('/assets/stone_path.png') },
+  { id: 'fence_h', name: '围栏(横)', emoji: '↔️', bgColor: '#8B7355', sprite: withBasePath('/assets/fence.png') },
+  { id: 'fence_v', name: '围栏(纵)', emoji: '↕️', bgColor: '#8B7355', sprite: withBasePath('/assets/fence.png') },
+  { id: 'fence_corner', name: '围栏(角)', emoji: '🔲', bgColor: '#8B7355', sprite: withBasePath('/assets/fence.png') },
 ];
 
 export const tileMap: Map<TileType, TileConfig> = new Map(tiles.map(t => [t.id, t]));
