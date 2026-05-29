@@ -1,0 +1,9 @@
+{
+  "name": "small-farm-monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

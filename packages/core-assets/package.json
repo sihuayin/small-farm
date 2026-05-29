@@ -1,0 +1,7 @@
+{
+  "name": "core-assets",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./plants.json",
+  "types": "./plants.d.ts"
+}
