@@ -915,6 +915,19 @@ export default function GardenCanvas({
   }, [loadPlan]);
 
   useEffect(() => {
+    const syncWelcomeForViewport = () => {
+      if (window.innerWidth < 768) {
+        setShowWelcome(false);
+        setHasDismissedWelcome(true);
+      }
+    };
+
+    syncWelcomeForViewport();
+    window.addEventListener('resize', syncWelcomeForViewport);
+    return () => window.removeEventListener('resize', syncWelcomeForViewport);
+  }, []);
+
+  useEffect(() => {
     if (!hasUnsavedChanges) return;
     const timeoutId = window.setTimeout(() => {
       savePlan();
@@ -3192,7 +3205,7 @@ export default function GardenCanvas({
   ]);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-[100dvh] flex-col overflow-hidden md:h-screen md:flex-row">
       <PlannerToolbar
         planId={planId}
         planName={planName}
@@ -3235,10 +3248,11 @@ export default function GardenCanvas({
       {/* 画布容器 */}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-hidden"
+        className="relative min-h-0 flex-1 overflow-hidden"
         style={{
           background: atmosphere.background,
-          cursor: canvasCursor
+          cursor: canvasCursor,
+          touchAction: 'none'
         }}
       >
         <style>{`
@@ -3277,18 +3291,18 @@ export default function GardenCanvas({
             />
           ))}
         </div>
-        <div className="pointer-events-none absolute left-8 top-6 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/70 px-3 py-2 text-xs font-black text-amber-900 shadow-[0_3px_0_rgba(120,72,24,0.12)]">
+        <div className="pointer-events-none absolute left-3 top-3 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/70 px-2 py-1.5 text-[10px] font-black text-amber-900 shadow-[0_3px_0_rgba(120,72,24,0.12)] md:left-8 md:top-6 md:px-3 md:py-2 md:text-xs">
           {planName} · {planYear} · {atmosphere.label}
         </div>
-        <div className="pointer-events-none absolute left-8 top-[74px] rounded-lg border-2 border-white/35 bg-white/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-950 shadow-[0_3px_0_rgba(44,82,52,0.1)] backdrop-blur">
+        <div className="pointer-events-none absolute left-3 top-[48px] rounded-lg border-2 border-white/35 bg-white/35 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-950 shadow-[0_3px_0_rgba(44,82,52,0.1)] backdrop-blur md:left-8 md:top-[74px] md:px-3 md:py-1.5 md:text-[10px]">
           {atmosphere.badge}
         </div>
         {firstRunFocus && !firstRunComplete && (
-          <div className="pointer-events-none absolute left-[292px] top-6 z-10 max-w-xs rounded-lg border-2 border-sky-300/70 bg-sky-50/88 px-3 py-2 text-[10px] font-black leading-4 text-sky-950 shadow-[0_3px_0_rgba(14,116,144,0.12)] backdrop-blur">
+          <div className="pointer-events-none absolute left-3 right-3 top-[82px] z-10 rounded-lg border-2 border-sky-300/70 bg-sky-50/88 px-3 py-2 text-[10px] font-black leading-4 text-sky-950 shadow-[0_3px_0_rgba(14,116,144,0.12)] backdrop-blur md:left-[292px] md:right-auto md:top-6 md:max-w-xs">
             {firstRunFocus.label} · {firstRunFocus.hint}
           </div>
         )}
-        <div className="absolute left-8 top-[112px] z-10 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/78 p-2 shadow-[0_3px_0_rgba(120,72,24,0.1)] backdrop-blur">
+        <div className="absolute left-8 top-[112px] z-10 hidden rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/78 p-2 shadow-[0_3px_0_rgba(120,72,24,0.1)] backdrop-blur md:block">
           <div className="text-[9px] font-black uppercase tracking-wider text-amber-800">Tile State</div>
           <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] font-black text-amber-900">
             <TileStateLegendItem color="bg-green-300" label="空闲" />
@@ -3297,7 +3311,7 @@ export default function GardenCanvas({
             <TileStateLegendItem color="bg-cyan-300" label="排水" />
           </div>
         </div>
-        <div className="absolute left-8 top-[190px] z-10 w-64 overflow-hidden rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/86 shadow-[0_3px_0_rgba(120,72,24,0.1),0_12px_24px_rgba(61,40,20,0.12)] backdrop-blur">
+        <div className="absolute left-8 top-[190px] z-10 hidden w-64 overflow-hidden rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/86 shadow-[0_3px_0_rgba(120,72,24,0.1),0_12px_24px_rgba(61,40,20,0.12)] backdrop-blur md:block">
           <button
             type="button"
             onClick={() => setShowFirstRunCheck(value => !value)}
@@ -3409,7 +3423,7 @@ export default function GardenCanvas({
             </div>
           )}
         </div>
-        <div className="absolute right-80 top-4 z-10 flex items-center gap-1 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-1 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur">
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-1 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:right-80 md:top-4">
           <button
             type="button"
             onClick={() => zoomAt(viewport.scale / 1.14)}
@@ -3440,7 +3454,7 @@ export default function GardenCanvas({
             重置
           </button>
         </div>
-        <div className="absolute bottom-12 left-8 z-10 w-64 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-3 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur">
+        <div className="absolute bottom-12 left-8 z-10 hidden w-64 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-3 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:block">
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Growth Preview</div>
@@ -3516,7 +3530,7 @@ export default function GardenCanvas({
           </div>
         </div>
         {activeToolId && (
-          <div className="absolute right-80 top-16 z-10 w-56 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/92 p-2 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur">
+          <div className="absolute right-3 top-16 z-10 w-44 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/92 p-2 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:right-80 md:w-56">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Placement</div>
@@ -3536,7 +3550,7 @@ export default function GardenCanvas({
                 {showHeatmap ? '开' : '关'}
               </button>
             </div>
-            <div className="mt-2 grid grid-cols-5 gap-1">
+            <div className="mt-2 hidden grid-cols-5 gap-1 md:grid">
               {heatmapLayers.map(layer => (
                 <button
                   key={layer.id}
@@ -3559,7 +3573,7 @@ export default function GardenCanvas({
                 拖动当前{safePlacementRepair.plantName}到绿色区域；成功后冲突会从 Score 中移除。
               </div>
             )}
-            <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] font-black text-amber-950">
+            <div className="mt-2 hidden grid-cols-3 gap-1 text-[10px] font-black text-amber-950 md:grid">
               <div className="rounded-md border border-green-700/20 bg-green-100 px-1.5 py-1">
                 <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-green-500" />
                 {heatmapLegend.good}
@@ -3585,6 +3599,9 @@ export default function GardenCanvas({
           onMouseLeave={handleMouseLeave}
           onClick={handleClick}
           onWheel={handleWheel}
+          onTouchStart={handleMouseDown}
+          onTouchMove={handleMouseMove}
+          onTouchEnd={handleMouseUp}
         >
           <Layer x={viewport.x} y={viewport.y} scaleX={viewport.scale} scaleY={viewport.scale}>
             {renderSceneDecorations}
@@ -3812,15 +3829,15 @@ export default function GardenCanvas({
 
         {/* 提示 */}
         {activeTileId ? (
-          <div className="absolute left-4 top-20 rounded-lg border-2 border-green-950/20 bg-green-100 px-4 py-2 text-sm font-black text-green-950 shadow-[0_4px_0_rgba(22,101,52,0.16)]">
+          <div className="absolute left-3 top-[76px] rounded-lg border-2 border-green-950/20 bg-green-100 px-3 py-1.5 text-xs font-black text-green-950 shadow-[0_4px_0_rgba(22,101,52,0.16)] md:left-4 md:top-20 md:px-4 md:py-2 md:text-sm">
             地块刷子 · {tiles.find(t => t.id === activeTileId)?.name}
           </div>
         ) : activeToolId ? (
-          <div className="absolute left-4 top-20 rounded-lg border-2 border-amber-950/20 bg-[#ffe08a] px-4 py-2 text-sm font-black text-amber-950 shadow-[0_4px_0_rgba(120,72,24,0.18)]">
+          <div className="absolute left-3 top-[76px] rounded-lg border-2 border-amber-950/20 bg-[#ffe08a] px-3 py-1.5 text-xs font-black text-amber-950 shadow-[0_4px_0_rgba(120,72,24,0.18)] md:left-4 md:top-20 md:px-4 md:py-2 md:text-sm">
             放置模式 · {activePlant?.naming.zh}
           </div>
         ) : (
-          <div className="absolute left-4 top-20 rounded-lg border-2 border-slate-950/20 bg-white/80 px-4 py-2 text-sm font-black text-slate-800 shadow-[0_4px_0_rgba(51,65,85,0.12)]">
+          <div className="absolute left-3 top-[76px] rounded-lg border-2 border-slate-950/20 bg-white/80 px-3 py-1.5 text-xs font-black text-slate-800 shadow-[0_4px_0_rgba(51,65,85,0.12)] md:left-4 md:top-20 md:px-4 md:py-2 md:text-sm">
             选择工具 · 拖动已放置植物
           </div>
         )}

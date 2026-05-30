@@ -10,4 +10,22 @@
 body {
   color: var(--foreground);
   background: var(--background);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
 }

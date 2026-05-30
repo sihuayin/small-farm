@@ -382,8 +382,9 @@ export function PlannerInspector({
   };
 
   return (
-    <aside className="absolute right-4 top-4 w-72 overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur">
-      <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-4">
+    <aside className="absolute inset-x-3 bottom-3 z-20 max-h-[42vh] overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:max-h-[calc(100vh-2rem)] md:w-72">
+      <div className="max-h-[42vh] overflow-y-auto md:max-h-[calc(100vh-2rem)]">
+      <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-3 md:p-4">
         <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Inspector</div>
         <div className="mt-1 text-lg font-black text-amber-950">{selectedTitle}</div>
         <div className="mt-1 rounded-md bg-white/55 px-2 py-1 text-xs font-bold text-amber-800">{selectedMeta}</div>
@@ -394,7 +395,7 @@ export function PlannerInspector({
         )}
 
         {selectedEntity?.type === 'plant' && selectedPlantAgronomy && (
-          <div className="mt-3 rounded-md border border-amber-900/10 bg-white/65 p-2">
+          <div className="mt-3 hidden rounded-md border border-amber-900/10 bg-white/65 p-2 md:block">
             <div className="grid grid-cols-2 gap-1 text-[10px] font-black text-amber-900">
               <div>{selectedEntity.spanX}x{selectedEntity.spanY} 格</div>
               <div>{selectedPlantAgronomy.daysToMaturity} 天成熟</div>
@@ -412,7 +413,7 @@ export function PlannerInspector({
         )}
 
         {selectedEntity && (
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
             <button
               type="button"
               onClick={onFocusSelected}
@@ -438,7 +439,7 @@ export function PlannerInspector({
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-1 border-b-2 border-amber-900/10 bg-[#fff3c4] p-2">
+      <div className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b-2 border-amber-900/10 bg-[#fff3c4] p-2">
         {tabItems.map(tab => (
           <button
             key={tab.id}
@@ -903,6 +904,7 @@ export function PlannerInspector({
           )}
         </>
       )}
+      </div>
     </aside>
   );
 }

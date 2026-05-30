@@ -292,13 +292,13 @@ export function PlannerToolbar({
   const bumpSelection = () => setSelectionPulse((value) => value + 1);
 
   return (
-    <div className="w-72 overflow-y-auto border-r border-amber-900/20 bg-[#f7e8c8] shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
-      <div className="p-4">
-        <div className="rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-3 shadow-[0_3px_0_rgba(120,72,24,0.18)]">
+    <div className="z-20 h-[176px] w-full shrink-0 overflow-y-auto border-b border-amber-900/20 bg-[#f7e8c8] shadow-[inset_0_-6px_0_rgba(120,72,24,0.08)] md:h-auto md:w-72 md:border-b-0 md:border-r md:shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
+      <div className="p-3 md:p-4">
+        <div className="rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-2 shadow-[0_3px_0_rgba(120,72,24,0.18)] md:p-3">
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Garden Kit</div>
-              <h2 className="text-lg font-black text-amber-950">小农场背包</h2>
+              <h2 className="text-base font-black text-amber-950 md:text-lg">小农场背包</h2>
             </div>
             <button onClick={onLoad} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.2)] hover:bg-amber-50">
             读取
@@ -308,7 +308,7 @@ export function PlannerToolbar({
 
         <div
           key={`equipped-${selectionPulse}-${activeToolId || activeTileId || 'empty'}`}
-          className="mt-4 rounded-lg border-2 border-amber-900/20 bg-[#fff3c4] p-3 shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-transform duration-150 ease-out"
+          className="mt-4 hidden rounded-lg border-2 border-amber-900/20 bg-[#fff3c4] p-3 shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-transform duration-150 ease-out md:block"
           style={{ transform: selectionPulse > 0 ? 'scale(1.015)' : undefined }}
         >
           <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Equipped</div>
@@ -327,7 +327,7 @@ export function PlannerToolbar({
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-2">
+        <div className="mt-3 flex items-center justify-between gap-2 md:mt-4">
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-amber-800">My Garden Kit</h3>
             <div className="text-[10px] font-bold text-amber-700">{kitPlants.length} 个可种项目</div>
@@ -341,16 +341,16 @@ export function PlannerToolbar({
           </button>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1 md:mt-3 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
           {kitPlants.map(plant => (
-            <div key={plant.id} className="group relative">
+            <div key={plant.id} className="group relative w-[76px] shrink-0 md:w-auto">
               <button
                 onClick={() => {
                   bumpSelection();
                   onSelectPlant(plant.id);
                 }}
                 className={`
-                  min-h-[72px] w-full rounded-lg border-2 p-2 text-center shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-all
+                  min-h-[66px] w-full rounded-lg border-2 p-1.5 text-center shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-all md:min-h-[72px] md:p-2
                   hover:-translate-y-0.5 active:translate-y-0
                   ${activeToolId === plant.id
                     ? 'border-amber-800 bg-[#ffe08a] ring-2 ring-amber-300'
@@ -492,8 +492,8 @@ export function PlannerToolbar({
           ))}
         </div>
 
-        <h3 className="mt-6 mb-2 text-xs font-black uppercase tracking-wider text-amber-800">地块刷子</h3>
-        <div className="grid grid-cols-3 gap-2">
+        <h3 className="mt-3 mb-2 text-xs font-black uppercase tracking-wider text-amber-800 md:mt-6">地块刷子</h3>
+        <div className="flex gap-2 overflow-x-auto pb-1 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
           {tiles.map(tile => (
             <button
               key={tile.id}
@@ -502,7 +502,7 @@ export function PlannerToolbar({
                 onSelectTile(tile.id);
               }}
               className={`
-                min-h-[64px] rounded-lg border-2 p-2 text-center shadow-[0_3px_0_rgba(120,72,24,0.14)] transition-all hover:-translate-y-0.5 active:translate-y-0
+                min-h-[58px] w-[72px] shrink-0 rounded-lg border-2 p-1.5 text-center shadow-[0_3px_0_rgba(120,72,24,0.14)] transition-all hover:-translate-y-0.5 active:translate-y-0 md:min-h-[64px] md:w-auto md:p-2
                 ${activeTileId === tile.id
                   ? 'border-green-800 bg-green-100 ring-2 ring-green-300'
                   : 'border-amber-900/20 bg-[#fff8df] hover:border-green-700 hover:bg-white'}
@@ -515,7 +515,7 @@ export function PlannerToolbar({
         </div>
 
         {activeTileId && (
-          <div className="mt-4 rounded-lg border-2 border-green-800/20 bg-green-50 p-3 shadow-[0_3px_0_rgba(22,101,52,0.12)]">
+          <div className="mt-4 hidden rounded-lg border-2 border-green-800/20 bg-green-50 p-3 shadow-[0_3px_0_rgba(22,101,52,0.12)] md:block">
             <div className="flex items-center gap-2">
               <span className="text-2xl">{tiles.find(t => t.id === activeTileId)?.emoji}</span>
               <div>
@@ -529,7 +529,7 @@ export function PlannerToolbar({
         )}
 
         {activeToolId && (
-          <div className="mt-4 rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-3 shadow-[0_3px_0_rgba(120,72,24,0.14)]">
+          <div className="mt-4 hidden rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-3 shadow-[0_3px_0_rgba(120,72,24,0.14)] md:block">
             <div className="flex items-center gap-2">
               {plants.find(p => p.id === activeToolId) && (
                 <PlantToken plant={plants.find(p => p.id === activeToolId)!} size="sm" />
@@ -547,33 +547,35 @@ export function PlannerToolbar({
         )}
       </div>
 
-      <GardenSettingsPanel
-        planId={planId}
-        planName={planName}
-        gridWidth={gridWidth}
-        gridHeight={gridHeight}
-        cellSizeFeet={cellSizeFeet}
-        planYear={planYear}
-        planSeason={planSeason}
-        climateProfile={climateProfile}
-        planSummaries={planSummaries}
-        hasUnsavedChanges={hasUnsavedChanges}
-        lastSavedAt={lastSavedAt}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onRename={onRenamePlan}
-        onSetPlanTime={onSetPlanTime}
-        onUpdateClimateProfile={onUpdateClimateProfile}
-        onResize={onResizeGarden}
-        onCreatePlan={onCreatePlan}
-        onDuplicatePlan={onDuplicatePlan}
-        onSwitchPlan={onSwitchPlan}
-        onUndo={onUndo}
-        onRedo={onRedo}
-        onSave={onSave}
-        onExportPlan={onExportPlan}
-        onImportPlan={onImportPlan}
-      />
+      <div className="hidden md:block">
+        <GardenSettingsPanel
+          planId={planId}
+          planName={planName}
+          gridWidth={gridWidth}
+          gridHeight={gridHeight}
+          cellSizeFeet={cellSizeFeet}
+          planYear={planYear}
+          planSeason={planSeason}
+          climateProfile={climateProfile}
+          planSummaries={planSummaries}
+          hasUnsavedChanges={hasUnsavedChanges}
+          lastSavedAt={lastSavedAt}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onRename={onRenamePlan}
+          onSetPlanTime={onSetPlanTime}
+          onUpdateClimateProfile={onUpdateClimateProfile}
+          onResize={onResizeGarden}
+          onCreatePlan={onCreatePlan}
+          onDuplicatePlan={onDuplicatePlan}
+          onSwitchPlan={onSwitchPlan}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          onSave={onSave}
+          onExportPlan={onExportPlan}
+          onImportPlan={onImportPlan}
+        />
+      </div>
     </div>
   );
 }
