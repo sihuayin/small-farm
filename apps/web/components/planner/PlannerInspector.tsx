@@ -57,6 +57,12 @@ interface PlannerInspectorProps {
     label: string;
     area: FirstRunFocusArea;
   } | null;
+  smartRecommendations?: Array<{
+    id: string;
+    name: string;
+    score: number;
+    reason: string;
+  }>;
 }
 
 export function PlannerInspector({
@@ -87,7 +93,8 @@ export function PlannerInspector({
   onDeleteSelected,
   onRotateSelected,
   onFocusSelected,
-  firstRunFocus
+  firstRunFocus,
+  smartRecommendations = []
 }: PlannerInspectorProps) {
   const selectedTitle = selectedEntity ? getEntityTitle(selectedEntity) : selectedTileStatus ? selectedTileStatus.label : '未选择对象';
   const selectedMeta = selectedEntity
@@ -487,6 +494,7 @@ export function PlannerInspector({
             <TileStatusPanel
               status={selectedTileStatus}
               rotationSuggestions={getTileRotationSuggestions(selectedTileStatus, plantingHistory)}
+              smartRecommendations={smartRecommendations}
               onResolve={onResolveTileStatus}
               onResolveTask={onResolveTileTask}
               onSelectPlant={onSelectRecommendedPlant}
@@ -1238,6 +1246,7 @@ function LifecycleStrip({
 function TileStatusPanel({
   status,
   rotationSuggestions,
+  smartRecommendations,
   onResolve,
   onResolveTask,
   onSelectPlant,
@@ -1245,6 +1254,7 @@ function TileStatusPanel({
 }: {
   status: TileStatusInfo;
   rotationSuggestions: Array<{ group: string; label: string; examples: Array<{ id: string; name: string }>; reason: string }>;
+  smartRecommendations: Array<{ id: string; name: string; score: number; reason: string }>;
   onResolve: (status: TileStatusInfo) => void;
   onResolveTask: (status: TileStatusInfo) => void;
   onSelectPlant: (plantId: string) => void;
@@ -1266,6 +1276,32 @@ function TileStatusPanel({
       <div className="mt-2 rounded-md border border-amber-900/10 bg-white/70 p-2 text-[10px] font-bold leading-4 text-amber-800">
         {status.recommendation}
       </div>
+      {(status.kind === 'idle' || status.kind === 'cleanup') && smartRecommendations.length > 0 && (
+        <div className="mt-3 rounded-md border border-sky-900/10 bg-sky-50/80 p-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10px] font-black uppercase tracking-wider text-sky-800">Smart Pick</div>
+            <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[10px] font-black text-sky-800">
+              空地推荐
+            </span>
+          </div>
+          <div className="mt-2 space-y-2">
+            {smartRecommendations.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onSelectPlant(item.id)}
+                className="w-full rounded-md border border-sky-900/10 bg-white/75 p-2 text-left shadow-[0_1px_0_rgba(14,116,144,0.08)] hover:bg-sky-100"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black text-sky-950">{item.name}</span>
+                  <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[10px] font-black text-sky-800">{item.score}/100</span>
+                </div>
+                <div className="mt-1 text-[10px] font-bold leading-4 text-sky-800">{item.reason}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {(status.kind === 'idle' || status.kind === 'cleanup') && rotationSuggestions.length > 0 && (
         <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-2">
           <div className="flex items-center justify-between gap-2">

@@ -17,10 +17,12 @@ import type { ActivityInput, HarvestInput } from './usePlannerStore';
 import { PlannerInspector } from './PlannerInspector';
 import { PlannerStatusBar } from './PlannerStatusBar';
 import { PlannerToolbar } from './PlannerToolbar';
-import { getCompanionRule } from './rules';
+import { evaluateCompanionRules, getCompanionRule } from './rules';
 import { getGardenTaskBoard, getPlantGrowthStatus, type GrowthStageId } from './growth';
 import { getPlantAgronomy } from './plants';
 import { shouldRemoveAfterHarvest } from './harvestPolicy';
+import { evaluateRotationRules } from './rotation';
+import { scorePlacement } from './scoring';
 import {
   TILE_SIZE,
   screenToGrid,
@@ -74,6 +76,13 @@ interface PlantVisualState {
   progressPercent: number;
   visualScale: number;
   harvestReady: boolean;
+}
+
+interface SmartRecommendation {
+  id: string;
+  name: string;
+  score: number;
+  reason: string;
 }
 
 const defaultPlantVisualState: PlantVisualState = {
@@ -489,6 +498,27 @@ function placementScoreStroke(result: SynergyResult) {
   return '#3f6212';
 }
 
+function smartRecommendationReason(result: SynergyResult, plant: Plant, planSeason: PlanSeason) {
+  if (result.enemyCount > 0) return '附近存在冲突植物，建议换个位置。';
+  if (result.companionCount > 0) return `附近有伴生伙伴，适合尝试${plant.naming.zh}。`;
+  if (getPlantAgronomy(plant.id).seasons.includes(planSeason)) return '当前季节适配，且没有明显冲突。';
+  return '没有明显冲突，但季节适配一般。';
+}
+
+function combineSynergyResults(primary: SynergyResult, secondary: SynergyResult): SynergyResult {
+  return {
+    valid: primary.valid && secondary.valid,
+    status: primary.status === 'bad'
+      ? 'bad'
+      : primary.status === 'good'
+        ? 'good'
+        : secondary.status,
+    companionCount: primary.companionCount + secondary.companionCount,
+    enemyCount: primary.enemyCount + secondary.enemyCount,
+    details: [...primary.details, ...secondary.details]
+  };
+}
+
 function placementHeatTone(result: SynergyResult) {
   if (result.recommendation === 'bad') {
     return { fill: 'rgba(239,68,68,0.28)', stroke: '#ef4444', opacity: 0.42 };
@@ -864,6 +894,51 @@ export default function GardenCanvas({
     () => activeToolId ? plants.find(p => p.id === activeToolId) || null : null,
     [activeToolId]
   );
+  const smartRecommendations = useMemo<SmartRecommendation[]>(() => {
+    if (!selectedTileStatus || selectedTileStatus.kind !== 'idle') return [];
+
+    return plants
+      .map((plant) => {
+        const inBounds = selectedTileStatus.gridX + plant.dimensions.grid_span_x <= effectiveGridWidth
+          && selectedTileStatus.gridY + plant.dimensions.grid_span_y <= effectiveGridHeight;
+        if (!inBounds) return null;
+
+        const hasCollision = Object.keys(occupancyIndex).some((key) => {
+          const [x, y] = key.split(',').map(Number);
+          return x >= selectedTileStatus.gridX
+            && x < selectedTileStatus.gridX + plant.dimensions.grid_span_x
+            && y >= selectedTileStatus.gridY
+            && y < selectedTileStatus.gridY + plant.dimensions.grid_span_y;
+        });
+        if (hasCollision) return null;
+
+        const result = scorePlacement(
+          plant,
+          combineSynergyResults(
+            evaluateCompanionRules(selectedTileStatus.gridX, selectedTileStatus.gridY, plant, entities),
+            evaluateRotationRules(selectedTileStatus.gridX, selectedTileStatus.gridY, plant, plantingHistory, planYear, planSeason)
+          ),
+          climateProfile,
+          planSeason
+        );
+        return {
+          id: plant.id,
+          name: plant.naming.zh,
+          score: result.score ?? 0,
+          reason: smartRecommendationReason(result, plant, planSeason),
+          valid: result.valid && result.recommendation !== 'bad',
+          category: plant.category
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .filter(item => item.valid)
+      .sort((a, b) => {
+        const categoryWeight = (item: { category: string }) => item.category === 'vegetable' ? 4 : item.category === 'herb' ? 3 : item.category === 'flower' ? 2 : 1;
+        return b.score - a.score || categoryWeight(b) - categoryWeight(a);
+      })
+      .slice(0, 3)
+      .map(({ id, name, score, reason }) => ({ id, name, score, reason }));
+  }, [climateProfile, effectiveGridHeight, effectiveGridWidth, entities, occupancyIndex, plantingHistory, planSeason, planYear, selectedTileStatus]);
   const heatmapSampleEvery = useMemo(() => {
     const maxCells = effectiveGridWidth * effectiveGridHeight;
     if (maxCells > 1400) return 3;
@@ -2915,6 +2990,46 @@ export default function GardenCanvas({
     setActiveTool(null);
     setActiveTile(null);
   }, [createPlan, selectEntity, setActiveTile, setActiveTool]);
+  const handleGenerateStarterPlan = useCallback(() => {
+    loadDemoScenario();
+    setShowWelcome(false);
+    setHasDismissedWelcome(true);
+    setShowGuidedPath(false);
+    setShowFirstRunCheck(false);
+    setCompletedDemoTourItems(new Set(['demo']));
+    setFirstRunNextSeasonSelected(false);
+    setFirstRunCompletedAt(null);
+    setGrowthPreviewDays(0);
+    setHeatmapLayer('overall');
+    setShowHeatmap(true);
+    setRequestedInspectorTab('tasks');
+    setSelectedTileStatus(null);
+    setPlacementInsight(null);
+    setNextSeasonTarget(null);
+    setActiveTool(null);
+    setActiveTile(null);
+    selectEntity(null);
+    setActionFeedback({
+      x: 6,
+      y: 5,
+      status: 'ok',
+      label: '已生成'
+    });
+  }, [loadDemoScenario, selectEntity, setActiveTile, setActiveTool]);
+  const handleShareGardenImage = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const dataUrl = stage.toDataURL({
+      pixelRatio: 2,
+      mimeType: 'image/png',
+      quality: 1
+    });
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `${planName.replace(/[\\/:*?"<>|]/g, '-').trim() || 'small-farm'}-garden.png`;
+    link.click();
+  }, [planName]);
   const handleFocusPreviewHarvest = useCallback(() => {
     if (!growthPreviewFirstHarvestId) return;
     selectEntity(growthPreviewFirstHarvestId);
@@ -3302,6 +3417,42 @@ export default function GardenCanvas({
             {firstRunFocus.label} · {firstRunFocus.hint}
           </div>
         )}
+        <div className="absolute left-3 top-[112px] z-10 flex max-w-[calc(100%-1.5rem)] gap-1 overflow-x-auto rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-1 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:left-[292px] md:top-[92px] md:max-w-none">
+          <button
+            type="button"
+            onClick={handleGenerateStarterPlan}
+            className="shrink-0 rounded-md border border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+          >
+            一键生成
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTool(null);
+              setActiveTile(null);
+              setRequestedInspectorTab('tasks');
+              setSelectedTileStatus({
+                kind: 'idle',
+                gridX: 1,
+                gridY: 1,
+                label: '空地智能推荐',
+                detail: '点击任意空地也可以获得推荐。这里先给你一个起步位置。',
+                recommendation: '展开底部面板，选择推荐植物后会进入放置模式。',
+                tone: 'green'
+              });
+            }}
+            className="shrink-0 rounded-md border border-sky-900/15 bg-sky-100 px-3 py-1.5 text-xs font-black text-sky-900 shadow-[0_2px_0_rgba(14,116,144,0.12)] hover:bg-sky-200"
+          >
+            智能推荐
+          </button>
+          <button
+            type="button"
+            onClick={handleShareGardenImage}
+            className="shrink-0 rounded-md border border-amber-900/15 bg-white px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+          >
+            导出分享图
+          </button>
+        </div>
         <div className="absolute left-8 top-[112px] z-10 hidden rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/78 p-2 shadow-[0_3px_0_rgba(120,72,24,0.1)] backdrop-blur md:block">
           <div className="text-[9px] font-black uppercase tracking-wider text-amber-800">Tile State</div>
           <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] font-black text-amber-900">
@@ -3701,6 +3852,7 @@ export default function GardenCanvas({
           onRotateSelected={handleRotateSelected}
           onFocusSelected={handleFocusSelected}
           firstRunFocus={firstRunFocus}
+          smartRecommendations={smartRecommendations}
         />
 
         {harvestDraft && (
