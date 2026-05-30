@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { plantMap, plants, tiles, type TileType } from './plants';
+import { getPlantAgronomy, plantMap, plants, tiles, type TileType } from './plants';
+import type { Plant } from './plants.d';
 import { evaluateCompanionRules } from './rules';
 import { createPlantingRecords, evaluateRotationRules } from './rotation';
 import { scorePlacement } from './scoring';
@@ -62,6 +63,7 @@ interface PlannerState {
   resizeGarden: (width: number, height: number, cellSizeFeet: number) => boolean;
   createPlan: () => void;
   loadDemoScenario: () => void;
+  generateStarterPlan: (plantIds?: string[]) => { placed: number; skipped: string[] };
   duplicatePlan: () => void;
   switchPlan: (planId: string) => boolean;
   undo: () => void;
@@ -230,6 +232,83 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     get().importPlan(demo);
     set({ hasUnsavedChanges: true, lastSavedAt: null });
     get().savePlan();
+  },
+
+  generateStarterPlan: (plantIds) => {
+    const timestamp = now();
+    const state = get();
+    const requestedPlantIds = normalizeStarterPlantIds(plantIds);
+    const nextEntities: Record<string, GardenEntity> = {};
+    let nextOccupancy: OccupancyIndex = {};
+    let nextPlantingHistory: Record<string, PlantingRecord[]> = {};
+    const skipped: string[] = [];
+
+    for (const plantId of orderStarterPlantIds(requestedPlantIds)) {
+      const plant = plantMap.get(plantId);
+      if (!plant) {
+        skipped.push(plantId);
+        continue;
+      }
+
+      const candidate = findStarterPlacement(
+        plant,
+        nextEntities,
+        nextOccupancy,
+        nextPlantingHistory,
+        state.gridWidth,
+        state.gridHeight,
+        state.planYear,
+        state.planSeason,
+        state.climateProfile
+      );
+
+      if (!candidate) {
+        skipped.push(plantId);
+        continue;
+      }
+
+      const entityId = `starter_${plant.id}_${candidate.x}_${candidate.y}_${timestamp}`;
+      const createdAt = timestamp - starterAgeDays(plant.id) * 24 * 60 * 60 * 1000;
+      const entity: GardenEntity = {
+        id: entityId,
+        type: 'plant',
+        originX: candidate.x,
+        originY: candidate.y,
+        spanX: plant.dimensions.grid_span_x,
+        spanY: plant.dimensions.grid_span_y,
+        rotation: 0,
+        createdAt,
+        updatedAt: createdAt,
+        plantId: plant.id,
+        plant
+      };
+
+      nextEntities[entityId] = entity;
+      nextOccupancy = writeFootprint(nextOccupancy, entityId, candidate.x, candidate.y, plant.dimensions.grid_span_x, plant.dimensions.grid_span_y);
+      nextPlantingHistory = mergePlantingHistory(
+        nextPlantingHistory,
+        createPlantingRecords(candidate.x, candidate.y, plant, state.planYear, state.planSeason, createdAt)
+      );
+    }
+
+    pushHistory(get, set);
+    set((current) => ({
+      planName: current.planName === '我的菜园' || current.planName.startsWith('新菜园') ? '智能生成菜园' : current.planName,
+      entities: nextEntities,
+      occupancyIndex: nextOccupancy,
+      surfaceIndex: {},
+      plantingHistory: nextPlantingHistory,
+      harvestRecords: [],
+      activityRecords: [],
+      resolvedCleanupKeys: [],
+      activeToolId: null,
+      activeTileId: null,
+      selectedEntityId: Object.keys(nextEntities)[0] || null,
+      hasUnsavedChanges: true
+    }));
+    get().savePlan();
+
+    return { placed: Object.keys(nextEntities).length, skipped };
   },
 
   duplicatePlan: () => {
@@ -930,6 +1009,99 @@ function createDemoPlan(): GardenPlan {
     },
     updatedAt: timestamp
   };
+}
+
+const DEFAULT_STARTER_PLANTS = ['tomato', 'basil', 'lettuce', 'carrot', 'pepper', 'marigold'];
+
+function normalizeStarterPlantIds(plantIds?: string[]) {
+  const source = plantIds && plantIds.length > 0 ? plantIds : DEFAULT_STARTER_PLANTS;
+  const seen = new Set<string>();
+  return source
+    .filter(id => plantMap.has(id))
+    .filter(id => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
+    .slice(0, 10);
+}
+
+function orderStarterPlantIds(plantIds: string[]) {
+  const priority = (plantId: string) => {
+    const plant = plantMap.get(plantId);
+    if (!plant) return 0;
+    const spanArea = plant.dimensions.grid_span_x * plant.dimensions.grid_span_y;
+    const companionWeight = plant.relationships.companions.length;
+    const categoryWeight = plant.category === 'vegetable' ? 4 : plant.category === 'herb' ? 3 : plant.category === 'flower' ? 2 : 1;
+    return spanArea * 10 + companionWeight * 2 + categoryWeight;
+  };
+  return [...plantIds].sort((a, b) => priority(b) - priority(a));
+}
+
+function findStarterPlacement(
+  plant: Plant,
+  entities: Record<string, GardenEntity>,
+  occupancyIndex: OccupancyIndex,
+  plantingHistory: Record<string, PlantingRecord[]>,
+  gridWidth: number,
+  gridHeight: number,
+  year: number,
+  season: PlanSeason,
+  climateProfile: ClimateProfile
+) {
+  const candidates: Array<{ x: number; y: number; score: number }> = [];
+  const margin = 1;
+
+  for (let y = margin; y <= gridHeight - plant.dimensions.grid_span_y - margin; y++) {
+    for (let x = margin; x <= gridWidth - plant.dimensions.grid_span_x - margin; x++) {
+      if (!isWithinBounds(x, y, plant.dimensions.grid_span_x, plant.dimensions.grid_span_y, gridWidth, gridHeight)) continue;
+      if (hasObjectCollision(x, y, plant.dimensions.grid_span_x, plant.dimensions.grid_span_y, occupancyIndex)) continue;
+
+      const result = scorePlacement(
+        plant,
+        mergeSynergyResults(
+          evaluateCompanionRules(x, y, plant, entities),
+          evaluateRotationRules(x, y, plant, plantingHistory, year, season)
+        ),
+        climateProfile,
+        season
+      );
+
+      if (!result.valid || result.recommendation === 'bad') continue;
+      const centerBias = starterCenterBias(x, y, plant, gridWidth, gridHeight);
+      const companionBias = result.companionCount * 12;
+      const categoryBias = plant.category === 'vegetable' ? 6 : plant.category === 'herb' ? 5 : plant.category === 'flower' ? 4 : 2;
+      candidates.push({
+        x,
+        y,
+        score: (result.score || 0) + centerBias + companionBias + categoryBias
+      });
+    }
+  }
+
+  return candidates.sort((a, b) => b.score - a.score)[0] || null;
+}
+
+function starterCenterBias(
+  x: number,
+  y: number,
+  plant: Plant,
+  gridWidth: number,
+  gridHeight: number
+) {
+  const centerX = gridWidth / 2;
+  const centerY = gridHeight / 2;
+  const plantCenterX = x + plant.dimensions.grid_span_x / 2;
+  const plantCenterY = y + plant.dimensions.grid_span_y / 2;
+  const distance = Math.abs(centerX - plantCenterX) + Math.abs(centerY - plantCenterY);
+  return Math.max(0, 18 - distance * 2);
+}
+
+function starterAgeDays(plantId: string) {
+  const plant = plantMap.get(plantId);
+  if (!plant) return 8;
+  const maturity = getPlantAgronomy(plantId).daysToMaturity;
+  return Math.max(7, Math.min(42, Math.round(maturity * 0.22)));
 }
 
 function mergeSynergyResults(primary: SynergyResult, secondary: SynergyResult): SynergyResult {

@@ -711,6 +711,7 @@ export default function GardenCanvas({
     status: 'ok' | 'blocked' | 'moved';
     label: string;
   } | null>(null);
+  const [starterSummary, setStarterSummary] = useState<{ placed: number; skipped: string[] } | null>(null);
 
   // ==================== Store ====================
   const {
@@ -742,6 +743,7 @@ export default function GardenCanvas({
     updateClimateProfile,
     createPlan,
     loadDemoScenario,
+    generateStarterPlan,
     duplicatePlan,
     switchPlan,
     undo,
@@ -771,6 +773,21 @@ export default function GardenCanvas({
   const effectiveGridHeight = planGridHeight || gridHeight;
   const heatmapLayerLabel = heatmapLayers.find(layer => layer.id === heatmapLayer)?.label || '综合';
   const heatmapLegend = heatmapLegends[heatmapLayer];
+  const getGardenKitPlantIds = useCallback(() => {
+    const fallback = ['tomato', 'basil', 'lettuce', 'carrot', 'pepper', 'marigold'];
+    if (typeof window === 'undefined') return fallback;
+    try {
+      const raw = window.localStorage.getItem('small-farm:garden-kit-plants:v1');
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed)) {
+        const valid = parsed.filter((item): item is string => typeof item === 'string' && plants.some(plant => plant.id === item));
+        return valid.length > 0 ? valid : fallback;
+      }
+    } catch {
+      return fallback;
+    }
+    return fallback;
+  }, []);
 
   // ==================== 预加载所有精灵图 ====================
   const allSpriteUrls = useMemo(() => {
@@ -2991,7 +3008,7 @@ export default function GardenCanvas({
     setActiveTile(null);
   }, [createPlan, selectEntity, setActiveTile, setActiveTool]);
   const handleGenerateStarterPlan = useCallback(() => {
-    loadDemoScenario();
+    const result = generateStarterPlan(getGardenKitPlantIds());
     setShowWelcome(false);
     setHasDismissedWelcome(true);
     setShowGuidedPath(false);
@@ -3013,9 +3030,10 @@ export default function GardenCanvas({
       x: 6,
       y: 5,
       status: 'ok',
-      label: '已生成'
+      label: result.placed > 0 ? `生成 ${result.placed}` : '未生成'
     });
-  }, [loadDemoScenario, selectEntity, setActiveTile, setActiveTool]);
+    setStarterSummary(result);
+  }, [generateStarterPlan, getGardenKitPlantIds, selectEntity, setActiveTile, setActiveTool]);
   const handleShareGardenImage = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -3453,6 +3471,21 @@ export default function GardenCanvas({
             导出分享图
           </button>
         </div>
+        {starterSummary && (
+          <div className="absolute left-3 right-3 top-[160px] z-10 rounded-lg border-2 border-green-900/15 bg-green-50/92 px-3 py-2 text-[10px] font-black leading-4 text-green-950 shadow-[0_3px_0_rgba(22,101,52,0.12)] backdrop-blur md:left-[292px] md:right-auto md:top-[140px] md:w-72">
+            已按你的植物工具箱生成 {starterSummary.placed} 个种植位。
+            {starterSummary.skipped.length > 0
+              ? ` 有 ${starterSummary.skipped.length} 个因为空间或规则冲突暂未放入。`
+              : ' 已优先避开冲突并靠近伴生组合。'}
+            <button
+              type="button"
+              onClick={() => setStarterSummary(null)}
+              className="ml-2 rounded border border-green-900/15 bg-white/70 px-1.5 py-0.5 text-[9px] font-black text-green-900"
+            >
+              关闭
+            </button>
+          </div>
+        )}
         <div className="absolute left-8 top-[112px] z-10 hidden rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/78 p-2 shadow-[0_3px_0_rgba(120,72,24,0.1)] backdrop-blur md:block">
           <div className="text-[9px] font-black uppercase tracking-wider text-amber-800">Tile State</div>
           <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] font-black text-amber-900">
