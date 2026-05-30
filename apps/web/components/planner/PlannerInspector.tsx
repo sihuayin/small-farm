@@ -125,6 +125,7 @@ export function PlannerInspector({
   const [focusCue, setFocusCue] = useState<{ label: string; area: InspectorFocusArea; createdAt: number } | null>(null);
   const [resolvedWeatherReminderIds, setResolvedWeatherReminderIds] = useState<Set<string>>(() => new Set());
   const [repairIntent, setRepairIntent] = useState<{ type: 'task' | 'harvest'; entityId?: string } | null>(null);
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
   const pendingManualTabRef = useRef<InspectorTab | null>(null);
   const calendarReminders = rawCalendarReminders.filter(reminder => !resolvedWeatherReminderIds.has(reminder.id));
   const seasonSnapshot = {
@@ -246,6 +247,12 @@ export function PlannerInspector({
       createdAt: Date.now()
     });
   }, [firstRunFocus?.area, firstRunFocus?.label]);
+
+  useEffect(() => {
+    if (selectedEntity || selectedTileStatus || placementInsight || requestedTab || firstRunFocus) {
+      setIsMobilePanelOpen(true);
+    }
+  }, [firstRunFocus, placementInsight, requestedTab, selectedEntity, selectedTileStatus]);
 
   const handleSnapshotAction = (actionId: SnapshotActionId) => {
     if (actionId === 'first-task') {
@@ -382,11 +389,23 @@ export function PlannerInspector({
   };
 
   return (
-    <aside className="absolute inset-x-3 bottom-3 z-20 max-h-[42vh] overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:max-h-[calc(100vh-2rem)] md:w-72">
-      <div className="max-h-[42vh] overflow-y-auto md:max-h-[calc(100vh-2rem)]">
+    <aside className={`absolute inset-x-3 bottom-3 z-20 overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur transition-[max-height] duration-200 md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:max-h-[calc(100vh-2rem)] md:w-72 ${isMobilePanelOpen ? 'max-h-[64vh]' : 'max-h-[104px]'}`}>
+      <div className={`${isMobilePanelOpen ? 'max-h-[64vh] overflow-y-auto' : 'max-h-[104px] overflow-hidden'} md:max-h-[calc(100vh-2rem)] md:overflow-y-auto`}>
       <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-3 md:p-4">
-        <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Inspector</div>
-        <div className="mt-1 text-lg font-black text-amber-950">{selectedTitle}</div>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Inspector</div>
+            <div className="mt-1 truncate text-lg font-black text-amber-950">{selectedTitle}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsMobilePanelOpen(value => !value)}
+            className="shrink-0 rounded-md border border-amber-900/15 bg-white/80 px-2 py-1 text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.12)] md:hidden"
+            aria-expanded={isMobilePanelOpen}
+          >
+            {isMobilePanelOpen ? '收起' : '展开'}
+          </button>
+        </div>
         <div className="mt-1 rounded-md bg-white/55 px-2 py-1 text-xs font-bold text-amber-800">{selectedMeta}</div>
         {focusCue && (
           <div className="mt-2 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-[10px] font-black text-sky-900 shadow-[0_1px_0_rgba(14,116,144,0.12)]">
@@ -439,6 +458,7 @@ export function PlannerInspector({
         )}
       </div>
 
+      <div className={`${isMobilePanelOpen ? 'block' : 'hidden'} md:block`}>
       <div className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b-2 border-amber-900/10 bg-[#fff3c4] p-2">
         {tabItems.map(tab => (
           <button
@@ -904,6 +924,7 @@ export function PlannerInspector({
           )}
         </>
       )}
+      </div>
       </div>
     </aside>
   );
