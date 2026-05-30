@@ -230,7 +230,24 @@ export function PlannerToolbar({
   onExportPlan,
   onImportPlan
 }: PlannerToolbarProps) {
+  const defaultKitPlantIds = ['tomato', 'basil', 'lettuce', 'carrot', 'pepper', 'marigold'];
+  const [kitPlantIds, setKitPlantIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return defaultKitPlantIds;
+    try {
+      const raw = window.localStorage.getItem('small-farm:garden-kit-plants:v1');
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+        const valid = parsed.filter(id => plants.some(plant => plant.id === id));
+        return valid.length > 0 ? valid : defaultKitPlantIds;
+      }
+    } catch {
+      return defaultKitPlantIds;
+    }
+    return defaultKitPlantIds;
+  });
+  const [showPlantLibrary, setShowPlantLibrary] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [librarySearch, setLibrarySearch] = useState('');
   const [selectionPulse, setSelectionPulse] = useState(0);
   const categoryTabs = [
     { id: 'all', label: '全部', icon: '✦' },
@@ -239,10 +256,37 @@ export function PlannerToolbar({
     { id: 'flower', label: '花卉', icon: '✿' },
     { id: 'fruit', label: '果物', icon: '◆' }
   ];
-  const filteredPlants = useMemo(() => {
-    if (activeCategory === 'all') return plants;
-    return plants.filter(plant => plant.category === activeCategory);
-  }, [activeCategory]);
+  const kitPlants = useMemo(() => kitPlantIds
+    .map(id => plants.find(plant => plant.id === id))
+    .filter((plant): plant is (typeof plants)[number] => Boolean(plant)), [kitPlantIds]);
+  const libraryPlants = useMemo(() => {
+    const query = librarySearch.trim().toLowerCase();
+    return plants.filter(plant => {
+      const matchesCategory = activeCategory === 'all' || plant.category === activeCategory;
+      const matchesSearch = !query
+        || plant.naming.zh.toLowerCase().includes(query)
+        || plant.naming.en.toLowerCase().includes(query)
+        || plant.id.toLowerCase().includes(query);
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, librarySearch]);
+  const saveKitPlantIds = (nextIds: string[]) => {
+    setKitPlantIds(nextIds);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('small-farm:garden-kit-plants:v1', JSON.stringify(nextIds));
+    }
+  };
+  const addPlantToKit = (plantId: string) => {
+    if (kitPlantIds.includes(plantId)) return;
+    saveKitPlantIds([...kitPlantIds, plantId]);
+  };
+  const removePlantFromKit = (plantId: string) => {
+    const nextIds = kitPlantIds.filter(id => id !== plantId);
+    saveKitPlantIds(nextIds.length > 0 ? nextIds : defaultKitPlantIds);
+    if (activeToolId === plantId) {
+      onSelectPlant(plantId);
+    }
+  };
   const selectedPlant = plants.find(plant => plant.id === activeToolId);
   const selectedTile = tiles.find(tile => tile.id === activeTileId);
   const bumpSelection = () => setSelectionPulse((value) => value + 1);
@@ -283,7 +327,131 @@ export function PlannerToolbar({
           </div>
         </div>
 
-        <div className="mt-4 flex gap-1 overflow-x-auto pb-1">
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-amber-800">My Garden Kit</h3>
+            <div className="text-[10px] font-bold text-amber-700">{kitPlants.length} 个可种项目</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPlantLibrary(true)}
+            className="rounded-md border-2 border-green-900/15 bg-green-100 px-2 py-1 text-[10px] font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+          >
+            添加植物
+          </button>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {kitPlants.map(plant => (
+            <div key={plant.id} className="group relative">
+              <button
+                onClick={() => {
+                  bumpSelection();
+                  onSelectPlant(plant.id);
+                }}
+                className={`
+                  min-h-[72px] w-full rounded-lg border-2 p-2 text-center shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-all
+                  hover:-translate-y-0.5 active:translate-y-0
+                  ${activeToolId === plant.id
+                    ? 'border-amber-800 bg-[#ffe08a] ring-2 ring-amber-300'
+                    : 'border-amber-900/20 bg-[#fff8df] hover:border-amber-700 hover:bg-white'}
+                `}
+              >
+                <PlantToken plant={plant} />
+                <div className="mt-1 truncate text-xs font-bold text-amber-950">{plant.naming.zh}</div>
+                <div className="mt-0.5 text-[10px] font-medium text-amber-700">
+                  {plant.dimensions.grid_span_x}x{plant.dimensions.grid_span_y}
+                </div>
+              </button>
+              {kitPlants.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removePlantFromKit(plant.id)}
+                  className="absolute -right-1 -top-1 hidden h-5 w-5 rounded-full border border-amber-900/20 bg-white text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.14)] group-hover:block"
+                  title={`从工具箱移除${plant.naming.zh}`}
+                  aria-label={`从工具箱移除${plant.naming.zh}`}
+                >
+                  x
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {showPlantLibrary && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-emerald-950/28 px-4 backdrop-blur-[2px]">
+            <div className="max-h-[86vh] w-full max-w-2xl overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df] shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.24)]">
+              <div className="flex items-center justify-between gap-3 border-b-2 border-amber-900/10 bg-[#f4d58d]/70 px-4 py-3">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Plant Library</div>
+                  <div className="text-lg font-black text-amber-950">选择要加入工具箱的植物</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPlantLibrary(false)}
+                  className="h-8 w-8 rounded-md border border-amber-900/15 bg-white text-sm font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+                  aria-label="关闭植物库"
+                >
+                  x
+                </button>
+              </div>
+              <div className="border-b border-amber-900/10 p-3">
+                <input
+                  value={librarySearch}
+                  onChange={(event) => setLibrarySearch(event.target.value)}
+                  placeholder="搜索番茄、Basil、flower..."
+                  className="w-full rounded-md border border-amber-900/20 bg-white px-3 py-2 text-sm font-bold text-amber-950 outline-none focus:border-green-600"
+                />
+                <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
+                  {categoryTabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveCategory(tab.id)}
+                      className={`shrink-0 rounded-md border-2 px-2 py-1 text-xs font-bold shadow-[0_2px_0_rgba(120,72,24,0.16)] transition ${
+                        activeCategory === tab.id
+                          ? 'border-amber-800 bg-amber-700 text-white'
+                          : 'border-amber-900/20 bg-[#fff8df] text-amber-900 hover:bg-white'
+                      }`}
+                    >
+                      <span className="mr-1">{tab.icon}</span>{tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="max-h-[52vh] overflow-y-auto p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {libraryPlants.map(plant => {
+                    const inKit = kitPlantIds.includes(plant.id);
+                    return (
+                      <div key={plant.id} className="rounded-md border border-amber-900/10 bg-white/70 p-2">
+                        <div className="flex items-center gap-2">
+                          <PlantToken plant={plant} size="sm" />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-black text-amber-950">{plant.naming.zh}</div>
+                            <div className="truncate text-[10px] font-bold text-amber-700">{plant.naming.en} · {plant.dimensions.grid_span_x}x{plant.dimensions.grid_span_y}</div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={inKit}
+                            onClick={() => addPlantToKit(plant.id)}
+                            className="rounded-md border border-green-900/15 bg-green-100 px-2 py-1 text-[10px] font-black text-green-900 hover:bg-green-200 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
+                          >
+                            {inKit ? '已加入' : '加入'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 rounded-md border border-dashed border-amber-400 bg-amber-50 px-3 py-2 text-[10px] font-black leading-4 text-amber-900">
+                  自定义植物即将支持：后续可补充名称、占地、成熟天数、需水和轮作分组。
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 hidden gap-1 overflow-x-auto pb-1">
           {categoryTabs.map(tab => (
             <button
               key={tab.id}
@@ -299,8 +467,8 @@ export function PlannerToolbar({
           ))}
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {filteredPlants.map(plant => (
+        <div className="mt-3 hidden grid-cols-3 gap-2">
+          {libraryPlants.map(plant => (
             <button
               key={plant.id}
               onClick={() => {
