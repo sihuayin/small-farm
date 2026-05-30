@@ -4158,44 +4158,47 @@ export default function GardenCanvas({
         {showWelcome && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-emerald-950/24 px-4 backdrop-blur-[2px]">
             <div className="w-full max-w-md rounded-lg border-2 border-amber-950/20 bg-[#fff8df] p-4 shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.24)]">
-              <div className="text-[10px] font-black uppercase tracking-wider text-green-800">First Run</div>
-              <div className="mt-1 text-2xl font-black leading-tight text-amber-950">3 分钟体验一个会思考的菜园</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Small Farm</div>
+              <div className="mt-1 text-2xl font-black leading-tight text-amber-950">先试着规划一块小菜园</div>
               <div className="mt-2 text-xs font-bold leading-5 text-amber-800">
-                从示例菜园开始，按验收清单走完伴生冲突、天气任务、采收整理和下一季轮作推荐。
-              </div>
-              <div className="mt-3 rounded-md border border-amber-900/10 bg-white/70 p-2">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Tester Task</div>
-                <div className="mt-1 text-[10px] font-bold leading-4 text-amber-700">
-                  请按 3-Min Check 走完一遍。完成后告诉我们：哪里不清楚、哪里不可信、哪里让你愿意继续使用。
-                </div>
+                选择蔬菜、香草或花，先在规划器里试种一遍，再决定真实菜园怎么下手。
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-black text-green-900">
-                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">规则可解释</div>
-                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">任务可闭环</div>
-                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">下一季可规划</div>
+                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">智能摆放</div>
+                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">规则解释</div>
+                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">分享导出</div>
               </div>
               <button
                 type="button"
-                onClick={resetFirstRunExperience}
+                onClick={handleGenerateStarterPlan}
                 className="mt-4 w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-sm font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
               >
-                开始 3 分钟体验
+                快速生成我的菜园
               </button>
               <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={resetFirstRunExperience}
+                  className="rounded-md border border-amber-900/15 bg-white/80 px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
+                >
+                  体验示例菜园
+                </button>
                 <button
                   type="button"
                   onClick={startBlankExperience}
                   className="rounded-md border border-amber-900/15 bg-white/80 px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
                 >
-                  空白创建
+                  空白开始
                 </button>
+              </div>
+              <div className="mt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setShowWelcome(false);
                     setHasDismissedWelcome(true);
                   }}
-                  className="rounded-md border border-amber-900/15 bg-white/80 px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
+                  className="w-full rounded-md border border-amber-900/10 bg-white/55 px-3 py-1.5 text-xs font-black text-amber-800 hover:bg-amber-50"
                 >
                   继续当前菜园
                 </button>
