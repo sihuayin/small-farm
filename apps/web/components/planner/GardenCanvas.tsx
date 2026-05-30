@@ -668,7 +668,7 @@ export default function GardenCanvas({
   const [isEntityDragging, setIsEntityDragging] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showGuidedPath, setShowGuidedPath] = useState(false);
-  const [showFirstRunCheck, setShowFirstRunCheck] = useState(true);
+  const [showFirstRunCheck, setShowFirstRunCheck] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [hasDismissedWelcome, setHasDismissedWelcome] = useState(false);
   const [firstRunCompletedAt, setFirstRunCompletedAt] = useState<number | null>(null);
@@ -3495,118 +3495,158 @@ export default function GardenCanvas({
             <TileStateLegendItem color="bg-cyan-300" label="排水" />
           </div>
         </div>
-        <div className="absolute left-8 top-[190px] z-10 hidden w-64 overflow-hidden rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/86 shadow-[0_3px_0_rgba(120,72,24,0.1),0_12px_24px_rgba(61,40,20,0.12)] backdrop-blur md:block">
-          <button
-            type="button"
-            onClick={() => setShowFirstRunCheck(value => !value)}
-            className="flex w-full items-center justify-between bg-[#f4d58d]/80 px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-amber-900"
-          >
-            <span>3-Min Check</span>
-            <span>{firstRunDoneCount}/{firstRunCheckSteps.length}</span>
-          </button>
-          {showFirstRunCheck && (
-            <div className="p-3">
-              <div className="h-2 overflow-hidden rounded-full bg-amber-100">
-                <div
-                  className="h-full rounded-full bg-green-500"
-                  style={{ width: `${Math.round((firstRunDoneCount / firstRunCheckSteps.length) * 100)}%` }}
-                />
+        <div className="absolute left-8 top-[190px] z-10 hidden w-64 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/88 p-2 shadow-[0_3px_0_rgba(120,72,24,0.1),0_12px_24px_rgba(61,40,20,0.12)] backdrop-blur md:block">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-wider text-amber-800">3-Min Check</div>
+              <div className="mt-0.5 text-xs font-black text-amber-950">
+                {firstRunCurrentStep ? firstRunCurrentStep.label : '体验路径已完成'}
               </div>
-              <div className={`mt-2 rounded-md border p-2 ${
-                firstRunComplete
-                  ? 'border-green-300 bg-green-50'
-                  : 'border-amber-900/10 bg-[#fff8df]/80'
-              }`}>
-                <div className="text-[10px] font-black text-amber-950">
-                  {firstRunCurrentStep ? `验收：${firstRunCurrentStep.label}` : '验收完成：可以邀请体验用户'}
-                </div>
-                <div className="mt-0.5 text-[9px] font-bold leading-4 text-amber-700">
-                  {firstRunCurrentStep
-                    ? firstRunCurrentStep.detail
-                    : '核心路径已经覆盖规则解释、任务闭环、采收、地块整理和下一季推荐。'}
-                </div>
-              </div>
-              {firstRunCompletedAt && (
-                <div className="mt-2 rounded-md border border-green-300 bg-white/80 px-2 py-1 text-[10px] font-black leading-4 text-green-900">
-                  体验路径已跑通：规则、任务、采收、整理和下一季推荐都能被用户理解并操作。
-                </div>
-              )}
-              {firstRunFocus && !firstRunComplete && (
-                <div className="mt-2 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-[10px] font-black leading-4 text-sky-950">
-                  当前看这里：{firstRunFocus.label}。{firstRunFocus.hint}
-                </div>
-              )}
-              <div className="mt-2 space-y-1">
-                {firstRunCheckSteps.map((step, index) => (
-                  <FirstRunCheckItem
-                    key={step.id}
-                    index={index}
-                    step={step}
-                    active={firstRunCurrentStep?.id === step.id}
-                    onClick={() => handleFirstRunStep(step.id)}
-                  />
-                ))}
+            </div>
+            <div className="rounded-full border border-green-900/10 bg-green-50 px-2 py-0.5 text-[10px] font-black text-green-800">
+              {firstRunDoneCount}/{firstRunCheckSteps.length}
+            </div>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-amber-100">
+            <div
+              className="h-full rounded-full bg-green-500"
+              style={{ width: `${Math.round((firstRunDoneCount / firstRunCheckSteps.length) * 100)}%` }}
+            />
+          </div>
+          <div className="mt-2 max-h-8 overflow-hidden text-[10px] font-bold leading-4 text-amber-700">
+            {firstRunCurrentStep
+              ? firstRunCurrentStep.detail
+              : '规则解释、任务闭环、采收整理和下一季推荐都已跑通。'}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleFirstRunStep()}
+              className="rounded-md border border-green-900/15 bg-green-100 px-2 py-1.5 text-[10px] font-black text-green-900 shadow-[0_1px_0_rgba(22,101,52,0.1)] hover:bg-green-200"
+            >
+              {firstRunCurrentStep ? '执行当前' : '看结果'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFirstRunCheck(true)}
+              className="rounded-md border border-amber-900/15 bg-white/80 px-2 py-1.5 text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
+            >
+              详情
+            </button>
+          </div>
+        </div>
+        {showFirstRunCheck && (
+          <div className="absolute left-8 top-[290px] z-20 hidden max-h-[calc(100%-318px)] w-72 overflow-y-auto rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/94 p-3 shadow-[0_4px_0_rgba(120,72,24,0.12),0_18px_30px_rgba(61,40,20,0.18)] backdrop-blur md:block">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Experience Guide</div>
+                <div className="mt-0.5 text-sm font-black text-amber-950">体验验收清单</div>
               </div>
               <button
                 type="button"
-                onClick={() => handleFirstRunStep()}
-                className="mt-2 w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+                onClick={() => setShowFirstRunCheck(false)}
+                className="h-7 w-7 rounded-md border border-amber-900/15 bg-white text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
+                aria-label="关闭体验导览"
               >
-                {firstRunCurrentStep ? '执行当前验收' : '查看验收结果'}
+                x
+              </button>
+            </div>
+            <div className={`mt-2 rounded-md border p-2 ${
+              firstRunComplete
+                ? 'border-green-300 bg-green-50'
+                : 'border-amber-900/10 bg-[#fff8df]/80'
+            }`}>
+              <div className="text-[10px] font-black text-amber-950">
+                {firstRunCurrentStep ? `当前：${firstRunCurrentStep.label}` : '完成：可以邀请体验用户'}
+              </div>
+              <div className="mt-0.5 text-[9px] font-bold leading-4 text-amber-700">
+                {firstRunCurrentStep
+                  ? firstRunCurrentStep.detail
+                  : '核心路径已经覆盖规则解释、任务闭环、采收、地块整理和下一季推荐。'}
+              </div>
+            </div>
+            {firstRunCompletedAt && (
+              <div className="mt-2 rounded-md border border-green-300 bg-white/80 px-2 py-1 text-[10px] font-black leading-4 text-green-900">
+                体验路径已跑通：规则、任务、采收、整理和下一季推荐都能被用户理解并操作。
+              </div>
+            )}
+            {firstRunFocus && !firstRunComplete && (
+              <div className="mt-2 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-[10px] font-black leading-4 text-sky-950">
+                当前看这里：{firstRunFocus.label}。{firstRunFocus.hint}
+              </div>
+            )}
+            <div className="mt-2 space-y-1">
+              {firstRunCheckSteps.map((step, index) => (
+                <FirstRunCheckItem
+                  key={step.id}
+                  index={index}
+                  step={step}
+                  active={firstRunCurrentStep?.id === step.id}
+                  onClick={() => handleFirstRunStep(step.id)}
+                />
+              ))}
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleFirstRunStep()}
+                className="rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+              >
+                {firstRunCurrentStep ? '执行当前' : '查看结果'}
               </button>
               <button
                 type="button"
                 onClick={resetFirstRunExperience}
-                className="mt-2 w-full rounded-md border border-amber-900/15 bg-white/75 px-3 py-1.5 text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
+                className="rounded-md border border-amber-900/15 bg-white/75 px-3 py-1.5 text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
               >
-                重置验收场景
+                重置场景
               </button>
-              <div className="mt-3 rounded-md border border-amber-900/10 bg-white/70 p-2">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Tester Brief</div>
-                <div className="mt-1 space-y-1 text-[9px] font-bold leading-4 text-amber-700">
-                  <div>目标：3 分钟内看懂这是否能帮你规划真实菜园。</div>
-                  <div>请完成：按清单走完，并记录哪里迷路、哪里不可信。</div>
-                  <div>反馈重点：规则是否清楚、操作是否顺、是否愿意下次再用。</div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowGuidedPath(value => !value)}
-                className="mt-2 flex w-full items-center justify-between rounded-md border border-amber-900/10 bg-white/65 px-2 py-1.5 text-left text-[10px] font-black text-amber-900 hover:bg-amber-50"
-              >
-                <span>高级路径</span>
-                <span>{guidedPathSteps.filter(step => step.done).length}/{guidedPathSteps.length}</span>
-              </button>
-              {showGuidedPath && (
-                <div className="mt-2 rounded-md border border-amber-900/10 bg-white/65 p-2">
-                  <div className="text-[10px] font-black text-amber-950">{guidedPathCopy.title}</div>
-                  <div className="mt-1 text-[9px] font-bold leading-4 text-amber-700">{guidedPathCopy.detail}</div>
-                  <div className="mt-2 space-y-1">
-                    {guidedPathSteps.map((step, index) => (
-                      <div key={step.id} className="flex items-center gap-2 text-[9px] font-black text-amber-900">
-                        <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[8px] ${
-                          step.done
-                            ? 'border-green-300 bg-green-100 text-green-800'
-                            : 'border-amber-300 bg-amber-100 text-amber-800'
-                        }`}>
-                          {step.done ? '✓' : index + 1}
-                        </span>
-                        <span>{step.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleGuidedNext}
-                    className="mt-2 w-full rounded-md border border-green-900/15 bg-green-100 px-2 py-1 text-[10px] font-black text-green-900 hover:bg-green-200"
-                  >
-                    {guidedPathComplete ? '查看评分' : '下一步'}
-                  </button>
-                </div>
-              )}
             </div>
-          )}
-        </div>
+            <div className="mt-3 rounded-md border border-amber-900/10 bg-white/70 p-2">
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Tester Brief</div>
+              <div className="mt-1 space-y-1 text-[9px] font-bold leading-4 text-amber-700">
+                <div>目标：3 分钟内看懂这是否能帮你规划真实菜园。</div>
+                <div>请完成：按清单走完，并记录哪里迷路、哪里不可信。</div>
+                <div>反馈重点：规则是否清楚、操作是否顺、是否愿意下次再用。</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowGuidedPath(value => !value)}
+              className="mt-2 flex w-full items-center justify-between rounded-md border border-amber-900/10 bg-white/65 px-2 py-1.5 text-left text-[10px] font-black text-amber-900 hover:bg-amber-50"
+            >
+              <span>高级路径</span>
+              <span>{guidedPathSteps.filter(step => step.done).length}/{guidedPathSteps.length}</span>
+            </button>
+            {showGuidedPath && (
+              <div className="mt-2 rounded-md border border-amber-900/10 bg-white/65 p-2">
+                <div className="text-[10px] font-black text-amber-950">{guidedPathCopy.title}</div>
+                <div className="mt-1 text-[9px] font-bold leading-4 text-amber-700">{guidedPathCopy.detail}</div>
+                <div className="mt-2 space-y-1">
+                  {guidedPathSteps.map((step, index) => (
+                    <div key={step.id} className="flex items-center gap-2 text-[9px] font-black text-amber-900">
+                      <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[8px] ${
+                        step.done
+                          ? 'border-green-300 bg-green-100 text-green-800'
+                          : 'border-amber-300 bg-amber-100 text-amber-800'
+                      }`}>
+                        {step.done ? '✓' : index + 1}
+                      </span>
+                      <span>{step.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGuidedNext}
+                  className="mt-2 w-full rounded-md border border-green-900/15 bg-green-100 px-2 py-1 text-[10px] font-black text-green-900 hover:bg-green-200"
+                >
+                  {guidedPathComplete ? '查看评分' : '下一步'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-1 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:right-80 md:top-4">
           <button
             type="button"
