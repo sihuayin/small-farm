@@ -476,6 +476,191 @@ function getGuidedPathCopy(stepId: string) {
   return copy[stepId] || copy.complete;
 }
 
+interface ShareCardStats {
+  score: number;
+  plantCount: number;
+  speciesCount: number;
+  taskCount: number;
+  harvestCount: number;
+  activityCount: number;
+  seasonLabel: string;
+  plantNames: string[];
+}
+
+function getShareGardenScore(stats: Omit<ShareCardStats, 'score' | 'seasonLabel' | 'plantNames'>) {
+  const taskPressure = Math.min(30, stats.taskCount * 5);
+  const diversityBonus = Math.min(10, Math.max(0, stats.speciesCount - 1) * 2);
+  const activityMomentum = Math.min(12, stats.activityCount * 3);
+  const harvestMomentum = Math.min(12, stats.harvestCount * 4);
+  const plantedBonus = stats.plantCount > 0 ? 8 : 0;
+  return Math.max(0, Math.min(100, Math.round(64 - taskPressure + diversityBonus + activityMomentum + harvestMomentum + plantedBonus)));
+}
+
+async function createGardenShareCard(stageDataUrl: string, title: string, stats: ShareCardStats) {
+  const stageImage = await loadCanvasImage(stageDataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 1600;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return stageDataUrl;
+
+  ctx.fillStyle = '#f7e8c8';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const sky = ctx.createLinearGradient(0, 0, 0, 760);
+  sky.addColorStop(0, '#9fd8ee');
+  sky.addColorStop(0.55, '#b8dfbf');
+  sky.addColorStop(1, '#f7e8c8');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, canvas.width, 760);
+
+  ctx.fillStyle = 'rgba(255, 248, 223, 0.94)';
+  drawRoundRect(ctx, 64, 64, 1072, 1472, 30);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120, 72, 24, 0.22)';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  ctx.fillStyle = '#2f6f3d';
+  ctx.font = '900 34px Arial, sans-serif';
+  ctx.fillText('SMALL FARM PLANNER', 104, 130);
+  ctx.fillStyle = '#3d2814';
+  ctx.font = '900 58px Arial, sans-serif';
+  drawWrappedText(ctx, title, 104, 210, 840, 64, 2);
+  ctx.fillStyle = '#7c4a18';
+  ctx.font = '800 28px Arial, sans-serif';
+  const plantText = stats.plantNames.length > 0 ? stats.plantNames.join('、') : '先规划一块小菜园';
+  drawWrappedText(ctx, `我的${stats.seasonLabel}小菜园计划：${plantText}`, 104, 315, 900, 38, 2);
+
+  drawScoreBadge(ctx, 896, 104, stats.score);
+
+  const imageBox = { x: 104, y: 405, width: 992, height: 720 };
+  ctx.fillStyle = '#fff8df';
+  drawRoundRect(ctx, imageBox.x, imageBox.y, imageBox.width, imageBox.height, 24);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120, 72, 24, 0.18)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  const imageScale = Math.min((imageBox.width - 36) / stageImage.width, (imageBox.height - 36) / stageImage.height);
+  const drawWidth = stageImage.width * imageScale;
+  const drawHeight = stageImage.height * imageScale;
+  ctx.drawImage(
+    stageImage,
+    imageBox.x + (imageBox.width - drawWidth) / 2,
+    imageBox.y + (imageBox.height - drawHeight) / 2,
+    drawWidth,
+    drawHeight
+  );
+
+  const metrics = [
+    { label: '作物', value: String(stats.plantCount), tone: '#2f9e44' },
+    { label: '品种', value: String(stats.speciesCount), tone: '#b7791f' },
+    { label: '今日任务', value: String(stats.taskCount), tone: '#0284c7' },
+    { label: '本季采收', value: String(stats.harvestCount), tone: '#16a34a' }
+  ];
+  metrics.forEach((metric, index) => {
+    const x = 104 + index * 248;
+    drawMetricCard(ctx, x, 1165, 220, 150, metric.value, metric.label, metric.tone);
+  });
+
+  ctx.fillStyle = '#3d2814';
+  ctx.font = '900 34px Arial, sans-serif';
+  ctx.fillText(getShareRecommendation(stats), 104, 1392);
+  ctx.fillStyle = '#7c4a18';
+  ctx.font = '800 24px Arial, sans-serif';
+  drawWrappedText(ctx, '先在规划器里试种一遍，再把真实菜园种下去。', 104, 1440, 780, 34, 2);
+  ctx.fillStyle = '#2f6f3d';
+  ctx.font = '900 24px Arial, sans-serif';
+  ctx.fillText('small-farm planner', 104, 1504);
+
+  return canvas.toDataURL('image/png', 1);
+}
+
+function loadCanvasImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines: number) {
+  const chars = Array.from(text);
+  let line = '';
+  let lines = 0;
+  chars.forEach((char, index) => {
+    const testLine = line + char;
+    const isLast = index === chars.length - 1;
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      ctx.fillText(lines === maxLines - 1 ? `${line.slice(0, Math.max(0, line.length - 1))}…` : line, x, y + lines * lineHeight);
+      lines += 1;
+      line = char;
+      return;
+    }
+    line = testLine;
+    if (isLast && lines < maxLines) {
+      ctx.fillText(line, x, y + lines * lineHeight);
+    }
+  });
+}
+
+function drawScoreBadge(ctx: CanvasRenderingContext2D, x: number, y: number, score: number) {
+  ctx.fillStyle = score >= 80 ? '#dcfce7' : score >= 60 ? '#fef3c7' : '#fee2e2';
+  drawRoundRect(ctx, x, y, 176, 176, 28);
+  ctx.fill();
+  ctx.strokeStyle = score >= 80 ? '#16a34a' : score >= 60 ? '#d97706' : '#dc2626';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.fillStyle = '#3d2814';
+  ctx.font = '900 26px Arial, sans-serif';
+  ctx.fillText('Garden', x + 36, y + 48);
+  ctx.fillText('Score', x + 44, y + 78);
+  ctx.font = '900 64px Arial, sans-serif';
+  ctx.fillText(String(score), x + 42, y + 142);
+}
+
+function drawMetricCard(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, value: string, label: string, color: string) {
+  ctx.fillStyle = '#fff8df';
+  drawRoundRect(ctx, x, y, width, height, 20);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120, 72, 24, 0.16)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.font = '900 54px Arial, sans-serif';
+  ctx.fillText(value, x + 28, y + 72);
+  ctx.fillStyle = '#7c4a18';
+  ctx.font = '900 24px Arial, sans-serif';
+  ctx.fillText(label, x + 28, y + 118);
+}
+
+function getShareRecommendation(stats: ShareCardStats) {
+  if (stats.score >= 82) return '这块菜园已经很适合开种';
+  if (stats.taskCount > 0) return '先处理今日任务，菜园状态会更稳';
+  if (stats.plantCount === 0) return '从几株蔬菜、香草或花开始规划';
+  return '这是一版可以继续优化的菜园计划';
+}
+
+function sanitizeShareFileName(name: string) {
+  return name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'small-farm';
+}
+
 function placementScoreLabel(result: SynergyResult) {
   if (result.recommendation === 'excellent') return '很适合';
   if (result.recommendation === 'ok') return '适合';
@@ -712,6 +897,7 @@ export default function GardenCanvas({
     label: string;
   } | null>(null);
   const [starterSummary, setStarterSummary] = useState<{ placed: number; skipped: string[] } | null>(null);
+  const [shareExportMessage, setShareExportMessage] = useState<string | null>(null);
 
   // ==================== Store ====================
   const {
@@ -2881,6 +3067,24 @@ export default function GardenCanvas({
   const surfaceCount = Object.keys(surfaceIndex).length;
   const seasonalActivityCount = activityRecords.filter(record => record.year === planYear && record.season === planSeason).length;
   const seasonalHarvestCount = harvestRecords.filter(record => record.year === planYear && record.season === planSeason).length;
+  const shareCardStats = useMemo<ShareCardStats>(() => {
+    const activePlants = Object.values(entities).filter((entity): entity is Extract<GardenEntity, { type: 'plant' }> => entity.type === 'plant');
+    const plantNames = Array.from(new Set(activePlants.map(entity => entity.plant.naming.zh))).slice(0, 4);
+    const baseStats = {
+      plantCount: activePlants.length,
+      speciesCount: new Set(activePlants.map(entity => entity.plantId)).size,
+      taskCount: currentGardenTasks.length,
+      harvestCount: seasonalHarvestCount,
+      activityCount: seasonalActivityCount
+    };
+
+    return {
+      ...baseStats,
+      score: getShareGardenScore(baseStats),
+      seasonLabel: seasonLabel(planSeason),
+      plantNames
+    };
+  }, [currentGardenTasks.length, entities, planSeason, seasonalActivityCount, seasonalHarvestCount]);
   const firstRunHasRules = completedDemoTourItems.has('companion') || completedDemoTourItems.has('conflict') || (plantCount > 0 && showHeatmap);
   const firstRunHasTaskFocus = seasonalActivityCount > 0 || completedDemoTourItems.has('task');
   const firstRunCheckSteps = useMemo<FirstRunCheckStep[]>(() => ([
@@ -3034,7 +3238,7 @@ export default function GardenCanvas({
     });
     setStarterSummary(result);
   }, [generateStarterPlan, getGardenKitPlantIds, selectEntity, setActiveTile, setActiveTool]);
-  const handleShareGardenImage = useCallback(() => {
+  const handleShareGardenImage = useCallback(async () => {
     const stage = stageRef.current;
     if (!stage) return;
 
@@ -3043,11 +3247,23 @@ export default function GardenCanvas({
       mimeType: 'image/png',
       quality: 1
     });
+    const shareDataUrl = await createGardenShareCard(
+      dataUrl,
+      `${planName} · ${planYear} ${seasonLabel(planSeason)}`,
+      shareCardStats
+    );
     const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `${planName.replace(/[\\/:*?"<>|]/g, '-').trim() || 'small-farm'}-garden.png`;
+    link.href = shareDataUrl;
+    link.download = `${sanitizeShareFileName(planName)}-share.png`;
     link.click();
-  }, [planName]);
+    setActionFeedback({
+      x: Math.max(1, Math.floor(effectiveGridWidth / 2)),
+      y: Math.max(1, Math.floor(effectiveGridHeight / 2)),
+      status: 'ok',
+      label: '分享图'
+    });
+    setShareExportMessage('已生成分享图：包含菜园标题、Garden Score、作物数量和任务状态。');
+  }, [effectiveGridHeight, effectiveGridWidth, planName, planSeason, planYear, shareCardStats]);
   const handleFocusPreviewHarvest = useCallback(() => {
     if (!growthPreviewFirstHarvestId) return;
     selectEntity(growthPreviewFirstHarvestId);
@@ -3481,6 +3697,18 @@ export default function GardenCanvas({
               type="button"
               onClick={() => setStarterSummary(null)}
               className="ml-2 rounded border border-green-900/15 bg-white/70 px-1.5 py-0.5 text-[9px] font-black text-green-900"
+            >
+              关闭
+            </button>
+          </div>
+        )}
+        {shareExportMessage && (
+          <div className="absolute left-3 right-3 top-[160px] z-10 rounded-lg border-2 border-sky-900/15 bg-sky-50/94 px-3 py-2 text-[10px] font-black leading-4 text-sky-950 shadow-[0_3px_0_rgba(14,116,144,0.12)] backdrop-blur md:left-[292px] md:right-auto md:top-[220px] md:w-72">
+            {shareExportMessage}
+            <button
+              type="button"
+              onClick={() => setShareExportMessage(null)}
+              className="ml-2 rounded border border-sky-900/15 bg-white/70 px-1.5 py-0.5 text-[9px] font-black text-sky-900"
             >
               关闭
             </button>
