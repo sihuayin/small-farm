@@ -27,6 +27,7 @@ interface GardenSettingsPanelProps {
   onUndo: () => void;
   onRedo: () => void;
   onSave: () => void;
+  onLoad: () => void;
   onExportPlan: () => GardenPlan;
   onImportPlan: (plan: GardenPlan) => boolean;
 }
@@ -55,6 +56,7 @@ export function GardenSettingsPanel({
   onUndo,
   onRedo,
   onSave,
+  onLoad,
   onExportPlan,
   onImportPlan
 }: GardenSettingsPanelProps) {
@@ -326,12 +328,15 @@ export function GardenSettingsPanel({
         {climateMessage && <div className="mt-2 text-xs font-bold text-amber-700">{climateMessage}</div>}
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-4 gap-2">
         <button onClick={onCreatePlan} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.14)] hover:bg-amber-50">
           新建
         </button>
         <button onClick={onDuplicatePlan} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.14)] hover:bg-amber-50">
           复制
+        </button>
+        <button onClick={onLoad} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.14)] hover:bg-amber-50">
+          读取
         </button>
         <button onClick={onSave} className="rounded-md border-2 border-green-800/20 bg-green-50 px-2 py-1.5 text-xs font-bold text-green-800 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-100">
           保存

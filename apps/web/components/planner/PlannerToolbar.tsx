@@ -1,7 +1,8 @@
 import { plants, tiles, type TileType } from './usePlannerStore';
 import { GardenSettingsPanel } from './GardenSettingsPanel';
 import type { ClimateProfile, GardenPlan, GardenPlanSummary, PlanSeason } from './usePlannerStore';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 function PlantToken({ plant, size = 'md' }: { plant: (typeof plants)[number]; size?: 'sm' | 'md' | 'lg' }) {
   const sizeClass = size === 'lg' ? 'h-14 w-14' : size === 'sm' ? 'h-9 w-9' : 'h-12 w-12';
@@ -246,6 +247,7 @@ export function PlannerToolbar({
     return defaultKitPlantIds;
   });
   const [showPlantLibrary, setShowPlantLibrary] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [librarySearch, setLibrarySearch] = useState('');
   const [selectionPulse, setSelectionPulse] = useState(0);
@@ -291,6 +293,19 @@ export function PlannerToolbar({
   const selectedTile = tiles.find(tile => tile.id === activeTileId);
   const bumpSelection = () => setSelectionPulse((value) => value + 1);
 
+  useEffect(() => {
+    if (!showSettingsPanel) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSettingsPanel(false);
+      }
+    };
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [showSettingsPanel]);
+
   return (
     <div className="z-20 h-[176px] w-full shrink-0 overflow-y-auto border-b border-amber-900/20 bg-[#f7e8c8] shadow-[inset_0_-6px_0_rgba(120,72,24,0.08)] md:h-auto md:w-72 md:border-b-0 md:border-r md:shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
       <div className="p-3 md:p-4">
@@ -300,8 +315,12 @@ export function PlannerToolbar({
               <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Garden Kit</div>
               <h2 className="text-base font-black text-amber-950 md:text-lg">小农场背包</h2>
             </div>
-            <button onClick={onLoad} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.2)] hover:bg-amber-50">
-            读取
+            <button
+              type="button"
+              onClick={() => setShowSettingsPanel(true)}
+              className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.2)] hover:bg-amber-50"
+            >
+              设置
             </button>
           </div>
         </div>
@@ -547,35 +566,70 @@ export function PlannerToolbar({
         )}
       </div>
 
-      <div className="hidden md:block">
-        <GardenSettingsPanel
-          planId={planId}
-          planName={planName}
-          gridWidth={gridWidth}
-          gridHeight={gridHeight}
-          cellSizeFeet={cellSizeFeet}
-          planYear={planYear}
-          planSeason={planSeason}
-          climateProfile={climateProfile}
-          planSummaries={planSummaries}
-          hasUnsavedChanges={hasUnsavedChanges}
-          lastSavedAt={lastSavedAt}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onRename={onRenamePlan}
-          onSetPlanTime={onSetPlanTime}
-          onUpdateClimateProfile={onUpdateClimateProfile}
-          onResize={onResizeGarden}
-          onCreatePlan={onCreatePlan}
-          onDuplicatePlan={onDuplicatePlan}
-          onSwitchPlan={onSwitchPlan}
-          onUndo={onUndo}
-          onRedo={onRedo}
-          onSave={onSave}
-          onExportPlan={onExportPlan}
-          onImportPlan={onImportPlan}
-        />
-      </div>
+      {showSettingsPanel && typeof document !== 'undefined' && createPortal((
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-emerald-950/28 px-3 py-5 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="planner-settings-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowSettingsPanel(false);
+            }
+          }}
+        >
+          <div
+            className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df] shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.24)]"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b-2 border-amber-900/10 bg-[#f4d58d]/80 px-4 py-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Settings</div>
+                <div id="planner-settings-title" className="text-lg font-black text-amber-950">菜园设置与数据</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSettingsPanel(false)}
+                onMouseDown={() => setShowSettingsPanel(false)}
+                className="h-8 w-8 rounded-md border border-amber-900/15 bg-white text-sm font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+                aria-label="关闭设置"
+              >
+                x
+              </button>
+            </div>
+            <div className="overflow-y-auto">
+              <GardenSettingsPanel
+                planId={planId}
+                planName={planName}
+                gridWidth={gridWidth}
+                gridHeight={gridHeight}
+                cellSizeFeet={cellSizeFeet}
+                planYear={planYear}
+                planSeason={planSeason}
+                climateProfile={climateProfile}
+                planSummaries={planSummaries}
+                hasUnsavedChanges={hasUnsavedChanges}
+                lastSavedAt={lastSavedAt}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onRename={onRenamePlan}
+                onSetPlanTime={onSetPlanTime}
+                onUpdateClimateProfile={onUpdateClimateProfile}
+                onResize={onResizeGarden}
+                onCreatePlan={onCreatePlan}
+                onDuplicatePlan={onDuplicatePlan}
+                onSwitchPlan={onSwitchPlan}
+                onUndo={onUndo}
+                onRedo={onRedo}
+                onSave={onSave}
+                onLoad={onLoad}
+                onExportPlan={onExportPlan}
+                onImportPlan={onImportPlan}
+              />
+            </div>
+          </div>
+        </div>
+      ), document.body)}
     </div>
   );
 }
