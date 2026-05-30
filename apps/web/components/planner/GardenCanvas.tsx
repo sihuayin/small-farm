@@ -2930,6 +2930,48 @@ export default function GardenCanvas({
     addEffect(status.gridX, status.gridY, 'tile');
     setRequestedInspectorTab('tasks');
   }, [addEffect, resolveCleanupTile]);
+  const handleResolveTileTask = useCallback((status: TileStatusInfo) => {
+    const taskId = status.kind === 'water'
+      ? 'water'
+      : status.kind === 'drainage'
+        ? 'drainage'
+        : status.kind === 'cover'
+          ? 'cover'
+          : null;
+    if (!taskId) return;
+
+    const target = Object.values(entities).find(entity => (
+      entity.type === 'plant'
+        && status.gridX >= entity.originX
+        && status.gridX < entity.originX + entity.spanX
+        && status.gridY >= entity.originY
+        && status.gridY < entity.originY + entity.spanY
+    ));
+    if (!target || target.type !== 'plant') return;
+
+    const completed = completePlantTask(target.id, taskId, {
+      note: `Tile action: ${status.label}`
+    } satisfies ActivityInput);
+    if (!completed) return;
+
+    setSelectedTileStatus({
+      kind: 'idle',
+      gridX: status.gridX,
+      gridY: status.gridY,
+      label: '任务已完成',
+      detail: `${status.label}已经处理，地块状态已刷新。`,
+      recommendation: '如果没有其他待办，这里不会再显示操作按钮。',
+      tone: 'green'
+    });
+    setActionFeedback({
+      x: status.gridX,
+      y: status.gridY,
+      status: 'ok',
+      label: taskId === 'water' ? 'WATER' : taskId === 'drainage' ? 'DRAIN' : 'COVER'
+    });
+    addEffect(status.gridX, status.gridY, 'tile');
+    setRequestedInspectorTab('tasks');
+  }, [addEffect, completePlantTask, entities]);
   const handleSelectRecommendedPlant = useCallback((plantId: string) => {
     setActiveTool(plantId);
     setShowHeatmap(true);
@@ -3627,6 +3669,7 @@ export default function GardenCanvas({
           placementInsight={placementInsight}
           selectedTileStatus={selectedTileStatus}
           onResolveTileStatus={handleResolveTileStatus}
+          onResolveTileTask={handleResolveTileTask}
           requestedTab={requestedInspectorTab}
           activeLayerLabel={heatmapLayerLabel}
           activeScoreLabel={heatmapLegend.scoreLabel}

@@ -39,6 +39,7 @@ interface PlannerInspectorProps {
   placementInsight: PlacementInsight | null;
   selectedTileStatus: TileStatusInfo | null;
   onResolveTileStatus: (status: TileStatusInfo) => void;
+  onResolveTileTask: (status: TileStatusInfo) => void;
   requestedTab: InspectorTab | null;
   activeLayerLabel: string;
   activeScoreLabel: string;
@@ -72,6 +73,7 @@ export function PlannerInspector({
   placementInsight,
   selectedTileStatus,
   onResolveTileStatus,
+  onResolveTileTask,
   requestedTab,
   activeLayerLabel,
   activeScoreLabel,
@@ -465,6 +467,7 @@ export function PlannerInspector({
               status={selectedTileStatus}
               rotationSuggestions={getTileRotationSuggestions(selectedTileStatus, plantingHistory)}
               onResolve={onResolveTileStatus}
+              onResolveTask={onResolveTileTask}
               onSelectPlant={onSelectRecommendedPlant}
               highlight={focusCue?.area === 'tasks'}
             />
@@ -813,20 +816,16 @@ export function PlannerInspector({
                   修复这项采收窗口：记录产量后，地块会进入待整理状态。
                 </div>
               )}
-              <button
-                type="button"
-                disabled={Boolean(selectedTaskDone)}
-                onClick={handleCompleteSelectedTask}
-                className={`mt-2 w-full rounded-md border-2 px-3 py-1.5 text-xs font-black shadow-[0_2px_0_rgba(22,101,52,0.12)] disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500 disabled:shadow-none ${
-                  isHarvestRepairFocus
-                    ? 'border-green-500 bg-green-100 text-green-950 hover:bg-green-200'
-                    : isTaskRepairFocus
-                    ? 'border-sky-400 bg-sky-100 text-sky-950 hover:bg-sky-200'
-                    : 'border-green-900/15 bg-green-100 text-green-900 hover:bg-green-200'
-                }`}
-              >
-                {selectedTaskDone ? '今日已完成' : selectedActionTask?.id === 'harvest' ? (isHarvestRepairFocus ? '记录采收并刷新 Score' : '完成采收') : isTaskRepairFocus ? '完成并刷新 Score' : '完成任务'}
-              </button>
+              {!selectedTaskDone && selectedActionTask && (
+                <button
+                  type="button"
+                  onClick={handleCompleteSelectedTask}
+                  className={`mt-3 flex w-full items-center justify-center gap-2 rounded-md border-2 px-3 py-2.5 text-sm font-black shadow-[0_3px_0_rgba(22,101,52,0.14)] ${primaryActionClassName(selectedActionTask.id, isTaskRepairFocus || isHarvestRepairFocus)}`}
+                >
+                  <span className="text-base leading-none">{primaryActionIcon(selectedActionTask.id)}</span>
+                  <span>{primaryActionLabel(selectedActionTask.id, isTaskRepairFocus, isHarvestRepairFocus)}</span>
+                </button>
+              )}
             </div>
           </div>
           <ActivityPanel
@@ -1217,15 +1216,18 @@ function TileStatusPanel({
   status,
   rotationSuggestions,
   onResolve,
+  onResolveTask,
   onSelectPlant,
   highlight
 }: {
   status: TileStatusInfo;
   rotationSuggestions: Array<{ group: string; label: string; examples: Array<{ id: string; name: string }>; reason: string }>;
   onResolve: (status: TileStatusInfo) => void;
+  onResolveTask: (status: TileStatusInfo) => void;
   onSelectPlant: (plantId: string) => void;
   highlight?: boolean;
 }) {
+  const tileAction = getTilePrimaryAction(status);
   return (
     <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(highlight)}`}>
       <div className="flex items-center justify-between">
@@ -1284,13 +1286,14 @@ function TileStatusPanel({
           </div>
         </div>
       )}
-      {status.kind === 'cleanup' && (
+      {tileAction && (
         <button
           type="button"
-          onClick={() => onResolve(status)}
-          className="mt-3 w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+          onClick={() => status.kind === 'cleanup' ? onResolve(status) : onResolveTask(status)}
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-md border-2 px-3 py-2.5 text-sm font-black shadow-[0_3px_0_rgba(22,101,52,0.14)] ${tileAction.className}`}
         >
-          标记已整理
+          <span className="text-base leading-none">{tileAction.icon}</span>
+          <span>{tileAction.label}</span>
         </button>
       )}
     </div>
@@ -1642,6 +1645,69 @@ function focusCueClassName(active?: boolean) {
   return active
     ? 'bg-sky-50/70 shadow-[inset_3px_0_0_rgba(14,165,233,0.75),0_0_0_1px_rgba(125,211,252,0.8)]'
     : '';
+}
+
+function primaryActionLabel(taskId: NonNullable<ReturnType<typeof getPlantGrowthStatus>>['nextTask']['id'], isTaskRepairFocus: boolean, isHarvestRepairFocus: boolean) {
+  if (taskId === 'harvest') return isHarvestRepairFocus ? '记录采收并刷新 Score' : '记录采收';
+  if (isTaskRepairFocus) return '完成并刷新 Score';
+  if (taskId === 'water') return '浇水';
+  if (taskId === 'cover') return '覆盖保温';
+  if (taskId === 'drainage') return '处理排水';
+  if (taskId === 'inspect') return '巡检';
+  if (taskId === 'protect') return '护苗';
+  if (taskId === 'maintain') return '施肥 / 维护';
+  return '完成操作';
+}
+
+function primaryActionIcon(taskId: NonNullable<ReturnType<typeof getPlantGrowthStatus>>['nextTask']['id']) {
+  if (taskId === 'harvest') return '收';
+  if (taskId === 'water') return '~';
+  if (taskId === 'cover') return '^';
+  if (taskId === 'drainage') return 'D';
+  if (taskId === 'inspect') return '!';
+  if (taskId === 'protect') return '+';
+  if (taskId === 'maintain') return '*';
+  return '✓';
+}
+
+function primaryActionClassName(taskId: NonNullable<ReturnType<typeof getPlantGrowthStatus>>['nextTask']['id'], isRepairFocus: boolean) {
+  if (isRepairFocus) return 'border-sky-500 bg-sky-100 text-sky-950 hover:bg-sky-200';
+  if (taskId === 'harvest') return 'border-green-700 bg-green-600 text-white hover:bg-green-700';
+  if (taskId === 'water' || taskId === 'drainage') return 'border-sky-700 bg-sky-600 text-white hover:bg-sky-700';
+  if (taskId === 'cover' || taskId === 'protect') return 'border-amber-700 bg-amber-500 text-amber-950 hover:bg-amber-400';
+  return 'border-green-900/20 bg-green-100 text-green-900 hover:bg-green-200';
+}
+
+function getTilePrimaryAction(status: TileStatusInfo) {
+  if (status.kind === 'cleanup') {
+    return {
+      icon: '*',
+      label: '整理地块',
+      className: 'border-amber-700 bg-amber-500 text-amber-950 hover:bg-amber-400'
+    };
+  }
+  if (status.kind === 'water') {
+    return {
+      icon: '~',
+      label: '浇水',
+      className: 'border-sky-700 bg-sky-600 text-white hover:bg-sky-700'
+    };
+  }
+  if (status.kind === 'drainage') {
+    return {
+      icon: 'D',
+      label: '处理排水',
+      className: 'border-sky-700 bg-sky-600 text-white hover:bg-sky-700'
+    };
+  }
+  if (status.kind === 'cover') {
+    return {
+      icon: '^',
+      label: '覆盖保护',
+      className: 'border-amber-700 bg-amber-500 text-amber-950 hover:bg-amber-400'
+    };
+  }
+  return null;
 }
 
 function getTopActivityLabel(records: ActivityRecord[]) {
