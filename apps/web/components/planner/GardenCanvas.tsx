@@ -637,7 +637,7 @@ export default function GardenCanvas({
   const [isPanning, setIsPanning] = useState(false);
   const [isEntityDragging, setIsEntityDragging] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(true);
-  const [showGuidedPath, setShowGuidedPath] = useState(true);
+  const [showGuidedPath, setShowGuidedPath] = useState(false);
   const [showFirstRunCheck, setShowFirstRunCheck] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [hasDismissedWelcome, setHasDismissedWelcome] = useState(false);
@@ -3255,227 +3255,115 @@ export default function GardenCanvas({
             <TileStateLegendItem color="bg-cyan-300" label="排水" />
           </div>
         </div>
-        <div className="absolute left-8 top-[190px] z-10 w-64 overflow-hidden rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/82 shadow-[0_3px_0_rgba(120,72,24,0.1),0_12px_24px_rgba(61,40,20,0.12)] backdrop-blur">
+        <div className="absolute left-8 top-[190px] z-10 w-64 overflow-hidden rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/86 shadow-[0_3px_0_rgba(120,72,24,0.1),0_12px_24px_rgba(61,40,20,0.12)] backdrop-blur">
           <button
             type="button"
-            onClick={() => setShowGuidedPath(value => !value)}
+            onClick={() => setShowFirstRunCheck(value => !value)}
             className="flex w-full items-center justify-between bg-[#f4d58d]/80 px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-amber-900"
           >
-            <span>Garden Path</span>
-            <span>{guidedPathSteps.filter(step => step.done).length}/{guidedPathSteps.length}</span>
+            <span>3-Min Check</span>
+            <span>{firstRunDoneCount}/{firstRunCheckSteps.length}</span>
           </button>
-          {showGuidedPath && (
+          {showFirstRunCheck && (
             <div className="p-3">
               <div className="h-2 overflow-hidden rounded-full bg-amber-100">
                 <div
                   className="h-full rounded-full bg-green-500"
-                  style={{ width: `${Math.round((guidedPathSteps.filter(step => step.done).length / guidedPathSteps.length) * 100)}%` }}
+                  style={{ width: `${Math.round((firstRunDoneCount / firstRunCheckSteps.length) * 100)}%` }}
                 />
               </div>
-              <div className="mt-2 rounded-md border border-amber-900/10 bg-white/65 p-2">
-                <div className="text-[10px] font-black text-amber-950">{guidedPathCopy.title}</div>
-                <div className="mt-1 text-[10px] font-bold leading-4 text-amber-700">{guidedPathCopy.detail}</div>
+              <div className={`mt-2 rounded-md border p-2 ${
+                firstRunComplete
+                  ? 'border-green-300 bg-green-50'
+                  : 'border-amber-900/10 bg-[#fff8df]/80'
+              }`}>
+                <div className="text-[10px] font-black text-amber-950">
+                  {firstRunCurrentStep ? `验收：${firstRunCurrentStep.label}` : '验收完成：可以邀请体验用户'}
+                </div>
+                <div className="mt-0.5 text-[9px] font-bold leading-4 text-amber-700">
+                  {firstRunCurrentStep
+                    ? firstRunCurrentStep.detail
+                    : '核心路径已经覆盖规则解释、任务闭环、采收、地块整理和下一季推荐。'}
+                </div>
               </div>
-              <div className="mt-2 space-y-1.5">
-                {guidedPathSteps.map((step, index) => (
-                  <div key={step.id} className="flex items-center gap-2 text-[10px] font-black text-amber-900">
-                    <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[8px] ${
-                      step.done
-                        ? 'border-green-300 bg-green-100 text-green-800'
-                        : 'border-amber-300 bg-amber-100 text-amber-800'
-                    }`}>
-                      {step.done ? '✓' : index + 1}
-                    </span>
-                    <span>{step.label}</span>
-                  </div>
+              {firstRunCompletedAt && (
+                <div className="mt-2 rounded-md border border-green-300 bg-white/80 px-2 py-1 text-[10px] font-black leading-4 text-green-900">
+                  体验路径已跑通：规则、任务、采收、整理和下一季推荐都能被用户理解并操作。
+                </div>
+              )}
+              {firstRunFocus && !firstRunComplete && (
+                <div className="mt-2 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-[10px] font-black leading-4 text-sky-950">
+                  当前看这里：{firstRunFocus.label}。{firstRunFocus.hint}
+                </div>
+              )}
+              <div className="mt-2 space-y-1">
+                {firstRunCheckSteps.map((step, index) => (
+                  <FirstRunCheckItem
+                    key={step.id}
+                    index={index}
+                    step={step}
+                    active={firstRunCurrentStep?.id === step.id}
+                    onClick={() => handleFirstRunStep(step.id)}
+                  />
                 ))}
               </div>
               <button
                 type="button"
-                onClick={handleGuidedNext}
-                className="mt-3 w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+                onClick={() => handleFirstRunStep()}
+                className="mt-2 w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
               >
-                {guidedPathComplete ? '查看评分' : '下一步'}
+                {firstRunCurrentStep ? '执行当前验收' : '查看验收结果'}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  loadDemoScenario();
-                  setGrowthPreviewDays(0);
-                  setRequestedInspectorTab('tasks');
-                }}
+                onClick={resetFirstRunExperience}
                 className="mt-2 w-full rounded-md border border-amber-900/15 bg-white/75 px-3 py-1.5 text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
               >
-                Demo Scenario
+                重置验收场景
               </button>
-              {planName === 'Demo Scenario' && (
-                <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Demo Tour</div>
-                    <div className="text-[10px] font-black text-green-800">{completedDemoTourItems.size}/5</div>
-                  </div>
-                  <div className="mt-2 space-y-1.5">
-                    <DemoTourItem
-                      done={completedDemoTourItems.has('companion')}
-                      label="伴生"
-                      detail="定位番茄，查看罗勒伴生关系。"
-                      onClick={() => {
-                        markDemoTourItem('companion');
-                        const tomato = Object.values(entities).find(entity => entity.type === 'plant' && entity.plantId === 'tomato');
-                        if (!tomato) return;
-                        selectEntity(tomato.id);
-                        focusEntityInView(tomato.id);
-                        setRequestedInspectorTab('planning');
-                        setSelectedTileStatus(null);
-                        setPlacementInsight(null);
-                      }}
-                    />
-                    <DemoTourItem
-                      done={completedDemoTourItems.has('conflict')}
-                      label="冲突"
-                      detail="定位土豆，查看番茄冲突风险。"
-                      onClick={() => {
-                        markDemoTourItem('conflict');
-                        const potato = Object.values(entities).find(entity => entity.type === 'plant' && entity.plantId === 'potato');
-                        if (!potato) return;
-                        selectEntity(potato.id);
-                        focusEntityInView(potato.id);
-                        setRequestedInspectorTab('planning');
-                        setSelectedTileStatus(null);
-                        setPlacementInsight(null);
-                      }}
-                    />
-                    <DemoTourItem
-                      done={completedDemoTourItems.has('task')}
-                      label="任务"
-                      detail="定位带角标的作物，完成后状态会消失。"
-                      onClick={() => {
-                        markDemoTourItem('task');
-                        const firstTask = currentGardenTasks[0];
-                        if (!firstTask) return;
-                        setRequestedInspectorTab('tasks');
-                        handleTaskSelectEntity(firstTask.id);
-                      }}
-                    />
-                    <DemoTourItem
-                      done={completedDemoTourItems.has('harvest')}
-                      label="采收"
-                      detail="定位待整理地块，查看整理和下一季推荐。"
-                      onClick={() => {
-                        markDemoTourItem('harvest');
-                        if (!firstCleanupTileStatus) return;
-                        setSelectedTileStatus(firstCleanupTileStatus);
-                        setRequestedInspectorTab('tasks');
-                        selectEntity(null);
-                        setPlacementInsight(null);
-                        setActionFeedback({
-                          x: firstCleanupTileStatus.gridX,
-                          y: firstCleanupTileStatus.gridY,
-                          status: 'ok',
-                          label: 'CLEAN'
-                        });
-                        addEffect(firstCleanupTileStatus.gridX, firstCleanupTileStatus.gridY, 'tile');
-                      }}
-                    />
-                    <DemoTourItem
-                      done={completedDemoTourItems.has('preview')}
-                      label="预览"
-                      detail="点击 +90 天，查看成熟与采收压力。"
-                      onClick={() => {
-                        markDemoTourItem('preview');
-                        setGrowthPreviewDays(90);
-                      }}
-                    />
-                  </div>
-                  {completedDemoTourItems.size >= 5 && (
-                    <div className="mt-3 rounded-md border border-green-900/10 bg-white/75 p-2">
-                      <div className="text-[10px] font-black text-green-950">你已经看完核心闭环</div>
-                      <div className="mt-1 space-y-1 text-[9px] font-bold leading-4 text-green-800">
-                        <div>规则规划：伴生与冲突</div>
-                        <div>运营任务：天气提醒与完成反馈</div>
-                        <div>季节管理：生长预览与采收预测</div>
-                        <div>持续种植：采收后整理与下一季推荐</div>
+              <div className="mt-3 rounded-md border border-amber-900/10 bg-white/70 p-2">
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Tester Brief</div>
+                <div className="mt-1 space-y-1 text-[9px] font-bold leading-4 text-amber-700">
+                  <div>目标：3 分钟内看懂这是否能帮你规划真实菜园。</div>
+                  <div>请完成：按清单走完，并记录哪里迷路、哪里不可信。</div>
+                  <div>反馈重点：规则是否清楚、操作是否顺、是否愿意下次再用。</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGuidedPath(value => !value)}
+                className="mt-2 flex w-full items-center justify-between rounded-md border border-amber-900/10 bg-white/65 px-2 py-1.5 text-left text-[10px] font-black text-amber-900 hover:bg-amber-50"
+              >
+                <span>高级路径</span>
+                <span>{guidedPathSteps.filter(step => step.done).length}/{guidedPathSteps.length}</span>
+              </button>
+              {showGuidedPath && (
+                <div className="mt-2 rounded-md border border-amber-900/10 bg-white/65 p-2">
+                  <div className="text-[10px] font-black text-amber-950">{guidedPathCopy.title}</div>
+                  <div className="mt-1 text-[9px] font-bold leading-4 text-amber-700">{guidedPathCopy.detail}</div>
+                  <div className="mt-2 space-y-1">
+                    {guidedPathSteps.map((step, index) => (
+                      <div key={step.id} className="flex items-center gap-2 text-[9px] font-black text-amber-900">
+                        <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[8px] ${
+                          step.done
+                            ? 'border-green-300 bg-green-100 text-green-800'
+                            : 'border-amber-300 bg-amber-100 text-amber-800'
+                        }`}>
+                          {step.done ? '✓' : index + 1}
+                        </span>
+                        <span>{step.label}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setRequestedInspectorTab('harvest')}
-                        className="mt-2 w-full rounded-md border border-green-900/15 bg-green-100 px-2 py-1 text-[10px] font-black text-green-900 hover:bg-green-200"
-                      >
-                        查看 Garden Score
-                      </button>
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGuidedNext}
+                    className="mt-2 w-full rounded-md border border-green-900/15 bg-green-100 px-2 py-1 text-[10px] font-black text-green-900 hover:bg-green-200"
+                  >
+                    {guidedPathComplete ? '查看评分' : '下一步'}
+                  </button>
                 </div>
               )}
-              <div className="mt-3 overflow-hidden rounded-md border border-amber-900/10 bg-white/70">
-                <button
-                  type="button"
-                  onClick={() => setShowFirstRunCheck(value => !value)}
-                  className="flex w-full items-center justify-between bg-[#f4d58d]/65 px-2 py-1.5 text-left text-[10px] font-black uppercase tracking-wider text-amber-900"
-                >
-                  <span>3-Min Check</span>
-                  <span>{firstRunDoneCount}/{firstRunCheckSteps.length}</span>
-                </button>
-                {showFirstRunCheck && (
-                  <div className="p-2">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-amber-100">
-                      <div
-                        className="h-full rounded-full bg-green-500"
-                        style={{ width: `${Math.round((firstRunDoneCount / firstRunCheckSteps.length) * 100)}%` }}
-                      />
-                    </div>
-                    <div className={`mt-2 rounded-md border p-2 ${
-                      firstRunComplete
-                        ? 'border-green-300 bg-green-50'
-                        : 'border-amber-900/10 bg-[#fff8df]/80'
-                    }`}>
-                      <div className="text-[10px] font-black text-amber-950">
-                        {firstRunCurrentStep ? `验收：${firstRunCurrentStep.label}` : '验收完成：可以邀请体验用户'}
-                      </div>
-                      <div className="mt-0.5 text-[9px] font-bold leading-4 text-amber-700">
-                        {firstRunCurrentStep
-                          ? firstRunCurrentStep.detail
-                          : '核心路径已经覆盖规则解释、任务闭环、采收、地块整理和下一季推荐。'}
-                      </div>
-                    </div>
-                    {firstRunCompletedAt && (
-                      <div className="mt-2 rounded-md border border-green-300 bg-white/80 px-2 py-1 text-[10px] font-black leading-4 text-green-900">
-                        体验路径已跑通：规则、任务、采收、整理和下一季推荐都能被用户理解并操作。
-                      </div>
-                    )}
-                    {firstRunFocus && !firstRunComplete && (
-                      <div className="mt-2 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-[10px] font-black leading-4 text-sky-950">
-                        当前看这里：{firstRunFocus.label}。{firstRunFocus.hint}
-                      </div>
-                    )}
-                    <div className="mt-2 space-y-1">
-                      {firstRunCheckSteps.map((step, index) => (
-                        <FirstRunCheckItem
-                          key={step.id}
-                          index={index}
-                          step={step}
-                          active={firstRunCurrentStep?.id === step.id}
-                          onClick={() => handleFirstRunStep(step.id)}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleFirstRunStep()}
-                      className="mt-2 w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
-                    >
-                      {firstRunCurrentStep ? '执行当前验收' : '查看验收结果'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resetFirstRunExperience}
-                      className="mt-2 w-full rounded-md border border-amber-900/15 bg-white/75 px-3 py-1.5 text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
-                    >
-                      重置验收场景
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           )}
         </div>
@@ -3683,6 +3571,12 @@ export default function GardenCanvas({
               <div className="mt-1 text-2xl font-black leading-tight text-amber-950">3 分钟体验一个会思考的菜园</div>
               <div className="mt-2 text-xs font-bold leading-5 text-amber-800">
                 从示例菜园开始，按验收清单走完伴生冲突、天气任务、采收整理和下一季轮作推荐。
+              </div>
+              <div className="mt-3 rounded-md border border-amber-900/10 bg-white/70 p-2">
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Tester Task</div>
+                <div className="mt-1 text-[10px] font-bold leading-4 text-amber-700">
+                  请按 3-Min Check 走完一遍。完成后告诉我们：哪里不清楚、哪里不可信、哪里让你愿意继续使用。
+                </div>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-black text-green-900">
                 <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">规则可解释</div>
