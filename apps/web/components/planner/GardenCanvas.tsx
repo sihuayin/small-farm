@@ -19,7 +19,7 @@ import { PlannerStatusBar } from './PlannerStatusBar';
 import { PlannerToolbar } from './PlannerToolbar';
 import { evaluateCompanionRules, getCompanionRule } from './rules';
 import { getGardenTaskBoard, getPlantGrowthStatus, type GrowthStageId } from './growth';
-import { getPlantAgronomy } from './plants';
+import { getPlantAgronomy, plantMap } from './plants';
 import { shouldRemoveAfterHarvest } from './harvestPolicy';
 import { evaluateRotationRules } from './rotation';
 import { scorePlacement } from './scoring';
@@ -487,6 +487,37 @@ interface ShareCardStats {
   plantNames: string[];
 }
 
+interface StarterPlanSummary {
+  placed: number;
+  requested: number;
+  skipped: string[];
+  skippedNames: string[];
+  reasons: string[];
+  nextStep: string;
+}
+
+function buildStarterPlanSummary(result: { placed: number; skipped: string[] }, requestedPlantIds: string[], planSeason: PlanSeason): StarterPlanSummary {
+  const skippedNames = Array.from(new Set(result.skipped))
+    .map(id => plantMap.get(id)?.naming.zh || id)
+    .slice(0, 4);
+  const reasons = [
+    '优先避开相克组合和高风险轮作位置。',
+    `优先匹配${seasonLabel(planSeason)}可种作物。`,
+    '尽量让伴生组合靠近，并保留可继续扩展的空位。'
+  ];
+
+  return {
+    placed: result.placed,
+    requested: requestedPlantIds.length,
+    skipped: result.skipped,
+    skippedNames,
+    reasons,
+    nextStep: result.skipped.length > 0
+      ? '可以打开热力图检查未放入作物，或减少工具箱后重新生成。'
+      : '可以查看规则热力图，确认伴生、轮作和季节适配。'
+  };
+}
+
 function getShareGardenScore(stats: Omit<ShareCardStats, 'score' | 'seasonLabel' | 'plantNames'>) {
   const taskPressure = Math.min(30, stats.taskCount * 5);
   const diversityBonus = Math.min(10, Math.max(0, stats.speciesCount - 1) * 2);
@@ -896,7 +927,7 @@ export default function GardenCanvas({
     status: 'ok' | 'blocked' | 'moved';
     label: string;
   } | null>(null);
-  const [starterSummary, setStarterSummary] = useState<{ placed: number; skipped: string[] } | null>(null);
+  const [starterSummary, setStarterSummary] = useState<StarterPlanSummary | null>(null);
   const [shareExportMessage, setShareExportMessage] = useState<string | null>(null);
 
   // ==================== Store ====================
@@ -3212,7 +3243,8 @@ export default function GardenCanvas({
     setActiveTile(null);
   }, [createPlan, selectEntity, setActiveTile, setActiveTool]);
   const handleGenerateStarterPlan = useCallback(() => {
-    const result = generateStarterPlan(getGardenKitPlantIds());
+    const requestedPlantIds = getGardenKitPlantIds();
+    const result = generateStarterPlan(requestedPlantIds);
     setShowWelcome(false);
     setHasDismissedWelcome(true);
     setShowGuidedPath(false);
@@ -3236,8 +3268,8 @@ export default function GardenCanvas({
       status: 'ok',
       label: result.placed > 0 ? `生成 ${result.placed}` : '未生成'
     });
-    setStarterSummary(result);
-  }, [generateStarterPlan, getGardenKitPlantIds, selectEntity, setActiveTile, setActiveTool]);
+    setStarterSummary(buildStarterPlanSummary(result, requestedPlantIds, planSeason));
+  }, [generateStarterPlan, getGardenKitPlantIds, planSeason, selectEntity, setActiveTile, setActiveTool]);
   const handleShareGardenImage = useCallback(async () => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -3688,18 +3720,66 @@ export default function GardenCanvas({
           </button>
         </div>
         {starterSummary && (
-          <div className="absolute left-3 right-3 top-[160px] z-10 rounded-lg border-2 border-green-900/15 bg-green-50/92 px-3 py-2 text-[10px] font-black leading-4 text-green-950 shadow-[0_3px_0_rgba(22,101,52,0.12)] backdrop-blur md:left-[292px] md:right-auto md:top-[140px] md:w-72">
-            已按你的植物工具箱生成 {starterSummary.placed} 个种植位。
-            {starterSummary.skipped.length > 0
-              ? ` 有 ${starterSummary.skipped.length} 个因为空间或规则冲突暂未放入。`
-              : ' 已优先避开冲突并靠近伴生组合。'}
-            <button
-              type="button"
-              onClick={() => setStarterSummary(null)}
-              className="ml-2 rounded border border-green-900/15 bg-white/70 px-1.5 py-0.5 text-[9px] font-black text-green-900"
-            >
-              关闭
-            </button>
+          <div className="absolute left-3 right-3 top-[160px] z-10 rounded-lg border-2 border-green-900/15 bg-green-50/94 p-3 text-[10px] font-black leading-4 text-green-950 shadow-[0_3px_0_rgba(22,101,52,0.12),0_14px_24px_rgba(61,40,20,0.14)] backdrop-blur md:left-[292px] md:right-auto md:top-[140px] md:w-80">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[9px] uppercase tracking-wider text-green-800">Generated Plan</div>
+                <div className="mt-0.5 text-xs font-black text-green-950">
+                  已生成 {starterSummary.placed}/{starterSummary.requested} 个种植位
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStarterSummary(null)}
+                className="h-6 w-6 shrink-0 rounded border border-green-900/15 bg-white/70 text-[9px] font-black text-green-900"
+                aria-label="关闭生成说明"
+              >
+                x
+              </button>
+            </div>
+            <div className="mt-2 rounded-md border border-green-900/10 bg-white/70 p-2 text-green-900">
+              {starterSummary.skipped.length > 0
+                ? `有 ${starterSummary.skipped.length} 个作物暂未放入：${starterSummary.skippedNames.join('、') || '未知作物'}。`
+                : '已优先避开冲突，并把适合的伴生组合靠近。'}
+            </div>
+            <div className="mt-2 space-y-1">
+              {starterSummary.reasons.map(reason => (
+                <div key={reason} className="flex gap-1.5 text-green-900">
+                  <span className="text-green-700">✓</span>
+                  <span>{reason}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 rounded-md border border-green-900/10 bg-white/60 px-2 py-1 text-green-800">
+              {starterSummary.nextStep}
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowHeatmap(true);
+                  setHeatmapLayer('companion');
+                  setStarterSummary(null);
+                }}
+                className="rounded-md border border-green-900/15 bg-white/80 px-2 py-1.5 text-[9px] font-black text-green-900 shadow-[0_1px_0_rgba(22,101,52,0.1)] hover:bg-green-100"
+              >
+                看热力图
+              </button>
+              <button
+                type="button"
+                onClick={handleShareGardenImage}
+                className="rounded-md border border-sky-900/15 bg-sky-100 px-2 py-1.5 text-[9px] font-black text-sky-900 shadow-[0_1px_0_rgba(14,116,144,0.1)] hover:bg-sky-200"
+              >
+                分享图
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateStarterPlan}
+                className="rounded-md border border-amber-900/15 bg-[#f4d58d] px-2 py-1.5 text-[9px] font-black text-amber-950 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-[#f8df9d]"
+              >
+                重新生成
+              </button>
+            </div>
           </div>
         )}
         {shareExportMessage && (
