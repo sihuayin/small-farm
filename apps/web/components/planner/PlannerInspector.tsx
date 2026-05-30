@@ -395,9 +395,30 @@ export function PlannerInspector({
     });
   };
 
+  const mobilePrimaryAction = selectedEntity?.type === 'plant' && selectedActionTask && !selectedTaskDone
+    ? {
+        icon: primaryActionIcon(selectedActionTask.id),
+        label: primaryActionLabel(selectedActionTask.id, isTaskRepairFocus, isHarvestRepairFocus),
+        className: primaryActionClassName(selectedActionTask.id, isTaskRepairFocus || isHarvestRepairFocus),
+        onClick: handleCompleteSelectedTask
+      }
+    : selectedTileStatus && getTilePrimaryAction(selectedTileStatus)
+      ? {
+          ...getTilePrimaryAction(selectedTileStatus)!,
+          onClick: () => selectedTileStatus.kind === 'cleanup'
+            ? onResolveTileStatus(selectedTileStatus)
+            : onResolveTileTask(selectedTileStatus)
+        }
+      : null;
+  const mobileCollapsedMaxHeight = isMobilePanelOpen
+    ? 'max-h-[64vh]'
+    : mobilePrimaryAction
+      ? 'max-h-[156px]'
+      : 'max-h-[104px]';
+
   return (
-    <aside className={`absolute inset-x-3 bottom-3 z-20 overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur transition-[max-height] duration-200 md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:max-h-[calc(100vh-2rem)] md:w-72 ${isMobilePanelOpen ? 'max-h-[64vh]' : 'max-h-[104px]'}`}>
-      <div className={`${isMobilePanelOpen ? 'max-h-[64vh] overflow-y-auto' : 'max-h-[104px] overflow-hidden'} md:max-h-[calc(100vh-2rem)] md:overflow-y-auto`}>
+    <aside className={`absolute inset-x-3 bottom-3 z-20 overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur transition-[max-height] duration-200 md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:max-h-[calc(100vh-2rem)] md:w-72 ${mobileCollapsedMaxHeight}`}>
+      <div className={`${isMobilePanelOpen ? 'max-h-[64vh] overflow-y-auto' : mobilePrimaryAction ? 'max-h-[156px] overflow-hidden' : 'max-h-[104px] overflow-hidden'} md:max-h-[calc(100vh-2rem)] md:overflow-y-auto`}>
       <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-3 md:p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -419,6 +440,16 @@ export function PlannerInspector({
             已定位：{focusCue.label}
           </div>
         )}
+        {mobilePrimaryAction && (
+          <button
+            type="button"
+            onClick={mobilePrimaryAction.onClick}
+            className={`mt-3 flex w-full items-center justify-center gap-2 rounded-md border-2 px-3 py-3 text-sm font-black shadow-[0_3px_0_rgba(22,101,52,0.14)] md:hidden ${mobilePrimaryAction.className}`}
+          >
+            <span className="text-base leading-none">{mobilePrimaryAction.icon}</span>
+            <span>{mobilePrimaryAction.label}</span>
+          </button>
+        )}
 
         {selectedEntity?.type === 'plant' && selectedPlantAgronomy && (
           <div className="mt-3 hidden rounded-md border border-amber-900/10 bg-white/65 p-2 md:block">
@@ -439,7 +470,7 @@ export function PlannerInspector({
         )}
 
         {selectedEntity && (
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
+          <div className="mt-3 hidden gap-2 overflow-x-auto pb-1 md:flex md:overflow-visible md:pb-0">
             <button
               type="button"
               onClick={onFocusSelected}
