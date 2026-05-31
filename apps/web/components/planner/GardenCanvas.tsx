@@ -3720,7 +3720,7 @@ export default function GardenCanvas({
           </button>
         </div>
         {starterSummary && (
-          <div className="absolute left-3 right-3 top-[160px] z-10 rounded-lg border-2 border-green-900/15 bg-green-50/94 p-3 text-[10px] font-black leading-4 text-green-950 shadow-[0_3px_0_rgba(22,101,52,0.12),0_14px_24px_rgba(61,40,20,0.14)] backdrop-blur md:left-[292px] md:right-auto md:top-[140px] md:w-80">
+          <div className="absolute left-3 right-3 top-[156px] z-30 max-h-[36vh] overflow-y-auto rounded-lg border-2 border-green-900/15 bg-green-50 p-2 text-[10px] font-black leading-4 text-green-950 shadow-[0_3px_0_rgba(22,101,52,0.12),0_14px_24px_rgba(61,40,20,0.14)] md:left-[292px] md:right-auto md:top-[140px] md:max-h-[calc(100vh-180px)] md:w-80 md:p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[9px] uppercase tracking-wider text-green-800">Generated Plan</div>
@@ -3737,7 +3737,7 @@ export default function GardenCanvas({
                 x
               </button>
             </div>
-            <div className="mt-2 rounded-md border border-green-900/10 bg-white/70 p-2 text-green-900">
+            <div className="mt-2 rounded-md border border-green-900/10 bg-white/70 px-2 py-1.5 text-green-900 md:p-2">
               {starterSummary.skipped.length > 0
                 ? `有 ${starterSummary.skipped.length} 个作物暂未放入：${starterSummary.skippedNames.join('、') || '未知作物'}。`
                 : '已优先避开冲突，并把适合的伴生组合靠近。'}
@@ -3783,7 +3783,7 @@ export default function GardenCanvas({
           </div>
         )}
         {shareExportMessage && (
-          <div className="absolute left-3 right-3 top-[160px] z-10 rounded-lg border-2 border-sky-900/15 bg-sky-50/94 px-3 py-2 text-[10px] font-black leading-4 text-sky-950 shadow-[0_3px_0_rgba(14,116,144,0.12)] backdrop-blur md:left-[292px] md:right-auto md:top-[220px] md:w-72">
+          <div className="absolute left-3 right-3 top-[160px] z-30 rounded-lg border-2 border-sky-900/15 bg-sky-50 px-3 py-2 text-[10px] font-black leading-4 text-sky-950 shadow-[0_3px_0_rgba(14,116,144,0.12)] md:left-[292px] md:right-auto md:top-[220px] md:w-72">
             {shareExportMessage}
             <button
               type="button"
