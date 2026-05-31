@@ -45,6 +45,8 @@ export type RotationGroup = 'fruiting' | 'leafy' | 'root' | 'legume' | 'flower' 
 export type Season = 'spring' | 'summer' | 'fall' | 'winter';
 export type SunRequirement = 'full_sun' | 'partial_sun' | 'shade';
 export type WaterNeed = 'low' | 'medium' | 'high';
+export type PlantStartMethod = 'direct_sow' | 'transplant' | 'either';
+export type PlantDataConfidence = 'mock' | 'reference';
 
 export interface PlantAgronomy {
   /** 作物科属/功能族，用于轮作、病虫害与推荐系统 */
@@ -61,6 +63,16 @@ export interface PlantAgronomy {
   hardinessZones: [number, number];
   /** 从播种/移栽到收获的大致天数 */
   daysToMaturity: number;
+  /** 建议株距/行距，单位：英寸 */
+  spacing: { plantInch: number; rowInch?: number };
+  /** 发芽所需天数范围 */
+  germinationDays: [number, number];
+  /** 播种深度，单位：英寸。移栽作物可省略 */
+  plantingDepthInch?: number;
+  /** 更适合直播、移栽，或两者均可 */
+  startMethod: PlantStartMethod;
+  /** 当前资料的可信度标记：reference=参考资料结构，mock=演示占位 */
+  dataConfidence: PlantDataConfidence;
   /** 以末霜日为基准的播种窗口，单位：天 */
   sowingWindow: { startOffsetDays: number; endOffsetDays: number };
   /** 以播种日为基准的收获窗口，单位：天 */

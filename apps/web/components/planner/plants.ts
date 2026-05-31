@@ -221,40 +221,81 @@ const agronomyDefaults: PlantAgronomy = {
   waterNeed: 'medium',
   hardinessZones: [3, 10],
   daysToMaturity: 70,
+  spacing: { plantInch: 12, rowInch: 18 },
+  germinationDays: [7, 14],
+  plantingDepthInch: 0.5,
+  startMethod: 'either',
+  dataConfidence: 'reference',
   sowingWindow: { startOffsetDays: -14, endOffsetDays: 28 },
   harvestWindow: { startOffsetDays: 55, endOffsetDays: 95 }
 };
 
 const agronomyByPlantId: Record<string, Partial<PlantAgronomy>> = {
-  tomato: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 80 },
-  basil: { family: 'lamiaceae', rotationGroup: 'leafy', waterNeed: 'medium', daysToMaturity: 65 },
-  carrot: { family: 'apiaceae', rotationGroup: 'root', waterNeed: 'medium', daysToMaturity: 75 },
-  lettuce: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45 },
-  pepper: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 85 },
-  onion: { family: 'allium', rotationGroup: 'root', waterNeed: 'low', daysToMaturity: 100 },
-  cabbage: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], waterNeed: 'high', daysToMaturity: 90 },
-  corn: { family: 'other', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 90 },
-  bean: { family: 'legume', rotationGroup: 'legume', waterNeed: 'medium', daysToMaturity: 60 },
-  cucumber: { family: 'cucurbit', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 60 },
-  potato: { family: 'nightshade', rotationGroup: 'root', waterNeed: 'medium', daysToMaturity: 100 },
-  eggplant: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 85 },
-  spinach: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45 },
-  strawberry: { family: 'fruit', rotationGroup: 'perennial', seasons: ['spring'], waterNeed: 'medium', daysToMaturity: 90 },
-  garlic: { family: 'allium', rotationGroup: 'root', seasons: ['fall'], waterNeed: 'low', daysToMaturity: 240 },
-  radish: { family: 'brassica', rotationGroup: 'root', seasons: ['spring', 'fall'], daysToMaturity: 30 },
-  pea: { family: 'legume', rotationGroup: 'legume', seasons: ['spring', 'fall'], waterNeed: 'medium', daysToMaturity: 60 },
-  marigold: { family: 'flower', rotationGroup: 'flower', seasons: ['spring', 'summer'], waterNeed: 'low', daysToMaturity: 55 },
-  sunflower: { family: 'aster', rotationGroup: 'flower', waterNeed: 'medium', daysToMaturity: 90 },
-  dill: { family: 'apiaceae', rotationGroup: 'leafy', waterNeed: 'low', daysToMaturity: 55 },
-  fennel: { family: 'apiaceae', rotationGroup: 'leafy', waterNeed: 'low', daysToMaturity: 80 },
-  sage: { family: 'lamiaceae', rotationGroup: 'perennial', waterNeed: 'low', daysToMaturity: 75 },
-  rosemary: { family: 'lamiaceae', rotationGroup: 'perennial', waterNeed: 'low', daysToMaturity: 120 },
-  pumpkin: { family: 'cucurbit', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 110 },
-  melon: { family: 'cucurbit', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 90 }
+  tomato: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 80, spacing: { plantInch: 24, rowInch: 36 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'transplant' },
+  basil: { family: 'lamiaceae', rotationGroup: 'leafy', waterNeed: 'medium', daysToMaturity: 65, spacing: { plantInch: 12, rowInch: 18 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'either' },
+  carrot: { family: 'apiaceae', rotationGroup: 'root', waterNeed: 'medium', daysToMaturity: 75, spacing: { plantInch: 3, rowInch: 12 }, germinationDays: [14, 21], plantingDepthInch: 0.25, startMethod: 'direct_sow' },
+  lettuce: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [2, 10], plantingDepthInch: 0.25, startMethod: 'either' },
+  pepper: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 85, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [7, 21], plantingDepthInch: 0.25, startMethod: 'transplant' },
+  onion: { family: 'allium', rotationGroup: 'root', waterNeed: 'low', daysToMaturity: 100, spacing: { plantInch: 4, rowInch: 12 }, germinationDays: [7, 14], plantingDepthInch: 0.25, startMethod: 'either' },
+  cabbage: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], waterNeed: 'high', daysToMaturity: 90, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'transplant' },
+  corn: { family: 'other', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 90, spacing: { plantInch: 12, rowInch: 30 }, germinationDays: [7, 10], plantingDepthInch: 1, startMethod: 'direct_sow' },
+  bean: { family: 'legume', rotationGroup: 'legume', waterNeed: 'medium', daysToMaturity: 60, spacing: { plantInch: 6, rowInch: 18 }, germinationDays: [6, 10], plantingDepthInch: 1, startMethod: 'direct_sow' },
+  cucumber: { family: 'cucurbit', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 60, spacing: { plantInch: 12, rowInch: 36 }, germinationDays: [3, 10], plantingDepthInch: 0.5, startMethod: 'either' },
+  potato: { family: 'nightshade', rotationGroup: 'root', waterNeed: 'medium', daysToMaturity: 100, spacing: { plantInch: 12, rowInch: 30 }, germinationDays: [14, 28], plantingDepthInch: 4, startMethod: 'direct_sow' },
+  eggplant: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 85, spacing: { plantInch: 24, rowInch: 30 }, germinationDays: [7, 14], plantingDepthInch: 0.25, startMethod: 'transplant' },
+  spinach: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45, spacing: { plantInch: 4, rowInch: 12 }, germinationDays: [5, 10], plantingDepthInch: 0.5, startMethod: 'direct_sow' },
+  strawberry: { family: 'fruit', rotationGroup: 'perennial', seasons: ['spring'], waterNeed: 'medium', daysToMaturity: 90, spacing: { plantInch: 12, rowInch: 24 }, germinationDays: [14, 28], startMethod: 'transplant' },
+  garlic: { family: 'allium', rotationGroup: 'root', seasons: ['fall'], waterNeed: 'low', daysToMaturity: 240, spacing: { plantInch: 6, rowInch: 12 }, germinationDays: [7, 21], plantingDepthInch: 2, startMethod: 'direct_sow' },
+  radish: { family: 'brassica', rotationGroup: 'root', seasons: ['spring', 'fall'], daysToMaturity: 30, spacing: { plantInch: 2, rowInch: 8 }, germinationDays: [3, 7], plantingDepthInch: 0.5, startMethod: 'direct_sow' },
+  pea: { family: 'legume', rotationGroup: 'legume', seasons: ['spring', 'fall'], waterNeed: 'medium', daysToMaturity: 60, spacing: { plantInch: 3, rowInch: 18 }, germinationDays: [7, 14], plantingDepthInch: 1, startMethod: 'direct_sow' },
+  marigold: { family: 'flower', rotationGroup: 'flower', seasons: ['spring', 'summer'], waterNeed: 'low', daysToMaturity: 55, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [4, 14], plantingDepthInch: 0.25, startMethod: 'either' },
+  sunflower: { family: 'aster', rotationGroup: 'flower', waterNeed: 'medium', daysToMaturity: 90, spacing: { plantInch: 24, rowInch: 30 }, germinationDays: [7, 10], plantingDepthInch: 1, startMethod: 'direct_sow' },
+  dill: { family: 'apiaceae', rotationGroup: 'leafy', waterNeed: 'low', daysToMaturity: 55, spacing: { plantInch: 12, rowInch: 18 }, germinationDays: [10, 14], plantingDepthInch: 0.25, startMethod: 'direct_sow' },
+  fennel: { family: 'apiaceae', rotationGroup: 'leafy', waterNeed: 'low', daysToMaturity: 80, spacing: { plantInch: 12, rowInch: 18 }, germinationDays: [7, 14], plantingDepthInch: 0.25, startMethod: 'direct_sow' },
+  sage: { family: 'lamiaceae', rotationGroup: 'perennial', waterNeed: 'low', daysToMaturity: 75, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [10, 21], plantingDepthInch: 0.25, startMethod: 'transplant' },
+  rosemary: { family: 'lamiaceae', rotationGroup: 'perennial', waterNeed: 'low', daysToMaturity: 120, spacing: { plantInch: 24, rowInch: 36 }, germinationDays: [14, 28], plantingDepthInch: 0.25, startMethod: 'transplant' },
+  pumpkin: { family: 'cucurbit', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 110, spacing: { plantInch: 36, rowInch: 72 }, germinationDays: [5, 10], plantingDepthInch: 1, startMethod: 'direct_sow' },
+  melon: { family: 'cucurbit', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 90, spacing: { plantInch: 36, rowInch: 72 }, germinationDays: [4, 10], plantingDepthInch: 1, startMethod: 'direct_sow' }
 };
 
 export function getPlantAgronomy(plantId: string): PlantAgronomy {
-  return { ...agronomyDefaults, ...agronomyByPlantId[plantId] };
+  const plant = plants.find(item => item.id === plantId);
+  const override = agronomyByPlantId[plantId] || {};
+  return {
+    ...agronomyDefaults,
+    ...override,
+    spacing: {
+      plantInch: override.spacing?.plantInch || plant?.dimensions.spacing_inch || agronomyDefaults.spacing.plantInch,
+      rowInch: override.spacing?.rowInch || agronomyDefaults.spacing.rowInch
+    }
+  };
+}
+
+export function getPlantSpacingLabel(plantId: string): string {
+  const agronomy = getPlantAgronomy(plantId);
+  return `株距 ${agronomy.spacing.plantInch} in${agronomy.spacing.rowInch ? ` / 行距 ${agronomy.spacing.rowInch} in` : ''}`;
+}
+
+export function getPlantTimingLabel(plantId: string): string {
+  const agronomy = getPlantAgronomy(plantId);
+  return `${agronomy.daysToMaturity} 天成熟 · 发芽 ${agronomy.germinationDays[0]}-${agronomy.germinationDays[1]} 天`;
+}
+
+export function getPlantCredibilityNotes(plantId: string): string[] {
+  const agronomy = getPlantAgronomy(plantId);
+  const depth = agronomy.plantingDepthInch ? `播种深度 ${agronomy.plantingDepthInch} in` : '移栽为主';
+  return [
+    getPlantSpacingLabel(plantId),
+    getPlantTimingLabel(plantId),
+    `${startMethodLabel(agronomy.startMethod)} · ${depth}`,
+    agronomy.dataConfidence === 'reference' ? '资料: 参考园艺数据结构' : '资料: 演示占位'
+  ];
+}
+
+function startMethodLabel(method: PlantAgronomy['startMethod']) {
+  if (method === 'direct_sow') return '适合直播';
+  if (method === 'transplant') return '适合移栽';
+  return '直播/移栽均可';
 }
 
 /**

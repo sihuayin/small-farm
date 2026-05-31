@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { tiles } from './usePlannerStore';
-import { getPlantAgronomy, plantMap } from './plants';
+import { getPlantAgronomy, getPlantCredibilityNotes, plantMap } from './plants';
 import { getNextRotationSuggestions } from './rotation';
 import { getGardenTaskBoard, getPlantGrowthStatus, summarizeGardenTasks, type GrowthStageId } from './growth';
 import { getGardenCalendarReminders } from './calendar';
@@ -151,6 +151,9 @@ export function PlannerInspector({
   const selectedPlantAgronomy = selectedEntity?.type === 'plant'
     ? getPlantAgronomy(selectedEntity.plantId)
     : null;
+  const selectedPlantCredibilityNotes = selectedEntity?.type === 'plant'
+    ? getPlantCredibilityNotes(selectedEntity.plantId)
+    : [];
   const selectedPlantActivities = selectedEntity?.type === 'plant'
     ? activityRecords.filter(record => record.entityId === selectedEntity.id || record.plantId === selectedEntity.plantId).slice(0, 4)
     : [];
@@ -457,7 +460,9 @@ export function PlannerInspector({
               <div>{selectedEntity.spanX}x{selectedEntity.spanY} 格</div>
               <div>{selectedPlantAgronomy.daysToMaturity} 天成熟</div>
               <div>{waterNeedLabel(selectedPlantAgronomy.waterNeed)}</div>
-              <div>{rotationGroupLabel(selectedPlantAgronomy.rotationGroup)}</div>
+              <div>{startMethodLabel(selectedPlantAgronomy.startMethod)}</div>
+              <div>{selectedPlantAgronomy.spacing.plantInch} in 株距</div>
+              <div>{selectedPlantAgronomy.germinationDays[0]}-{selectedPlantAgronomy.germinationDays[1]} 天发芽</div>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {selectedPlantAgronomy.seasons.map(season => (
@@ -793,6 +798,16 @@ export function PlannerInspector({
               <div className="mt-2 rounded-md border border-amber-900/10 bg-white/70 p-2 text-[11px] font-bold leading-5 text-amber-800">
                 {familyLabel(selectedPlantAgronomy.family)} · {sunRequirementLabel(selectedPlantAgronomy.sunRequirement)} · Zone {selectedPlantAgronomy.hardinessZones[0]}-{selectedPlantAgronomy.hardinessZones[1]}
               </div>
+              <div className="mt-2 grid gap-1">
+                {selectedPlantCredibilityNotes.map(note => (
+                  <div key={note} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black leading-4 text-slate-700">
+                    {note}
+                  </div>
+                ))}
+                <div className="rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-black leading-4 text-sky-800">
+                  气候: ZIP/Zone 为本地 mock 推断，真实天气 API 暂未接入。
+                </div>
+              </div>
               {isRuleRepairFocus && (
                 <div className="mt-2 rounded-md border border-sky-300 bg-sky-50 p-2 text-[10px] font-black text-sky-900">
                   <div>修复这项评分问题：查看低冲突位置，再拖动或重新放置作物。</div>
@@ -1058,6 +1073,12 @@ function sunRequirementLabel(sunRequirement: string) {
   if (sunRequirement === 'partial_sun') return '半日照';
   if (sunRequirement === 'shade') return '耐阴';
   return '全日照';
+}
+
+function startMethodLabel(method: string) {
+  if (method === 'direct_sow') return '直播';
+  if (method === 'transplant') return '移栽';
+  return '直播/移栽';
 }
 
 function seasonLabel(season: PlanSeason) {

@@ -1,4 +1,4 @@
-import { getPlantAgronomy } from './plants';
+import { getPlantAgronomy, getPlantSpacingLabel, getPlantTimingLabel } from './plants';
 import type { Plant } from './plants.d';
 import type { ClimateProfile, PlanSeason, SynergyResult } from './types';
 
@@ -11,16 +11,17 @@ export function scorePlacement(
   let score = 72;
   const details = [...synergy.details];
   const agronomy = getPlantAgronomy(plant.id);
+  details.push(`作物资料: ${plant.naming.zh} 约 ${getPlantTimingLabel(plant.id)}，建议${getPlantSpacingLabel(plant.id)}。`);
 
   score += synergy.companionCount * 8;
   score -= synergy.enemyCount * 35;
 
   if (!agronomy.seasons.includes(planSeason)) {
     score -= 18;
-    details.push(`季节扣分: ${plant.naming.zh} 更适合 ${agronomy.seasons.map(seasonLabel).join('、')}。`);
+    details.push(`季节扣分: ${plant.naming.zh} 更适合 ${agronomy.seasons.map(seasonLabel).join('、')}，当前是${seasonLabel(planSeason)}。`);
   } else {
     score += 8;
-    details.push(`季节加分: 当前季节适合 ${plant.naming.zh}。`);
+    details.push(`季节加分: 当前${seasonLabel(planSeason)}适合 ${plant.naming.zh}。`);
   }
 
   const zoneNumber = Number.parseInt(climateProfile.hardinessZone, 10);
@@ -36,7 +37,7 @@ export function scorePlacement(
 
   if (agronomy.waterNeed === 'high' && climateProfile.mockWeatherScenario === 'dry') {
     score -= 10;
-    details.push('天气扣分: 干旱场景下高需水作物维护压力更高。');
+    details.push('天气扣分: Mock 干旱场景下，高需水作物维护压力更高，仅供体验验证。');
   }
 
   const clampedScore = Math.max(0, Math.min(100, Math.round(score)));

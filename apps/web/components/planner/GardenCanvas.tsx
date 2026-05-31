@@ -19,7 +19,7 @@ import { PlannerStatusBar } from './PlannerStatusBar';
 import { PlannerToolbar } from './PlannerToolbar';
 import { evaluateCompanionRules, getCompanionRule } from './rules';
 import { getGardenTaskBoard, getPlantGrowthStatus, type GrowthStageId } from './growth';
-import { getPlantAgronomy, plantMap } from './plants';
+import { getPlantAgronomy, getPlantSpacingLabel, getPlantTimingLabel, plantMap } from './plants';
 import { shouldRemoveAfterHarvest } from './harvestPolicy';
 import { evaluateRotationRules } from './rotation';
 import { scorePlacement } from './scoring';
@@ -825,9 +825,9 @@ function getLayerDetails(result: SynergyResult, layer: HeatmapLayer, plant: Plan
   const agronomy = getPlantAgronomy(plant.id);
   if (layer === 'season') {
     if (agronomy.seasons.includes(planSeason)) {
-      return [`季节图层: 当前季节适合 ${plant.naming.zh}。`];
+      return [`季节图层: 当前季节适合 ${plant.naming.zh}，约 ${getPlantTimingLabel(plant.id)}。`];
     }
-    return [`季节图层: ${plant.naming.zh} 更适合 ${agronomy.seasons.map(seasonLabel).join('、')}。`];
+    return [`季节图层: ${plant.naming.zh} 更适合 ${agronomy.seasons.map(seasonLabel).join('、')}，建议${getPlantSpacingLabel(plant.id)}。`];
   }
 
   if (layer === 'weather') {
@@ -844,7 +844,7 @@ function getLayerDetails(result: SynergyResult, layer: HeatmapLayer, plant: Plan
     if (scenario === 'rain' && agronomy.waterNeed === 'low') {
       return [`天气图层: Mock 降雨场景下，${plant.naming.zh} 需注意排水，避免根部过湿。`];
     }
-    return [`天气图层: 当前 Mock 天气对 ${plant.naming.zh} 没有明显额外风险。`];
+    return [`天气图层: 当前 Mock 天气对 ${plant.naming.zh} 没有明显额外风险，真实天气 API 暂未接入。`];
   }
 
   return result.details;
