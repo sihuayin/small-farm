@@ -20,6 +20,7 @@ import { PlannerToolbar } from './PlannerToolbar';
 import { evaluateCompanionRules, getCompanionRule } from './rules';
 import { getGardenTaskBoard, getPlantGrowthStatus, type GrowthStageId } from './growth';
 import { getPlantAgronomy, getPlantSpacingLabel, getPlantTimingLabel, plantMap } from './plants';
+import { getPlantingWindowStatus } from './plantingWindow';
 import { shouldRemoveAfterHarvest } from './harvestPolicy';
 import { evaluateRotationRules } from './rotation';
 import { scorePlacement } from './scoring';
@@ -35,6 +36,7 @@ import type { SynergyResult } from './types';
 import type { PlacementInsight } from './types';
 import type { HeatmapLayer } from './types';
 import type { PlanSeason } from './types';
+import type { ClimateProfile } from './types';
 import type { TileStatusInfo, TileStatusKind } from './types';
 import type { Plant } from './plants.d';
 
@@ -714,11 +716,15 @@ function placementScoreStroke(result: SynergyResult) {
   return '#3f6212';
 }
 
-function smartRecommendationReason(result: SynergyResult, plant: Plant, planSeason: PlanSeason) {
+function smartRecommendationReason(result: SynergyResult, plant: Plant, planSeason: PlanSeason, climateProfile: ClimateProfile, planYear: number) {
+  const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
   if (result.enemyCount > 0) return '附近存在冲突植物，建议换个位置。';
-  if (result.companionCount > 0) return `附近有伴生伙伴，适合尝试${plant.naming.zh}。`;
+  if (windowStatus.status === 'in_window' && result.companionCount > 0) return `${windowStatus.shortLabel}，附近有伴生伙伴，适合尝试${plant.naming.zh}。`;
+  if (windowStatus.status === 'in_window') return `${windowStatus.shortLabel}: ${windowStatus.detail}`;
+  if (windowStatus.status === 'too_early') return `${windowStatus.shortLabel}: ${windowStatus.detail}`;
+  if (result.companionCount > 0) return `有伴生伙伴，但${windowStatus.shortLabel}。${windowStatus.detail}`;
   if (getPlantAgronomy(plant.id).seasons.includes(planSeason)) return '当前季节适配，且没有明显冲突。';
-  return '没有明显冲突，但季节适配一般。';
+  return `${windowStatus.shortLabel}: ${windowStatus.detail}`;
 }
 
 function combineSynergyResults(primary: SynergyResult, secondary: SynergyResult): SynergyResult {
@@ -1153,22 +1159,25 @@ export default function GardenCanvas({
             evaluateRotationRules(selectedTileStatus.gridX, selectedTileStatus.gridY, plant, plantingHistory, planYear, planSeason)
           ),
           climateProfile,
-          planSeason
+          planSeason,
+          planYear
         );
+        const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
         return {
           id: plant.id,
           name: plant.naming.zh,
           score: result.score ?? 0,
-          reason: smartRecommendationReason(result, plant, planSeason),
+          reason: smartRecommendationReason(result, plant, planSeason, climateProfile, planYear),
           valid: result.valid && result.recommendation !== 'bad',
-          category: plant.category
+          category: plant.category,
+          windowPriority: windowStatus.status === 'in_window' ? 3 : windowStatus.status === 'too_early' ? 2 : windowStatus.status === 'late' ? 1 : 0
         };
       })
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
       .filter(item => item.valid)
       .sort((a, b) => {
         const categoryWeight = (item: { category: string }) => item.category === 'vegetable' ? 4 : item.category === 'herb' ? 3 : item.category === 'flower' ? 2 : 1;
-        return b.score - a.score || categoryWeight(b) - categoryWeight(a);
+        return b.windowPriority - a.windowPriority || b.score - a.score || categoryWeight(b) - categoryWeight(a);
       })
       .slice(0, 3)
       .map(({ id, name, score, reason }) => ({ id, name, score, reason }));

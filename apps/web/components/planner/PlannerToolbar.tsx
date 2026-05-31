@@ -1,5 +1,6 @@
 import { plants, tiles, type TileType } from './usePlannerStore';
 import { GardenSettingsPanel } from './GardenSettingsPanel';
+import { getPlantingWindowStatus, plantingWindowBadgeClassName } from './plantingWindow';
 import type { ClimateProfile, GardenPlan, GardenPlanSummary, PlanSeason } from './usePlannerStore';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -363,6 +364,9 @@ export function PlannerToolbar({
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1 md:mt-3 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
           {kitPlants.map(plant => (
             <div key={plant.id} className="group relative w-[76px] shrink-0 md:w-auto">
+              {(() => {
+                const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
+                return (
               <button
                 onClick={() => {
                   bumpSelection();
@@ -381,7 +385,12 @@ export function PlannerToolbar({
                 <div className="mt-0.5 text-[10px] font-medium text-amber-700">
                   {plant.dimensions.grid_span_x}x{plant.dimensions.grid_span_y}
                 </div>
+                <div className={`mt-1 rounded-full border px-1 py-0.5 text-[9px] font-black leading-none ${plantingWindowBadgeClassName(windowStatus.status)}`}>
+                  {windowStatus.shortLabel}
+                </div>
               </button>
+                );
+              })()}
               {kitPlants.length > 1 && (
                 <button
                   type="button"
@@ -441,6 +450,7 @@ export function PlannerToolbar({
                 <div className="grid grid-cols-2 gap-2">
                   {libraryPlants.map(plant => {
                     const inKit = kitPlantIds.includes(plant.id);
+                    const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
                     return (
                       <div key={plant.id} className="rounded-md border border-amber-900/10 bg-white/70 p-2">
                         <div className="flex items-center gap-2">
@@ -448,6 +458,9 @@ export function PlannerToolbar({
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-black text-amber-950">{plant.naming.zh}</div>
                             <div className="truncate text-[10px] font-bold text-amber-700">{plant.naming.en} · {plant.dimensions.grid_span_x}x{plant.dimensions.grid_span_y}</div>
+                            <div className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-black ${plantingWindowBadgeClassName(windowStatus.status)}`}>
+                              {windowStatus.shortLabel}
+                            </div>
                           </div>
                           <button
                             type="button"

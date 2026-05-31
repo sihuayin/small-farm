@@ -722,7 +722,8 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
         evaluateRotationRules(gridX, gridY, plant, state.plantingHistory, state.planYear, state.planSeason)
       ),
       state.climateProfile,
-      state.planSeason
+      state.planSeason,
+      state.planYear
     );
   },
 
@@ -1064,7 +1065,8 @@ function findStarterPlacement(
           evaluateRotationRules(x, y, plant, plantingHistory, year, season)
         ),
         climateProfile,
-        season
+        season,
+        year
       );
 
       if (!result.valid || result.recommendation === 'bad') continue;

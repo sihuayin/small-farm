@@ -6,6 +6,7 @@ import { getGardenTaskBoard, getPlantGrowthStatus, summarizeGardenTasks, type Gr
 import { getGardenCalendarReminders } from './calendar';
 import { getSeasonTimeline } from './timeline';
 import { getCompanionRule } from './rules';
+import { getPlantingWindowStatus, plantingWindowBadgeClassName } from './plantingWindow';
 import type { ActivityRecord, ClimateProfile, GardenEntity, HarvestRecord, PlacementInsight, PlantEntity, PlantingRecord, PlanSeason, SynergyResult, TileStatusInfo } from './types';
 import type { HarvestInput } from './usePlannerStore';
 
@@ -154,6 +155,9 @@ export function PlannerInspector({
   const selectedPlantCredibilityNotes = selectedEntity?.type === 'plant'
     ? getPlantCredibilityNotes(selectedEntity.plantId)
     : [];
+  const selectedPlantingWindow = selectedEntity?.type === 'plant'
+    ? getPlantingWindowStatus(selectedEntity.plant, climateProfile, planYear, planSeason)
+    : null;
   const selectedPlantActivities = selectedEntity?.type === 'plant'
     ? activityRecords.filter(record => record.entityId === selectedEntity.id || record.plantId === selectedEntity.plantId).slice(0, 4)
     : [];
@@ -798,6 +802,17 @@ export function PlannerInspector({
               <div className="mt-2 rounded-md border border-amber-900/10 bg-white/70 p-2 text-[11px] font-bold leading-5 text-amber-800">
                 {familyLabel(selectedPlantAgronomy.family)} · {sunRequirementLabel(selectedPlantAgronomy.sunRequirement)} · Zone {selectedPlantAgronomy.hardinessZones[0]}-{selectedPlantAgronomy.hardinessZones[1]}
               </div>
+              {selectedPlantingWindow && (
+                <div className="mt-2 rounded-md border border-amber-900/10 bg-white/75 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Local Window</div>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${plantingWindowBadgeClassName(selectedPlantingWindow.status)}`}>
+                      {selectedPlantingWindow.label}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[10px] font-bold leading-4 text-amber-800">{selectedPlantingWindow.detail}</div>
+                </div>
+              )}
               <div className="mt-2 grid gap-1">
                 {selectedPlantCredibilityNotes.map(note => (
                   <div key={note} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black leading-4 text-slate-700">

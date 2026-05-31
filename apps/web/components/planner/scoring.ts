@@ -1,4 +1,5 @@
 import { getPlantAgronomy, getPlantSpacingLabel, getPlantTimingLabel } from './plants';
+import { getPlantingWindowStatus } from './plantingWindow';
 import type { Plant } from './plants.d';
 import type { ClimateProfile, PlanSeason, SynergyResult } from './types';
 
@@ -6,15 +7,19 @@ export function scorePlacement(
   plant: Plant,
   synergy: SynergyResult,
   climateProfile: ClimateProfile,
-  planSeason: PlanSeason
+  planSeason: PlanSeason,
+  planYear = new Date().getFullYear()
 ): SynergyResult {
   let score = 72;
   const details = [...synergy.details];
   const agronomy = getPlantAgronomy(plant.id);
+  const plantingWindow = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
   details.push(`作物资料: ${plant.naming.zh} 约 ${getPlantTimingLabel(plant.id)}，建议${getPlantSpacingLabel(plant.id)}。`);
+  details.push(`地区窗口: ${plantingWindow.label}。${plantingWindow.detail}`);
 
   score += synergy.companionCount * 8;
   score -= synergy.enemyCount * 35;
+  score += plantingWindow.scoreDelta;
 
   if (!agronomy.seasons.includes(planSeason)) {
     score -= 18;
