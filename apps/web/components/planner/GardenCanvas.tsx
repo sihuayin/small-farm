@@ -3122,7 +3122,7 @@ export default function GardenCanvas({
     {
       id: 'demo',
       label: '打开示例菜园',
-      detail: '载入含伴生、冲突、天气任务和采收窗口的验收场景。',
+      detail: '载入含伴生、冲突、天气任务和采收窗口的示例菜园。',
       done: planName === 'Demo Scenario' || plantCount > 0
     },
     {
@@ -3806,7 +3806,7 @@ export default function GardenCanvas({
         <div className="absolute left-8 top-[190px] z-10 hidden w-64 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/88 p-2 shadow-[0_3px_0_rgba(120,72,24,0.1),0_12px_24px_rgba(61,40,20,0.12)] backdrop-blur md:block">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-black uppercase tracking-wider text-amber-800">3-Min Check</div>
+              <div className="text-[9px] font-black uppercase tracking-wider text-amber-800">Starter Path</div>
               <div className="mt-0.5 text-xs font-black text-amber-950">
                 {firstRunCurrentStep ? firstRunCurrentStep.label : '体验路径已完成'}
               </div>
@@ -3847,8 +3847,8 @@ export default function GardenCanvas({
           <div className="absolute left-8 top-[290px] z-20 hidden max-h-[calc(100%-318px)] w-72 overflow-y-auto rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/94 p-3 shadow-[0_4px_0_rgba(120,72,24,0.12),0_18px_30px_rgba(61,40,20,0.18)] backdrop-blur md:block">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Experience Guide</div>
-                <div className="mt-0.5 text-sm font-black text-amber-950">体验验收清单</div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Garden Guide</div>
+                <div className="mt-0.5 text-sm font-black text-amber-950">新手导览</div>
               </div>
               <button
                 type="button"
@@ -3911,11 +3911,11 @@ export default function GardenCanvas({
               </button>
             </div>
             <div className="mt-3 rounded-md border border-amber-900/10 bg-white/70 p-2">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Tester Brief</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Feedback Notes</div>
               <div className="mt-1 space-y-1 text-[9px] font-bold leading-4 text-amber-700">
-                <div>目标：3 分钟内看懂这是否能帮你规划真实菜园。</div>
-                <div>请完成：按清单走完，并记录哪里迷路、哪里不可信。</div>
-                <div>反馈重点：规则是否清楚、操作是否顺、是否愿意下次再用。</div>
+                <div>可以用 3 分钟快速判断它是否适合你的真实菜园。</div>
+                <div>按导览走完后，看看规则、操作和推荐是否清楚。</div>
+                <div>如果愿意反馈，告诉我们哪里最有用、哪里还不够可信。</div>
               </div>
             </div>
             <button
