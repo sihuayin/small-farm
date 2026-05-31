@@ -324,6 +324,22 @@ export function PlannerToolbar({
               设置
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowSettingsPanel(true)}
+            className="mt-2 flex w-full flex-wrap gap-1 text-left"
+            aria-label="查看数据状态"
+          >
+            <span className="rounded-full border border-green-300 bg-green-50 px-2 py-0.5 text-[9px] font-black text-green-800">
+              {plants.length} crops
+            </span>
+            <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-[9px] font-black text-sky-800">
+              Mock climate
+            </span>
+            <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-700">
+              Reference data
+            </span>
+          </button>
         </div>
 
         <div

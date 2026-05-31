@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { inferClimateProfileFromZip } from './climate';
+import { plants } from './plants';
 import type { ClimateProfile, GardenPlan, GardenPlanSummary, MockWeatherScenario, PlanSeason } from './usePlannerStore';
 
 interface GardenSettingsPanelProps {
@@ -80,7 +81,6 @@ export function GardenSettingsPanel({
     setDraftSeason(planSeason);
     setDraftClimate(climateProfile);
     setError(null);
-    setClimateMessage(null);
   }, [planName, gridWidth, gridHeight, cellSizeFeet, planYear, planSeason, climateProfile]);
 
   const area = useMemo(() => {
@@ -94,11 +94,15 @@ export function GardenSettingsPanel({
       : '尚未保存';
 
   const applySettings = () => {
+    const climateChanged = !isSameClimate(draftClimate, climateProfile) || draftYear !== planYear || draftSeason !== planSeason;
     onRename(draftName);
     onSetPlanTime(draftYear, draftSeason);
     onUpdateClimateProfile(draftClimate);
     const ok = onResize(draftWidth, draftHeight, draftCellSize);
     setError(ok ? null : '当前有对象会超出新尺寸，先移动或删除它们。');
+    if (climateChanged) {
+      setClimateMessage(getCalibrationMessage(draftClimate));
+    }
   };
 
   const exportPlan = () => {
@@ -135,13 +139,14 @@ export function GardenSettingsPanel({
 
     setDraftClimate(inferred.profile);
     onUpdateClimateProfile(inferred.profile);
-    setClimateMessage(`已使用 ${inferred.source} 近似资料`);
+    setClimateMessage(`已使用 ${inferred.source} 近似资料，并刷新推荐`);
   };
 
   const updateMockScenario = (scenario: MockWeatherScenario) => {
     const nextClimate = { ...draftClimate, mockWeatherScenario: scenario };
     setDraftClimate(nextClimate);
     onUpdateClimateProfile(nextClimate);
+    setClimateMessage(getCalibrationMessage(nextClimate));
   };
 
   return (
@@ -325,7 +330,40 @@ export function GardenSettingsPanel({
             <option value="dry">干旱</option>
           </select>
         </label>
-        {climateMessage && <div className="mt-2 text-xs font-bold text-amber-700">{climateMessage}</div>}
+        {climateMessage && (
+          <div className="mt-2 rounded-md border border-green-300 bg-green-50 px-2 py-1 text-xs font-black text-green-800">
+            {climateMessage}
+          </div>
+        )}
+        <div className="mt-2 rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-bold leading-4 text-sky-900">
+          ZIP/Zone/霜冻日期会影响植物列表标签、智能推荐、日历提醒和 Garden Score。
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-md border border-slate-200 bg-white/65 p-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[10px] font-black uppercase tracking-wider text-slate-700">Data Confidence</div>
+          <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-700">
+            Alpha
+          </span>
+        </div>
+        <div className="mt-2 grid gap-1 text-[10px] font-bold leading-4 text-slate-700">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
+            作物资料：{plants.length} 种，参考园艺数据结构，待正式来源逐项复核。
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
+            地区气候：ZIP/Zone/霜冻日为本地 Mock 推断，可手动校准。
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
+            天气提醒：Mock 场景，尚未接入实时天气 API。
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
+            推荐系统：综合伴生、轮作、季节、地区窗口和天气压力。
+          </div>
+        </div>
+        <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-black leading-4 text-amber-900">
+          当前适合体验规划逻辑；真实种植前建议结合当地 extension、nursery 或农艺资料复核。
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-4 gap-2">
@@ -376,4 +414,22 @@ export function GardenSettingsPanel({
 
 function sanitizeFileName(name: string) {
   return name.replace(/[\\/:*?"<>|]+/g, '-').trim() || 'garden-plan';
+}
+
+function isSameClimate(a: ClimateProfile, b: ClimateProfile) {
+  return a.zipCode === b.zipCode
+    && a.hardinessZone === b.hardinessZone
+    && a.lastFrostDate === b.lastFrostDate
+    && a.firstFrostDate === b.firstFrostDate
+    && (a.mockWeatherScenario || 'auto') === (b.mockWeatherScenario || 'auto');
+}
+
+function getCalibrationMessage(climate: ClimateProfile) {
+  return `已按 Zone ${climate.hardinessZone || '未设定'} / 末霜 ${formatMonthDay(climate.lastFrostDate)} / 初霜 ${formatMonthDay(climate.firstFrostDate)} 刷新推荐`;
+}
+
+function formatMonthDay(monthDay: string) {
+  if (!monthDay) return '未设定';
+  const [month, day] = monthDay.split('-');
+  return month && day ? `${Number(month)}/${Number(day)}` : monthDay;
 }
