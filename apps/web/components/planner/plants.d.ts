@@ -73,6 +73,14 @@ export interface PlantAgronomy {
   startMethod: PlantStartMethod;
   /** 当前资料的可信度标记：reference=参考资料结构，mock=演示占位 */
   dataConfidence: PlantDataConfidence;
+  /** 数据来源名称，用于透明说明 */
+  dataSourceLabel: string;
+  /** 数据来源 URL，未来接真实资料库时使用 */
+  dataSourceUrl?: string;
+  /** 最近人工校对日期 */
+  lastReviewedAt: string;
+  /** 可信度说明 */
+  confidenceNote: string;
   /** 以末霜日为基准的播种窗口，单位：天 */
   sowingWindow: { startOffsetDays: number; endOffsetDays: number };
   /** 以播种日为基准的收获窗口，单位：天 */
