@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 function PlantToken({ plant, size = 'md' }: { plant: (typeof plants)[number]; size?: 'sm' | 'md' | 'lg' }) {
-  const sizeClass = size === 'lg' ? 'h-14 w-14' : size === 'sm' ? 'h-9 w-9' : 'h-12 w-12';
-  const glyphSize = size === 'lg' ? 48 : size === 'sm' ? 31 : 40;
+  const sizeClass = size === 'lg' ? 'h-14 w-14' : size === 'sm' ? 'h-9 w-9' : 'h-10 w-10 md:h-12 md:w-12';
+  const glyphSize = size === 'lg' ? 48 : size === 'sm' ? 31 : 34;
 
   return (
     <div
@@ -308,8 +308,8 @@ export function PlannerToolbar({
   }, [showSettingsPanel]);
 
   return (
-    <div className="z-20 h-[176px] w-full shrink-0 overflow-y-auto border-b border-amber-900/20 bg-[#f7e8c8] shadow-[inset_0_-6px_0_rgba(120,72,24,0.08)] md:h-auto md:w-72 md:border-b-0 md:border-r md:shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
-      <div className="p-3 md:p-4">
+    <div className="z-20 h-[132px] w-full shrink-0 overflow-y-auto border-b border-amber-900/20 bg-[#f7e8c8] shadow-[inset_0_-6px_0_rgba(120,72,24,0.08)] md:h-auto md:w-72 md:border-b-0 md:border-r md:shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
+      <div className="p-2 md:p-4">
         <div className="rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-2 shadow-[0_3px_0_rgba(120,72,24,0.18)] md:p-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
@@ -367,8 +367,8 @@ export function PlannerToolbar({
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-2 md:mt-4">
-          <div>
+        <div className="mt-2 flex items-center justify-end gap-2 md:mt-4 md:justify-between">
+          <div className="hidden md:block">
             <h3 className="text-xs font-black uppercase tracking-wider text-amber-800">My Garden Kit</h3>
             <div className="text-[10px] font-bold text-amber-700">{kitPlants.length} 个可种项目</div>
           </div>
@@ -381,9 +381,9 @@ export function PlannerToolbar({
           </button>
         </div>
 
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1 md:mt-3 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
+        <div className="mt-1 flex gap-2 overflow-x-auto pb-1 md:mt-3 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
           {kitPlants.map(plant => (
-            <div key={plant.id} className="group relative w-[76px] shrink-0 md:w-auto">
+            <div key={plant.id} className="group relative w-[60px] shrink-0 md:w-auto">
               {(() => {
                 const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
                 return (
@@ -393,7 +393,7 @@ export function PlannerToolbar({
                   onSelectPlant(plant.id);
                 }}
                 className={`
-                  min-h-[66px] w-full rounded-lg border-2 p-1.5 text-center shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-all md:min-h-[72px] md:p-2
+                  min-h-[58px] w-full rounded-lg border-2 p-1 text-center shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-all md:min-h-[72px] md:p-2
                   hover:-translate-y-0.5 active:translate-y-0
                   ${activeToolId === plant.id
                     ? 'border-amber-800 bg-[#ffe08a] ring-2 ring-amber-300'
@@ -401,11 +401,11 @@ export function PlannerToolbar({
                 `}
               >
                 <PlantToken plant={plant} />
-                <div className="mt-1 truncate text-xs font-bold text-amber-950">{plant.naming.zh}</div>
-                <div className="mt-0.5 text-[10px] font-medium text-amber-700">
+                <div className="mt-0.5 truncate text-[10px] font-bold leading-none text-amber-950 md:mt-1 md:text-xs">{plant.naming.zh}</div>
+                <div className="mt-0.5 hidden text-[10px] font-medium text-amber-700 md:block">
                   {plant.dimensions.grid_span_x}x{plant.dimensions.grid_span_y}
                 </div>
-                <div className={`mt-1 rounded-full border px-1 py-0.5 text-[9px] font-black leading-none ${plantingWindowBadgeClassName(windowStatus.status)}`}>
+                <div className={`mt-1 hidden rounded-full border px-1 py-0.5 text-[9px] font-black leading-none md:block ${plantingWindowBadgeClassName(windowStatus.status)}`}>
                   {windowStatus.shortLabel}
                 </div>
               </button>
