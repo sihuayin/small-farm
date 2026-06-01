@@ -323,13 +323,21 @@ export function PlannerToolbar({
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [showSettingsPanel]);
 
+  const modeLabel = planName === 'Demo Scenario' ? 'Demo 模式' : '正式规划';
+  const modeClassName = planName === 'Demo Scenario'
+    ? 'border-amber-300 bg-amber-100 text-amber-800'
+    : 'border-green-300 bg-green-50 text-green-800';
+
   return (
     <div className="z-20 h-[132px] w-full shrink-0 overflow-y-auto border-b border-amber-900/20 bg-[#f7e8c8] shadow-[inset_0_-6px_0_rgba(120,72,24,0.08)] md:h-auto md:w-72 md:border-b-0 md:border-r md:shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
       <div className="p-2 md:p-4">
         <div className="rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-2 shadow-[0_3px_0_rgba(120,72,24,0.18)] md:p-3">
           <div className="flex items-center justify-between gap-2 md:hidden">
-            <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5">
               <h2 className="truncate text-sm font-black leading-none text-amber-950">小农场背包</h2>
+              <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-black leading-none ${modeClassName}`}>
+                {planName === 'Demo Scenario' ? 'Demo' : '正式'}
+              </span>
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <button
@@ -358,7 +366,12 @@ export function PlannerToolbar({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Garden Kit</div>
-                <h2 className="text-lg font-black text-amber-950">小农场背包</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-amber-950">小农场背包</h2>
+                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black ${modeClassName}`}>
+                    {modeLabel}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"

@@ -896,6 +896,9 @@ export default function GardenCanvas({
   const [showFirstRunCheck, setShowFirstRunCheck] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [setupMode, setSetupMode] = useState<'choice' | 'custom'>('choice');
+  const [setupStep, setSetupStep] = useState<'size' | 'climate' | 'plants' | 'review'>('size');
+  const [setupPlantCategory, setSetupPlantCategory] = useState<string>('all');
+  const [setupPlantSearch, setSetupPlantSearch] = useState('');
   const [setupWidth, setSetupWidth] = useState(12);
   const [setupHeight, setSetupHeight] = useState(12);
   const [setupCellSize, setSetupCellSize] = useState(1);
@@ -3216,6 +3219,34 @@ export default function GardenCanvas({
   const selectedEntity = selectedEntityId ? entities[selectedEntityId] || null : null;
   const harvestEntity = harvestDraft ? entities[harvestDraft.entityId] || null : null;
   const activityEntity = activityDraft ? entities[activityDraft.entityId] || null : null;
+  const setupStepItems = [
+    { id: 'size', label: '地块' },
+    { id: 'climate', label: '地区' },
+    { id: 'plants', label: '植物' },
+    { id: 'review', label: '确认' }
+  ] as const;
+  const setupCategoryItems = [
+    { id: 'all', label: '全部' },
+    { id: 'vegetable', label: '蔬菜' },
+    { id: 'herb', label: '香草' },
+    { id: 'flower', label: '花卉' },
+    { id: 'fruit', label: '果物' }
+  ];
+  const setupPresetItems = [
+    { id: 'starter', label: '蔬菜入门', plantIds: ['tomato', 'lettuce', 'carrot', 'pepper', 'basil', 'marigold'] },
+    { id: 'herbs', label: '香草搭配', plantIds: ['basil', 'rosemary', 'sage', 'thyme', 'oregano', 'cilantro'] },
+    { id: 'flowers', label: '花卉伴生', plantIds: ['marigold', 'nasturtium', 'lavender', 'sunflower', 'dill', 'basil'] },
+    { id: 'berries', label: '浆果多年生', plantIds: ['strawberry', 'blueberry', 'raspberry', 'blackberry', 'thyme', 'lavender'] }
+  ];
+  const setupFilteredPlants = plants.filter(plant => {
+    const query = setupPlantSearch.trim().toLowerCase();
+    const matchesCategory = setupPlantCategory === 'all' || plant.category === setupPlantCategory;
+    const matchesSearch = !query
+      || plant.naming.zh.toLowerCase().includes(query)
+      || plant.naming.en.toLowerCase().includes(query)
+      || plant.id.toLowerCase().includes(query);
+    return matchesCategory && matchesSearch;
+  });
   const canvasCursor = isEntityDragging || isPanning
     ? 'grabbing'
     : activeToolId
@@ -4272,7 +4303,10 @@ export default function GardenCanvas({
                   <div className="mt-4 grid gap-2">
                     <button
                       type="button"
-                      onClick={() => setSetupMode('custom')}
+                      onClick={() => {
+                        setSetupMode('custom');
+                        setSetupStep('size');
+                      }}
                       className="w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-sm font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
                     >
                       创建我的菜园
@@ -4291,6 +4325,23 @@ export default function GardenCanvas({
                   <div className="mt-2 text-xs font-bold leading-5 text-amber-800">
                     先配置真实菜园的基础参数。进入规划器后不会显示 Demo 导览，工具箱只保留你选择的植物。
                   </div>
+                  <div className="mt-3 grid grid-cols-4 gap-1">
+                    {setupStepItems.map((step, index) => (
+                      <button
+                        key={step.id}
+                        type="button"
+                        onClick={() => setSetupStep(step.id)}
+                        className={`rounded-md border px-2 py-1 text-[10px] font-black ${
+                          setupStep === step.id
+                            ? 'border-green-300 bg-green-100 text-green-900'
+                            : 'border-amber-900/10 bg-white/70 text-amber-800'
+                        }`}
+                      >
+                        {index + 1}. {step.label}
+                      </button>
+                    ))}
+                  </div>
+                  {setupStep === 'size' && (
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     <label className="text-xs font-bold text-amber-800">
                       宽
@@ -4327,6 +4378,8 @@ export default function GardenCanvas({
                       />
                     </label>
                   </div>
+                  )}
+                  {setupStep === 'climate' && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <label className="text-xs font-bold text-amber-800">
                       ZIP
@@ -4365,6 +4418,8 @@ export default function GardenCanvas({
                       />
                     </label>
                   </div>
+                  )}
+                  {setupStep === 'plants' && (
                   <div className="mt-3">
                     <div className="flex items-center justify-between">
                       <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Plant Kit</div>
@@ -4372,9 +4427,43 @@ export default function GardenCanvas({
                         {setupPlantIds.length} 个
                       </span>
                     </div>
+                    <div className="mt-2 grid grid-cols-2 gap-1">
+                      {setupPresetItems.map(preset => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setSetupPlantIds(preset.plantIds)}
+                          className="rounded-md border border-green-900/10 bg-green-50 px-2 py-1 text-[10px] font-black text-green-900 hover:bg-green-100"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      value={setupPlantSearch}
+                      onChange={(event) => setSetupPlantSearch(event.target.value)}
+                      placeholder="搜索番茄、Basil、flower..."
+                      className="mt-2 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-xs font-bold text-amber-950"
+                    />
+                    <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
+                      {setupCategoryItems.map(category => (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => setSetupPlantCategory(category.id)}
+                          className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-black ${
+                            setupPlantCategory === category.id
+                              ? 'border-amber-800 bg-amber-700 text-white'
+                              : 'border-amber-900/10 bg-white/70 text-amber-800'
+                          }`}
+                        >
+                          {category.label}
+                        </button>
+                      ))}
+                    </div>
                     <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-amber-900/10 bg-white/55 p-2">
                       <div className="grid grid-cols-2 gap-1">
-                        {plants.map(plant => {
+                        {setupFilteredPlants.map(plant => {
                           const selected = setupPlantIds.includes(plant.id);
                           return (
                             <button
@@ -4398,20 +4487,43 @@ export default function GardenCanvas({
                       </div>
                     </div>
                   </div>
+                  )}
+                  {setupStep === 'review' && (
+                    <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-3 text-xs font-bold leading-5 text-green-900">
+                      已准备创建 {setupWidth}x{setupHeight} 格菜园，{setupCellSize} ft/格，地区 Zone {setupZone || '未设定'}，工具箱包含 {setupPlantIds.length} 种植物。
+                      <div className="mt-2 rounded-md bg-white/70 px-2 py-1 text-[10px] font-black text-green-800">
+                        进入后可直接拖放植物，也可以点空地查看 Smart Pick。
+                      </div>
+                    </div>
+                  )}
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setSetupMode('choice')}
+                      onClick={() => {
+                        if (setupStep === 'size') {
+                          setSetupMode('choice');
+                          return;
+                        }
+                        const currentIndex = setupStepItems.findIndex(step => step.id === setupStep);
+                        setSetupStep(setupStepItems[Math.max(0, currentIndex - 1)].id);
+                      }}
                       className="rounded-md border border-amber-900/15 bg-white/80 px-3 py-2 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
                     >
-                      返回
+                      {setupStep === 'size' ? '返回' : '上一步'}
                     </button>
                     <button
                       type="button"
-                      onClick={startConfiguredGarden}
+                      onClick={() => {
+                        if (setupStep === 'review') {
+                          startConfiguredGarden();
+                          return;
+                        }
+                        const currentIndex = setupStepItems.findIndex(step => step.id === setupStep);
+                        setSetupStep(setupStepItems[Math.min(setupStepItems.length - 1, currentIndex + 1)].id);
+                      }}
                       className="rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-xs font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
                     >
-                      进入规划器
+                      {setupStep === 'review' ? '进入规划器' : '下一步'}
                     </button>
                   </div>
                 </>
