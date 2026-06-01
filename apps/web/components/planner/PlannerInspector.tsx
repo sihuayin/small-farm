@@ -263,10 +263,10 @@ export function PlannerInspector({
   }, [firstRunFocus?.area, firstRunFocus?.label]);
 
   useEffect(() => {
-    if (selectedEntity || selectedTileStatus || placementInsight || requestedTab || firstRunFocus) {
+    if (selectedEntity || selectedTileStatus || placementInsight) {
       setIsMobilePanelOpen(true);
     }
-  }, [firstRunFocus, placementInsight, requestedTab, selectedEntity, selectedTileStatus]);
+  }, [placementInsight, selectedEntity, selectedTileStatus]);
 
   const handleSnapshotAction = (actionId: SnapshotActionId) => {
     if (actionId === 'first-task') {
@@ -418,14 +418,14 @@ export function PlannerInspector({
         }
       : null;
   const mobileCollapsedMaxHeight = isMobilePanelOpen
-    ? 'max-h-[64vh]'
+    ? 'max-h-[58vh]'
     : mobilePrimaryAction
       ? 'max-h-[156px]'
       : 'max-h-[104px]';
 
   return (
     <aside className={`absolute inset-x-3 bottom-3 z-20 overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur transition-[max-height] duration-200 md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:max-h-[calc(100vh-2rem)] md:w-72 ${mobileCollapsedMaxHeight}`}>
-      <div className={`${isMobilePanelOpen ? 'max-h-[64vh] overflow-y-auto' : mobilePrimaryAction ? 'max-h-[156px] overflow-hidden' : 'max-h-[104px] overflow-hidden'} md:max-h-[calc(100vh-2rem)] md:overflow-y-auto`}>
+      <div className={`${isMobilePanelOpen ? 'max-h-[58vh] overflow-y-auto' : mobilePrimaryAction ? 'max-h-[156px] overflow-hidden' : 'max-h-[104px] overflow-hidden'} md:max-h-[calc(100vh-2rem)] md:overflow-y-auto`}>
       <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-3 md:p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

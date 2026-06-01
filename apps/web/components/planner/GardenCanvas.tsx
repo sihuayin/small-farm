@@ -4187,11 +4187,6 @@ export default function GardenCanvas({
               <div className="mt-2 text-xs font-bold leading-5 text-amber-800">
                 选择蔬菜、香草或花，先在规划器里试种一遍，再决定真实菜园怎么下手。
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] font-black text-green-900">
-                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">智能摆放</div>
-                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">规则解释</div>
-                <div className="rounded-md border border-green-900/10 bg-green-50 px-2 py-2">分享导出</div>
-              </div>
               <button
                 type="button"
                 onClick={handleGenerateStarterPlan}
