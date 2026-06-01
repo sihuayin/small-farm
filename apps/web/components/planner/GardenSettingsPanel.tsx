@@ -161,6 +161,26 @@ export function GardenSettingsPanel({
         </span>
       </div>
 
+      <div className={`mt-3 rounded-md border p-2 ${
+        planName === 'Demo Scenario'
+          ? 'border-amber-300 bg-amber-50 text-amber-900'
+          : 'border-green-300 bg-green-50 text-green-900'
+      }`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[10px] font-black uppercase tracking-wider">
+            {planName === 'Demo Scenario' ? 'Demo Mode' : 'Planner Mode'}
+          </div>
+          <span className="rounded-full border border-current/20 bg-white/65 px-2 py-0.5 text-[10px] font-black">
+            {planName === 'Demo Scenario' ? '示例体验' : '正式规划'}
+          </span>
+        </div>
+        <div className="mt-1 text-[10px] font-bold leading-4">
+          {planName === 'Demo Scenario'
+            ? '这是用于体验功能的示例菜园，包含预置作物、任务和导览。'
+            : '当前方案为正式规划，尺寸、气候、植物选择和后续调整会保存到本地方案库。'}
+        </div>
+      </div>
+
       <label className="block mt-3 text-xs text-amber-800">
         当前方案
         <select

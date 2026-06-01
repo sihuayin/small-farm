@@ -3073,6 +3073,7 @@ export default function GardenCanvas({
 
   // ==================== 渲染 ====================
   const plantCount = Object.values(entities).filter(entity => entity.type === 'plant').length;
+  const isDemoMode = planName === 'Demo Scenario';
   useEffect(() => {
     if (hasDismissedWelcome || plantCount > 0 || planName === 'Demo Scenario') return;
     setShowWelcome(true);
@@ -3920,6 +3921,7 @@ export default function GardenCanvas({
             <TileStateLegendItem color="bg-cyan-300" label="排水" />
           </div>
         </div>
+        {isDemoMode && (
         <div className="absolute left-8 top-[190px] z-10 hidden w-64 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/88 p-2 shadow-[0_3px_0_rgba(120,72,24,0.1),0_12px_24px_rgba(61,40,20,0.12)] backdrop-blur md:block">
           <div className="flex items-center justify-between gap-2">
             <div>
@@ -3960,7 +3962,8 @@ export default function GardenCanvas({
             </button>
           </div>
         </div>
-        {showFirstRunCheck && (
+        )}
+        {showFirstRunCheck && isDemoMode && (
           <div className="absolute left-8 top-[290px] z-20 hidden max-h-[calc(100%-318px)] w-72 overflow-y-auto rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/94 p-3 shadow-[0_4px_0_rgba(120,72,24,0.12),0_18px_30px_rgba(61,40,20,0.18)] backdrop-blur md:block">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -4271,6 +4274,16 @@ export default function GardenCanvas({
           activeToolId={activeToolId}
           activeTileId={activeTileId}
         />
+
+        {!showWelcome && !isDemoMode && plantCount === 0 && (
+          <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 w-[min(340px,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/88 p-3 text-center shadow-[0_4px_0_rgba(120,72,24,0.12),0_14px_24px_rgba(61,40,20,0.16)] backdrop-blur">
+            <div className="text-[10px] font-black uppercase tracking-wider text-green-800">正式规划</div>
+            <div className="mt-1 text-sm font-black text-amber-950">选择植物后点击地块开始规划</div>
+            <div className="mt-1 text-[10px] font-bold leading-4 text-amber-700">
+              也可以先点空地查看 Smart Pick，系统会根据伴生、轮作、地区窗口给出推荐。
+            </div>
+          </div>
+        )}
 
         {showWelcome && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-emerald-950/24 px-4 backdrop-blur-[2px]">
