@@ -503,9 +503,9 @@ function buildStarterPlanSummary(result: { placed: number; skipped: string[] }, 
     .map(id => plantMap.get(id)?.naming.zh || id)
     .slice(0, 4);
   const reasons = [
-    '优先避开相克组合和高风险轮作位置。',
-    `优先匹配${seasonLabel(planSeason)}可种作物。`,
-    '尽量让伴生组合靠近，并保留可继续扩展的空位。'
+    `已根据${seasonLabel(planSeason)}、地区窗口、伴生关系和轮作风险生成起步菜园。`,
+    '你可以点击任意植物查看任务、采收状态和推荐原因。',
+    '打开热力图可以继续检查伴生、轮作、季节和天气风险。'
   ];
 
   return {
@@ -4167,8 +4167,23 @@ export default function GardenCanvas({
         {showWelcome && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-emerald-950/24 px-4 backdrop-blur-[2px]">
             <div className="w-full max-w-md rounded-lg border-2 border-amber-950/20 bg-[#fff8df] p-4 shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.24)]">
-              <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Small Farm</div>
-              <div className="mt-1 text-2xl font-black leading-tight text-amber-950">先试着规划一块小菜园</div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Small Farm</div>
+                  <div className="mt-1 text-2xl font-black leading-tight text-amber-950">先试着规划一块小菜园</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWelcome(false);
+                    setHasDismissedWelcome(true);
+                  }}
+                  className="h-7 w-7 shrink-0 rounded-md border border-amber-900/15 bg-white/80 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
+                  aria-label="关闭欢迎"
+                >
+                  x
+                </button>
+              </div>
               <div className="mt-2 text-xs font-bold leading-5 text-amber-800">
                 选择蔬菜、香草或花，先在规划器里试种一遍，再决定真实菜园怎么下手。
               </div>
@@ -4198,18 +4213,6 @@ export default function GardenCanvas({
                   className="rounded-md border border-amber-900/15 bg-white/80 px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
                 >
                   空白开始
-                </button>
-              </div>
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowWelcome(false);
-                    setHasDismissedWelcome(true);
-                  }}
-                  className="w-full rounded-md border border-amber-900/10 bg-white/55 px-3 py-1.5 text-xs font-black text-amber-800 hover:bg-amber-50"
-                >
-                  继续当前菜园
                 </button>
               </div>
             </div>

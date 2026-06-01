@@ -366,6 +366,26 @@ export function GardenSettingsPanel({
         </div>
       </div>
 
+      <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-2">
+        <div className="text-[10px] font-black uppercase tracking-wider text-green-800">5-Minute Test</div>
+        <div className="mt-2 grid gap-1 text-[10px] font-bold leading-4 text-green-900">
+          {[
+            '快速生成一版菜园',
+            '点击一个植物查看任务',
+            '完成一次浇水、覆盖或排水',
+            '点空地查看 Smart Pick',
+            '导出一张分享图'
+          ].map((item, index) => (
+            <div key={item} className="flex items-center gap-2 rounded-md border border-green-200 bg-white/75 px-2 py-1">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-green-300 bg-green-100 text-[8px] font-black text-green-800">
+                {index + 1}
+              </span>
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="mt-3 grid grid-cols-4 gap-2">
         <button onClick={onCreatePlan} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.14)] hover:bg-amber-50">
           新建
