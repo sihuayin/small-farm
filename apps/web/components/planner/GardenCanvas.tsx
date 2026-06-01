@@ -66,6 +66,9 @@ const activityOptions = [
   { id: 'pest', label: '病虫害' }
 ];
 
+const DEFAULT_GARDEN_KIT_PLANT_IDS = ['tomato', 'basil', 'lettuce', 'carrot', 'pepper', 'marigold'];
+const GARDEN_KIT_STORAGE_KEY = 'small-farm:garden-kit-plants:v1';
+
 interface HeatmapCell {
   x: number;
   y: number;
@@ -892,6 +895,15 @@ export default function GardenCanvas({
   const [showGuidedPath, setShowGuidedPath] = useState(false);
   const [showFirstRunCheck, setShowFirstRunCheck] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [setupMode, setSetupMode] = useState<'choice' | 'custom'>('choice');
+  const [setupWidth, setSetupWidth] = useState(12);
+  const [setupHeight, setSetupHeight] = useState(12);
+  const [setupCellSize, setSetupCellSize] = useState(1);
+  const [setupZipCode, setSetupZipCode] = useState('');
+  const [setupZone, setSetupZone] = useState('7a');
+  const [setupLastFrost, setSetupLastFrost] = useState('04-15');
+  const [setupFirstFrost, setSetupFirstFrost] = useState('10-15');
+  const [setupPlantIds, setSetupPlantIds] = useState<string[]>(DEFAULT_GARDEN_KIT_PLANT_IDS);
   const [hasDismissedWelcome, setHasDismissedWelcome] = useState(false);
   const [firstRunCompletedAt, setFirstRunCompletedAt] = useState<number | null>(null);
   const [completedDemoTourItems, setCompletedDemoTourItems] = useState<Set<string>>(() => new Set());
@@ -997,10 +1009,10 @@ export default function GardenCanvas({
   const heatmapLayerLabel = heatmapLayers.find(layer => layer.id === heatmapLayer)?.label || '综合';
   const heatmapLegend = heatmapLegends[heatmapLayer];
   const getGardenKitPlantIds = useCallback(() => {
-    const fallback = ['tomato', 'basil', 'lettuce', 'carrot', 'pepper', 'marigold'];
+    const fallback = DEFAULT_GARDEN_KIT_PLANT_IDS;
     if (typeof window === 'undefined') return fallback;
     try {
-      const raw = window.localStorage.getItem('small-farm:garden-kit-plants:v1');
+      const raw = window.localStorage.getItem(GARDEN_KIT_STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
       if (Array.isArray(parsed)) {
         const valid = parsed.filter((item): item is string => typeof item === 'string' && plants.some(plant => plant.id === item));
@@ -1010,6 +1022,16 @@ export default function GardenCanvas({
       return fallback;
     }
     return fallback;
+  }, []);
+  const saveGardenKitPlantIds = useCallback((plantIds: string[]) => {
+    const valid = plantIds.filter(id => plantMap.has(id));
+    const nextIds = valid.length > 0 ? Array.from(new Set(valid)).slice(0, 12) : DEFAULT_GARDEN_KIT_PLANT_IDS;
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(GARDEN_KIT_STORAGE_KEY, JSON.stringify(nextIds));
+      window.dispatchEvent(new CustomEvent('small-farm:garden-kit-updated', { detail: nextIds }));
+    }
+    setSetupPlantIds(nextIds);
+    return nextIds;
   }, []);
 
   // ==================== 预加载所有精灵图 ====================
@@ -3205,6 +3227,7 @@ export default function GardenCanvas({
     loadDemoScenario();
     setShowWelcome(false);
     setHasDismissedWelcome(true);
+    setSetupMode('choice');
     setShowGuidedPath(true);
     setShowFirstRunCheck(true);
     setCompletedDemoTourItems(new Set());
@@ -3234,6 +3257,7 @@ export default function GardenCanvas({
     createPlan();
     setShowWelcome(false);
     setHasDismissedWelcome(true);
+    setSetupMode('choice');
     setShowGuidedPath(true);
     setShowFirstRunCheck(true);
     setCompletedDemoTourItems(new Set());
@@ -3251,6 +3275,59 @@ export default function GardenCanvas({
     setActiveTool(null);
     setActiveTile(null);
   }, [createPlan, selectEntity, setActiveTile, setActiveTool]);
+  const startConfiguredGarden = useCallback(() => {
+    const selectedPlantIds = saveGardenKitPlantIds(setupPlantIds);
+    createPlan();
+    resizeGarden(setupWidth, setupHeight, setupCellSize);
+    updateClimateProfile({
+      zipCode: setupZipCode,
+      hardinessZone: setupZone,
+      lastFrostDate: setupLastFrost,
+      firstFrostDate: setupFirstFrost,
+      mockWeatherScenario: 'auto'
+    });
+    setShowWelcome(false);
+    setHasDismissedWelcome(true);
+    setSetupMode('choice');
+    setShowGuidedPath(false);
+    setShowFirstRunCheck(false);
+    setCompletedDemoTourItems(new Set());
+    setFirstRunNextSeasonSelected(false);
+    setFirstRunCompletedAt(null);
+    setGrowthPreviewDays(0);
+    setHeatmapLayer('overall');
+    setShowHeatmap(true);
+    setRequestedInspectorTab(null);
+    setSelectedTileStatus(null);
+    setPlacementInsight(null);
+    setActionFeedback({
+      x: 1,
+      y: 1,
+      status: 'ok',
+      label: `${selectedPlantIds.length} 作物`
+    });
+    setStarterSummary(null);
+    setNextSeasonTarget(null);
+    selectEntity(null);
+    setActiveTool(null);
+    setActiveTile(null);
+  }, [
+    createPlan,
+    resizeGarden,
+    saveGardenKitPlantIds,
+    selectEntity,
+    setActiveTile,
+    setActiveTool,
+    setupCellSize,
+    setupFirstFrost,
+    setupHeight,
+    setupLastFrost,
+    setupPlantIds,
+    setupWidth,
+    setupZipCode,
+    setupZone,
+    updateClimateProfile
+  ]);
   const handleGenerateStarterPlan = useCallback(() => {
     const requestedPlantIds = getGardenKitPlantIds();
     const result = generateStarterPlan(requestedPlantIds);
@@ -4166,11 +4243,14 @@ export default function GardenCanvas({
 
         {showWelcome && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-emerald-950/24 px-4 backdrop-blur-[2px]">
-            <div className="w-full max-w-md rounded-lg border-2 border-amber-950/20 bg-[#fff8df] p-4 shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.24)]">
+            <div className="max-h-[88vh] w-full max-w-xl overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df] shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.24)]">
+              <div className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Small Farm</div>
-                  <div className="mt-1 text-2xl font-black leading-tight text-amber-950">先试着规划一块小菜园</div>
+                  <div className="mt-1 text-2xl font-black leading-tight text-amber-950">
+                    {setupMode === 'custom' ? '设置我的菜园' : '开始前先选一种方式'}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -4184,31 +4264,158 @@ export default function GardenCanvas({
                   x
                 </button>
               </div>
-              <div className="mt-2 text-xs font-bold leading-5 text-amber-800">
-                选择蔬菜、香草或花，先在规划器里试种一遍，再决定真实菜园怎么下手。
-              </div>
-              <button
-                type="button"
-                onClick={handleGenerateStarterPlan}
-                className="mt-4 w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-sm font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
-              >
-                快速生成我的菜园
-              </button>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={resetFirstRunExperience}
-                  className="rounded-md border border-amber-900/15 bg-white/80 px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
-                >
-                  体验示例菜园
-                </button>
-                <button
-                  type="button"
-                  onClick={startBlankExperience}
-                  className="rounded-md border border-amber-900/15 bg-white/80 px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
-                >
-                  空白开始
-                </button>
+              {setupMode === 'choice' ? (
+                <>
+                  <div className="mt-2 text-xs font-bold leading-5 text-amber-800">
+                    Demo 用来快速看能力；正式规划会先设置地块、地区和想种的植物，进入后就是干净的规划器。
+                  </div>
+                  <div className="mt-4 grid gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSetupMode('custom')}
+                      className="w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-sm font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
+                    >
+                      创建我的菜园
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetFirstRunExperience}
+                      className="w-full rounded-md border border-amber-900/15 bg-white/80 px-3 py-2 text-sm font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
+                    >
+                      体验 Demo
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mt-2 text-xs font-bold leading-5 text-amber-800">
+                    先配置真实菜园的基础参数。进入规划器后不会显示 Demo 导览，工具箱只保留你选择的植物。
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <label className="text-xs font-bold text-amber-800">
+                      宽
+                      <input
+                        type="number"
+                        min={4}
+                        max={64}
+                        value={setupWidth}
+                        onChange={(event) => setSetupWidth(Number(event.target.value))}
+                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                      />
+                    </label>
+                    <label className="text-xs font-bold text-amber-800">
+                      高
+                      <input
+                        type="number"
+                        min={4}
+                        max={64}
+                        value={setupHeight}
+                        onChange={(event) => setSetupHeight(Number(event.target.value))}
+                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                      />
+                    </label>
+                    <label className="text-xs font-bold text-amber-800">
+                      ft/格
+                      <input
+                        type="number"
+                        min={0.25}
+                        max={20}
+                        step={0.25}
+                        value={setupCellSize}
+                        onChange={(event) => setSetupCellSize(Number(event.target.value))}
+                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <label className="text-xs font-bold text-amber-800">
+                      ZIP
+                      <input
+                        value={setupZipCode}
+                        onChange={(event) => setSetupZipCode(event.target.value)}
+                        placeholder="97205"
+                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                      />
+                    </label>
+                    <label className="text-xs font-bold text-amber-800">
+                      Zone
+                      <input
+                        value={setupZone}
+                        onChange={(event) => setSetupZone(event.target.value)}
+                        placeholder="7a"
+                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                      />
+                    </label>
+                    <label className="text-xs font-bold text-amber-800">
+                      末霜
+                      <input
+                        value={setupLastFrost}
+                        onChange={(event) => setSetupLastFrost(event.target.value)}
+                        placeholder="04-15"
+                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                      />
+                    </label>
+                    <label className="text-xs font-bold text-amber-800">
+                      初霜
+                      <input
+                        value={setupFirstFrost}
+                        onChange={(event) => setSetupFirstFrost(event.target.value)}
+                        placeholder="10-15"
+                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Plant Kit</div>
+                      <span className="rounded-full border border-green-300 bg-green-50 px-2 py-0.5 text-[10px] font-black text-green-800">
+                        {setupPlantIds.length} 个
+                      </span>
+                    </div>
+                    <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-amber-900/10 bg-white/55 p-2">
+                      <div className="grid grid-cols-2 gap-1">
+                        {plants.map(plant => {
+                          const selected = setupPlantIds.includes(plant.id);
+                          return (
+                            <button
+                              key={plant.id}
+                              type="button"
+                              onClick={() => setSetupPlantIds(current => (
+                                selected
+                                  ? current.filter(id => id !== plant.id)
+                                  : [...current, plant.id].slice(0, 12)
+                              ))}
+                              className={`rounded-md border px-2 py-1 text-left text-[10px] font-black ${
+                                selected
+                                  ? 'border-green-300 bg-green-100 text-green-900'
+                                  : 'border-amber-900/10 bg-white/70 text-amber-800'
+                              }`}
+                            >
+                              {plant.naming.zh}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSetupMode('choice')}
+                      className="rounded-md border border-amber-900/15 bg-white/80 px-3 py-2 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50"
+                    >
+                      返回
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startConfiguredGarden}
+                      className="rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-xs font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
+                    >
+                      进入规划器
+                    </button>
+                  </div>
+                </>
+              )}
               </div>
             </div>
           </div>

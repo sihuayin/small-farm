@@ -5,6 +5,9 @@ import type { ClimateProfile, GardenPlan, GardenPlanSummary, PlanSeason } from '
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+const DEFAULT_KIT_PLANT_IDS = ['tomato', 'basil', 'lettuce', 'carrot', 'pepper', 'marigold'];
+const GARDEN_KIT_STORAGE_KEY = 'small-farm:garden-kit-plants:v1';
+
 function PlantToken({ plant, size = 'md' }: { plant: (typeof plants)[number]; size?: 'sm' | 'md' | 'lg' }) {
   const sizeClass = size === 'lg' ? 'h-14 w-14' : size === 'sm' ? 'h-9 w-9' : 'h-10 w-10 md:h-12 md:w-12';
   const glyphSize = size === 'lg' ? 48 : size === 'sm' ? 31 : 34;
@@ -232,20 +235,19 @@ export function PlannerToolbar({
   onExportPlan,
   onImportPlan
 }: PlannerToolbarProps) {
-  const defaultKitPlantIds = ['tomato', 'basil', 'lettuce', 'carrot', 'pepper', 'marigold'];
   const [kitPlantIds, setKitPlantIds] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return defaultKitPlantIds;
+    if (typeof window === 'undefined') return DEFAULT_KIT_PLANT_IDS;
     try {
-      const raw = window.localStorage.getItem('small-farm:garden-kit-plants:v1');
+      const raw = window.localStorage.getItem(GARDEN_KIT_STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
       if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
         const valid = parsed.filter(id => plants.some(plant => plant.id === id));
-        return valid.length > 0 ? valid : defaultKitPlantIds;
+        return valid.length > 0 ? valid : DEFAULT_KIT_PLANT_IDS;
       }
     } catch {
-      return defaultKitPlantIds;
+      return DEFAULT_KIT_PLANT_IDS;
     }
-    return defaultKitPlantIds;
+    return DEFAULT_KIT_PLANT_IDS;
   });
   const [showPlantLibrary, setShowPlantLibrary] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
@@ -276,7 +278,8 @@ export function PlannerToolbar({
   const saveKitPlantIds = (nextIds: string[]) => {
     setKitPlantIds(nextIds);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('small-farm:garden-kit-plants:v1', JSON.stringify(nextIds));
+      window.localStorage.setItem(GARDEN_KIT_STORAGE_KEY, JSON.stringify(nextIds));
+      window.dispatchEvent(new CustomEvent('small-farm:garden-kit-updated', { detail: nextIds }));
     }
   };
   const addPlantToKit = (plantId: string) => {
@@ -285,7 +288,7 @@ export function PlannerToolbar({
   };
   const removePlantFromKit = (plantId: string) => {
     const nextIds = kitPlantIds.filter(id => id !== plantId);
-    saveKitPlantIds(nextIds.length > 0 ? nextIds : defaultKitPlantIds);
+    saveKitPlantIds(nextIds.length > 0 ? nextIds : DEFAULT_KIT_PLANT_IDS);
     if (activeToolId === plantId) {
       onSelectPlant(plantId);
     }
@@ -293,6 +296,19 @@ export function PlannerToolbar({
   const selectedPlant = plants.find(plant => plant.id === activeToolId);
   const selectedTile = tiles.find(tile => tile.id === activeTileId);
   const bumpSelection = () => setSelectionPulse((value) => value + 1);
+
+  useEffect(() => {
+    const handleKitUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<string[]>).detail;
+      if (Array.isArray(detail)) {
+        const valid = detail.filter(id => plants.some(plant => plant.id === id));
+        setKitPlantIds(valid.length > 0 ? valid : DEFAULT_KIT_PLANT_IDS);
+      }
+    };
+
+    window.addEventListener('small-farm:garden-kit-updated', handleKitUpdate);
+    return () => window.removeEventListener('small-farm:garden-kit-updated', handleKitUpdate);
+  }, []);
 
   useEffect(() => {
     if (!showSettingsPanel) return;
