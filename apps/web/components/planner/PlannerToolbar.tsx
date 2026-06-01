@@ -311,16 +311,16 @@ export function PlannerToolbar({
     <div className="z-20 h-[176px] w-full shrink-0 overflow-y-auto border-b border-amber-900/20 bg-[#f7e8c8] shadow-[inset_0_-6px_0_rgba(120,72,24,0.08)] md:h-auto md:w-72 md:border-b-0 md:border-r md:shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
       <div className="p-3 md:p-4">
         <div className="rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-2 shadow-[0_3px_0_rgba(120,72,24,0.18)] md:p-3">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-amber-700 md:text-[10px]">Garden Kit</div>
-              <h2 className="truncate text-sm font-black leading-tight text-amber-950 md:text-lg">小农场背包</h2>
+              <div className="hidden text-[10px] font-bold uppercase tracking-wider text-amber-700 md:block">Garden Kit</div>
+              <h2 className="truncate text-sm font-black leading-none text-amber-950 md:text-lg md:leading-tight">小农场背包</h2>
             </div>
-            <div className="flex shrink-0 items-start gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 onClick={() => setShowSettingsPanel(true)}
-                className="flex max-w-[144px] flex-wrap justify-end gap-1 text-right md:max-w-none"
+                className="flex max-w-[144px] flex-wrap items-center justify-end gap-1 text-right md:max-w-none"
                 aria-label="查看数据状态"
               >
                 <span className="rounded-full border border-green-300 bg-green-50 px-1.5 py-0.5 text-[8px] font-black leading-none text-green-800 md:px-2 md:text-[9px]">
