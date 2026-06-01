@@ -311,35 +311,39 @@ export function PlannerToolbar({
     <div className="z-20 h-[176px] w-full shrink-0 overflow-y-auto border-b border-amber-900/20 bg-[#f7e8c8] shadow-[inset_0_-6px_0_rgba(120,72,24,0.08)] md:h-auto md:w-72 md:border-b-0 md:border-r md:shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
       <div className="p-3 md:p-4">
         <div className="rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-2 shadow-[0_3px_0_rgba(120,72,24,0.18)] md:p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Garden Kit</div>
-              <h2 className="text-base font-black text-amber-950 md:text-lg">小农场背包</h2>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[9px] font-bold uppercase tracking-wider text-amber-700 md:text-[10px]">Garden Kit</div>
+              <h2 className="truncate text-sm font-black leading-tight text-amber-950 md:text-lg">小农场背包</h2>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowSettingsPanel(true)}
-              className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.2)] hover:bg-amber-50"
-            >
-              设置
-            </button>
+            <div className="flex shrink-0 items-start gap-1">
+              <button
+                type="button"
+                onClick={() => setShowSettingsPanel(true)}
+                className="flex max-w-[144px] flex-wrap justify-end gap-1 text-right md:max-w-none"
+                aria-label="查看数据状态"
+              >
+                <span className="rounded-full border border-green-300 bg-green-50 px-1.5 py-0.5 text-[8px] font-black leading-none text-green-800 md:px-2 md:text-[9px]">
+                  <span className="md:hidden">{plants.length}</span>
+                  <span className="hidden md:inline">{plants.length} crops</span>
+                </span>
+                <span className="rounded-full border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[8px] font-black leading-none text-sky-800 md:px-2 md:text-[9px]">
+                  <span className="md:hidden">Mock</span>
+                  <span className="hidden md:inline">Mock climate</span>
+                </span>
+                <span className="hidden rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] font-black leading-none text-slate-700 sm:inline-block">
+                  Reference data
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSettingsPanel(true)}
+                className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1 text-[10px] font-bold leading-none text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.2)] hover:bg-amber-50 md:text-xs"
+              >
+                设置
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowSettingsPanel(true)}
-            className="mt-2 flex w-full flex-wrap gap-1 text-left"
-            aria-label="查看数据状态"
-          >
-            <span className="rounded-full border border-green-300 bg-green-50 px-2 py-0.5 text-[9px] font-black text-green-800">
-              {plants.length} crops
-            </span>
-            <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-[9px] font-black text-sky-800">
-              Mock climate
-            </span>
-            <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-700">
-              Reference data
-            </span>
-          </button>
         </div>
 
         <div
