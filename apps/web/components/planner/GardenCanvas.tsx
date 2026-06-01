@@ -899,6 +899,7 @@ export default function GardenCanvas({
   const [setupStep, setSetupStep] = useState<'size' | 'climate' | 'plants' | 'review'>('size');
   const [setupPlantCategory, setSetupPlantCategory] = useState<string>('all');
   const [setupPlantSearch, setSetupPlantSearch] = useState('');
+  const [setupPlanName, setSetupPlanName] = useState('我的菜园');
   const [setupWidth, setSetupWidth] = useState(12);
   const [setupHeight, setSetupHeight] = useState(12);
   const [setupCellSize, setSetupCellSize] = useState(1);
@@ -3226,6 +3227,11 @@ export default function GardenCanvas({
     { id: 'plants', label: '植物' },
     { id: 'review', label: '确认' }
   ] as const;
+  const setupSizePresets = [
+    { id: 'small', label: '小园子', detail: '8x8 · 1 ft/格', width: 8, height: 8, cellSize: 1 },
+    { id: 'yard', label: '后院菜畦', detail: '12x12 · 1 ft/格', width: 12, height: 12, cellSize: 1 },
+    { id: 'plot', label: '小农地', detail: '18x14 · 1.5 ft/格', width: 18, height: 14, cellSize: 1.5 }
+  ];
   const setupCategoryItems = [
     { id: 'all', label: '全部' },
     { id: 'vegetable', label: '蔬菜' },
@@ -3248,6 +3254,9 @@ export default function GardenCanvas({
       || plant.id.toLowerCase().includes(query);
     return matchesCategory && matchesSearch;
   });
+  const setupSelectedPlants = setupPlantIds
+    .map(id => plantMap.get(id))
+    .filter((plant): plant is Plant => Boolean(plant));
   const canvasCursor = isEntityDragging || isPanning
     ? 'grabbing'
     : activeToolId
@@ -3310,6 +3319,7 @@ export default function GardenCanvas({
   const startConfiguredGarden = useCallback(() => {
     const selectedPlantIds = saveGardenKitPlantIds(setupPlantIds);
     createPlan();
+    renamePlan(setupPlanName.trim() || '我的菜园');
     resizeGarden(setupWidth, setupHeight, setupCellSize);
     updateClimateProfile({
       zipCode: setupZipCode,
@@ -3345,6 +3355,7 @@ export default function GardenCanvas({
     setActiveTile(null);
   }, [
     createPlan,
+    renamePlan,
     resizeGarden,
     saveGardenKitPlantIds,
     selectEntity,
@@ -3354,6 +3365,7 @@ export default function GardenCanvas({
     setupFirstFrost,
     setupHeight,
     setupLastFrost,
+    setupPlanName,
     setupPlantIds,
     setupWidth,
     setupZipCode,
@@ -4355,41 +4367,73 @@ export default function GardenCanvas({
                     ))}
                   </div>
                   {setupStep === 'size' && (
-                  <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="mt-3">
                     <label className="text-xs font-bold text-amber-800">
-                      宽
+                      菜园名称
                       <input
-                        type="number"
-                        min={4}
-                        max={64}
-                        value={setupWidth}
-                        onChange={(event) => setSetupWidth(Number(event.target.value))}
+                        value={setupPlanName}
+                        onChange={(event) => setSetupPlanName(event.target.value)}
+                        placeholder="我的菜园"
                         className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
                       />
                     </label>
-                    <label className="text-xs font-bold text-amber-800">
-                      高
-                      <input
-                        type="number"
-                        min={4}
-                        max={64}
-                        value={setupHeight}
-                        onChange={(event) => setSetupHeight(Number(event.target.value))}
-                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
-                      />
-                    </label>
-                    <label className="text-xs font-bold text-amber-800">
-                      ft/格
-                      <input
-                        type="number"
-                        min={0.25}
-                        max={20}
-                        step={0.25}
-                        value={setupCellSize}
-                        onChange={(event) => setSetupCellSize(Number(event.target.value))}
-                        className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
-                      />
-                    </label>
+                    <div className="mt-3 grid grid-cols-3 gap-1.5">
+                      {setupSizePresets.map(preset => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            setSetupWidth(preset.width);
+                            setSetupHeight(preset.height);
+                            setSetupCellSize(preset.cellSize);
+                          }}
+                          className={`rounded-md border px-2 py-1.5 text-left shadow-[0_1px_0_rgba(120,72,24,0.1)] ${
+                            setupWidth === preset.width && setupHeight === preset.height && setupCellSize === preset.cellSize
+                              ? 'border-green-300 bg-green-100 text-green-900'
+                              : 'border-amber-900/10 bg-white/70 text-amber-900'
+                          }`}
+                        >
+                          <div className="text-[10px] font-black">{preset.label}</div>
+                          <div className="mt-0.5 text-[9px] font-bold opacity-75">{preset.detail}</div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <label className="text-xs font-bold text-amber-800">
+                        宽
+                        <input
+                          type="number"
+                          min={4}
+                          max={64}
+                          value={setupWidth}
+                          onChange={(event) => setSetupWidth(Number(event.target.value))}
+                          className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                        />
+                      </label>
+                      <label className="text-xs font-bold text-amber-800">
+                        高
+                        <input
+                          type="number"
+                          min={4}
+                          max={64}
+                          value={setupHeight}
+                          onChange={(event) => setSetupHeight(Number(event.target.value))}
+                          className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                        />
+                      </label>
+                      <label className="text-xs font-bold text-amber-800">
+                        ft/格
+                        <input
+                          type="number"
+                          min={0.25}
+                          max={20}
+                          step={0.25}
+                          value={setupCellSize}
+                          onChange={(event) => setSetupCellSize(Number(event.target.value))}
+                          className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-black text-amber-950"
+                        />
+                      </label>
+                    </div>
                   </div>
                   )}
                   {setupStep === 'climate' && (
@@ -4439,6 +4483,23 @@ export default function GardenCanvas({
                       <span className="rounded-full border border-green-300 bg-green-50 px-2 py-0.5 text-[10px] font-black text-green-800">
                         {setupPlantIds.length} 个
                       </span>
+                    </div>
+                    <div className="mt-2 flex gap-1 overflow-x-auto rounded-md border border-amber-900/10 bg-white/55 p-1">
+                      {setupSelectedPlants.length > 0 ? setupSelectedPlants.map(plant => (
+                        <button
+                          key={plant.id}
+                          type="button"
+                          onClick={() => setSetupPlantIds(current => current.filter(id => id !== plant.id))}
+                          className="shrink-0 rounded-full border border-green-300 bg-green-50 px-2 py-1 text-[10px] font-black text-green-900"
+                          title={`移除${plant.naming.zh}`}
+                        >
+                          {plant.naming.zh} x
+                        </button>
+                      )) : (
+                        <div className="px-2 py-1 text-[10px] font-black text-amber-700">
+                          至少选择 1 种植物，进入后会出现在左侧工具箱。
+                        </div>
+                      )}
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-1">
                       {setupPresetItems.map(preset => (
@@ -4493,7 +4554,10 @@ export default function GardenCanvas({
                                   : 'border-amber-900/10 bg-white/70 text-amber-800'
                               }`}
                             >
-                              {plant.naming.zh}
+                              <span className="flex items-center justify-between gap-2">
+                                <span>{plant.naming.zh}</span>
+                                <span className="text-[9px] opacity-70">{plant.category}</span>
+                              </span>
                             </button>
                           );
                         })}
@@ -4503,7 +4567,14 @@ export default function GardenCanvas({
                   )}
                   {setupStep === 'review' && (
                     <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-3 text-xs font-bold leading-5 text-green-900">
-                      已准备创建 {setupWidth}x{setupHeight} 格菜园，{setupCellSize} ft/格，地区 Zone {setupZone || '未设定'}，工具箱包含 {setupPlantIds.length} 种植物。
+                      已准备创建「{setupPlanName.trim() || '我的菜园'}」：{setupWidth}x{setupHeight} 格，{setupCellSize} ft/格，地区 Zone {setupZone || '未设定'}，工具箱包含 {setupPlantIds.length} 种植物。
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {setupSelectedPlants.slice(0, 10).map(plant => (
+                          <span key={plant.id} className="rounded-full border border-green-300 bg-white/80 px-2 py-0.5 text-[10px] font-black text-green-900">
+                            {plant.naming.zh}
+                          </span>
+                        ))}
+                      </div>
                       <div className="mt-2 rounded-md bg-white/70 px-2 py-1 text-[10px] font-black text-green-800">
                         进入后可直接拖放植物，也可以点空地查看 Smart Pick。
                       </div>
@@ -4528,13 +4599,15 @@ export default function GardenCanvas({
                       type="button"
                       onClick={() => {
                         if (setupStep === 'review') {
+                          if (setupPlantIds.length === 0) return;
                           startConfiguredGarden();
                           return;
                         }
                         const currentIndex = setupStepItems.findIndex(step => step.id === setupStep);
                         setSetupStep(setupStepItems[Math.min(setupStepItems.length - 1, currentIndex + 1)].id);
                       }}
-                      className="rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-xs font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
+                      disabled={setupStep === 'review' && setupPlantIds.length === 0}
+                      className="rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-xs font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
                     >
                       {setupStep === 'review' ? '进入规划器' : '下一步'}
                     </button>
