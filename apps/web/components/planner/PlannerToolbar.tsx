@@ -435,9 +435,10 @@ export function PlannerToolbar({
           </button>
         </div>
 
-        <div className="mt-1 flex gap-2 overflow-x-auto pb-1 md:mt-3 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
-          {kitPlants.map(plant => (
-            <div key={plant.id} className="group relative w-[60px] shrink-0 md:w-auto">
+        <div className="relative mt-1 md:mt-3">
+          <div className="flex gap-2 overflow-x-auto pb-1 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
+            {kitPlants.map(plant => (
+              <div key={plant.id} className="group relative w-[60px] shrink-0 md:w-auto">
               {(() => {
                 const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
                 return (
@@ -447,15 +448,20 @@ export function PlannerToolbar({
                   onSelectPlant(plant.id);
                 }}
                 className={`
-                  min-h-[58px] w-full rounded-lg border-2 p-1 text-center shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-all md:min-h-[72px] md:p-2
+                  relative min-h-[58px] w-full rounded-lg border-2 p-1 text-center shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-all md:min-h-[72px] md:p-2
                   hover:-translate-y-0.5 active:translate-y-0
                   ${activeToolId === plant.id
-                    ? 'border-amber-800 bg-[#ffe08a] ring-2 ring-amber-300'
+                    ? 'border-amber-800 bg-[#ffe08a] ring-2 ring-amber-300 shadow-[0_4px_0_rgba(146,64,14,0.2)]'
                     : 'border-amber-900/20 bg-[#fff8df] hover:border-amber-700 hover:bg-white'}
                 `}
               >
                 <PlantToken plant={plant} />
                 <div className="mt-0.5 truncate text-[10px] font-bold leading-none text-amber-950 md:mt-1 md:text-xs">{plant.naming.zh}</div>
+                {activeToolId === plant.id && (
+                  <div className="absolute -right-1 -top-1 rounded-full border border-amber-800/20 bg-white/90 px-1 py-0.5 text-[8px] font-black leading-none text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.12)]">
+                    种植中
+                  </div>
+                )}
                 <div className="mt-0.5 hidden text-[10px] font-medium text-amber-700 md:block">
                   {plant.dimensions.grid_span_x}x{plant.dimensions.grid_span_y}
                 </div>
@@ -469,15 +475,21 @@ export function PlannerToolbar({
                 <button
                   type="button"
                   onClick={() => removePlantFromKit(plant.id)}
-                  className="absolute -right-1 -top-1 hidden h-5 w-5 rounded-full border border-amber-900/20 bg-white text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.14)] group-hover:block"
+                  className="absolute -right-1 top-5 hidden h-5 w-5 rounded-full border border-amber-900/20 bg-white text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.14)] group-hover:block"
                   title={`从工具箱移除${plant.naming.zh}`}
                   aria-label={`从工具箱移除${plant.naming.zh}`}
                 >
                   x
                 </button>
               )}
+              </div>
+            ))}
+          </div>
+          {kitPlants.length > 3 && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center bg-gradient-to-l from-[#fff8df] via-[#fff8df]/85 to-transparent pl-6 pr-1 text-[8px] font-black text-amber-800 md:hidden">
+              滑动
             </div>
-          ))}
+          )}
         </div>
 
         {showPlantLibrary && (

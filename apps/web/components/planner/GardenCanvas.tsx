@@ -885,6 +885,7 @@ export default function GardenCanvas({
   const didDragRef = useRef(false);
   const isPanningRef = useRef(false);
   const panStartRef = useRef<{ pointerX: number; pointerY: number; viewX: number; viewY: number } | null>(null);
+  const previousPlantCountRef = useRef<number | null>(null);
 
   // ==================== State ====================
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -951,6 +952,7 @@ export default function GardenCanvas({
   } | null>(null);
   const [starterSummary, setStarterSummary] = useState<StarterPlanSummary | null>(null);
   const [shareExportMessage, setShareExportMessage] = useState<string | null>(null);
+  const [showFirstPlantTip, setShowFirstPlantTip] = useState(false);
 
   // ==================== Store ====================
   const {
@@ -3076,6 +3078,13 @@ export default function GardenCanvas({
   const plantCount = Object.values(entities).filter(entity => entity.type === 'plant').length;
   const isDemoMode = planName === 'Demo Scenario';
   useEffect(() => {
+    const previousCount = previousPlantCountRef.current;
+    previousPlantCountRef.current = plantCount;
+    if (previousCount === 0 && plantCount > 0 && !isDemoMode) {
+      setShowFirstPlantTip(true);
+    }
+  }, [isDemoMode, plantCount]);
+  useEffect(() => {
     if (hasDismissedWelcome || plantCount > 0 || planName === 'Demo Scenario') return;
     setShowWelcome(true);
   }, [hasDismissedWelcome, planName, plantCount]);
@@ -3281,6 +3290,7 @@ export default function GardenCanvas({
     setSelectedTileStatus(null);
     setPlacementInsight(null);
     setActionFeedback(null);
+    setShowFirstPlantTip(false);
     setNextSeasonTarget(null);
     selectEntity(null);
     setActiveTool(null);
@@ -3311,6 +3321,7 @@ export default function GardenCanvas({
     setSelectedTileStatus(null);
     setPlacementInsight(null);
     setActionFeedback(null);
+    setShowFirstPlantTip(false);
     setNextSeasonTarget(null);
     selectEntity(null);
     setActiveTool(null);
@@ -3348,11 +3359,12 @@ export default function GardenCanvas({
       status: 'ok',
       label: `${selectedPlantIds.length} 作物`
     });
+    setShowFirstPlantTip(false);
     setStarterSummary(null);
     setNextSeasonTarget(null);
     selectEntity(null);
-    setActiveTool(null);
     setActiveTile(null);
+    setActiveTool(selectedPlantIds[0] || null);
   }, [
     createPlan,
     renamePlan,
@@ -3398,6 +3410,7 @@ export default function GardenCanvas({
       status: 'ok',
       label: result.placed > 0 ? `生成 ${result.placed}` : '未生成'
     });
+    setShowFirstPlantTip(false);
     setStarterSummary(buildStarterPlanSummary(result, requestedPlantIds, planSeason));
   }, [generateStarterPlan, getGardenKitPlantIds, planSeason, selectEntity, setActiveTile, setActiveTool]);
   const handleShareGardenImage = useCallback(async () => {
@@ -4290,9 +4303,40 @@ export default function GardenCanvas({
         {!showWelcome && !isDemoMode && plantCount === 0 && (
           <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 w-[min(340px,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/88 p-3 text-center shadow-[0_4px_0_rgba(120,72,24,0.12),0_14px_24px_rgba(61,40,20,0.16)] backdrop-blur">
             <div className="text-[10px] font-black uppercase tracking-wider text-green-800">正式规划</div>
-            <div className="mt-1 text-sm font-black text-amber-950">选择植物后点击地块开始规划</div>
+            <div className="mt-1 text-sm font-black text-amber-950">
+              {activePlant ? `已选择${activePlant.naming.zh}，点击地块种下` : '选择一种植物，然后点击地块种下'}
+            </div>
             <div className="mt-1 text-[10px] font-bold leading-4 text-amber-700">
-              也可以先点空地查看 Smart Pick，系统会根据伴生、轮作、地区窗口给出推荐。
+              移动到地块会先显示预览和适配分数；也可以空手点地块查看 Smart Pick 推荐。
+            </div>
+          </div>
+        )}
+
+        {!showWelcome && !isDemoMode && plantCount > 0 && showFirstPlantTip && (
+          <div className="absolute bottom-4 left-1/2 z-10 w-[min(360px,calc(100%-2rem))] -translate-x-1/2 rounded-lg border-2 border-green-900/15 bg-[#fff8df]/94 p-3 text-sm shadow-[0_4px_0_rgba(22,101,52,0.12),0_14px_24px_rgba(61,40,20,0.16)] backdrop-blur">
+            <div className="text-[10px] font-black uppercase tracking-wider text-green-800">第一棵已种下</div>
+            <div className="mt-1 font-black text-amber-950">可以继续布局，也可以查看今天要做什么。</div>
+            <div className="mt-1 text-[10px] font-bold leading-4 text-amber-700">
+              任务面板会根据天气、阶段和作物状态生成浇水、覆盖、采收等操作。
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setShowFirstPlantTip(false)}
+                className="rounded-md border border-amber-900/15 bg-white/85 px-2 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+              >
+                继续种植
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestedInspectorTab('tasks');
+                  setShowFirstPlantTip(false);
+                }}
+                className="rounded-md border-2 border-green-900/15 bg-green-100 px-2 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
+              >
+                查看任务
+              </button>
             </div>
           </div>
         )}
