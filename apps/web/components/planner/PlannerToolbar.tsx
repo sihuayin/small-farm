@@ -1,12 +1,15 @@
 import { plants, tiles, type TileType } from './usePlannerStore';
 import { GardenSettingsPanel } from './GardenSettingsPanel';
+import { getPlantAgronomy } from './plants';
 import { getPlantingWindowStatus, plantingWindowBadgeClassName } from './plantingWindow';
+import type { PlantAgronomy, Season } from './plants.d';
 import type { ClimateProfile, GardenPlan, GardenPlanSummary, PlanSeason } from './usePlannerStore';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 const DEFAULT_KIT_PLANT_IDS = ['tomato', 'basil', 'lettuce', 'carrot', 'pepper', 'marigold'];
 const GARDEN_KIT_STORAGE_KEY = 'small-farm:garden-kit-plants:v1';
+type PlantQuickFilter = 'all' | 'current' | 'quick' | 'beginner' | 'perennial' | 'low_water' | 'high_water';
 
 function PlantToken({ plant, size = 'md' }: { plant: (typeof plants)[number]; size?: 'sm' | 'md' | 'lg' }) {
   const sizeClass = size === 'lg' ? 'h-14 w-14' : size === 'sm' ? 'h-9 w-9' : 'h-10 w-10 md:h-12 md:w-12';
@@ -170,6 +173,88 @@ function PlantGlyph({ plant, size }: { plant: (typeof plants)[number]; size: num
   );
 }
 
+function seasonLabel(season: Season) {
+  const labels: Record<Season, string> = {
+    spring: '春',
+    summer: '夏',
+    fall: '秋',
+    winter: '冬'
+  };
+  return labels[season];
+}
+
+function waterNeedLabel(waterNeed: PlantAgronomy['waterNeed']) {
+  if (waterNeed === 'high') return '高需水';
+  if (waterNeed === 'low') return '低需水';
+  return '中需水';
+}
+
+function startMethodLabel(method: PlantAgronomy['startMethod']) {
+  if (method === 'direct_sow') return '直播';
+  if (method === 'transplant') return '移栽';
+  return '直播/移栽';
+}
+
+function PlantFactPills({ plant }: { plant: (typeof plants)[number] }) {
+  const agronomy = getPlantAgronomy(plant.id);
+  const facts = [
+    `${agronomy.daysToMaturity} 天成熟`,
+    `株距 ${agronomy.spacing.plantInch} in`,
+    agronomy.seasons.map(seasonLabel).join('/'),
+    waterNeedLabel(agronomy.waterNeed),
+    startMethodLabel(agronomy.startMethod)
+  ];
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {facts.map(fact => (
+        <span key={fact} className="rounded-full border border-amber-900/10 bg-white/65 px-2 py-0.5 text-[9px] font-black leading-4 text-amber-900">
+          {fact}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function PlantCompactFacts({ plant }: { plant: (typeof plants)[number] }) {
+  const agronomy = getPlantAgronomy(plant.id);
+  return (
+    <div className="mt-1 grid grid-cols-3 gap-1 text-[9px] font-black leading-none text-amber-900">
+      <span className="rounded border border-amber-900/10 bg-amber-50 px-1.5 py-1">{agronomy.daysToMaturity}d</span>
+      <span className="rounded border border-amber-900/10 bg-amber-50 px-1.5 py-1">{agronomy.spacing.plantInch}in</span>
+      <span className="rounded border border-amber-900/10 bg-amber-50 px-1.5 py-1">{agronomy.seasons.map(seasonLabel).join('/')}</span>
+    </div>
+  );
+}
+
+function windowSortScore(status: ReturnType<typeof getPlantingWindowStatus>['status']) {
+  if (status === 'in_window') return 5;
+  if (status === 'too_early') return 3;
+  if (status === 'late') return 2;
+  if (status === 'harvest_risk') return 1;
+  return 0;
+}
+
+function matchesQuickFilter(plant: (typeof plants)[number], filter: PlantQuickFilter, windowStatus: ReturnType<typeof getPlantingWindowStatus>) {
+  if (filter === 'all') return true;
+  const agronomy = getPlantAgronomy(plant.id);
+
+  if (filter === 'current') return windowStatus.status === 'in_window';
+  if (filter === 'quick') return agronomy.daysToMaturity <= 60 && agronomy.rotationGroup !== 'perennial';
+  if (filter === 'beginner') {
+    return agronomy.daysToMaturity <= 80
+      && agronomy.waterNeed !== 'high'
+      && plant.dimensions.grid_span_x * plant.dimensions.grid_span_y <= 2
+      && windowStatus.status !== 'off_season'
+      && windowStatus.status !== 'harvest_risk';
+  }
+  if (filter === 'perennial') return agronomy.rotationGroup === 'perennial';
+  if (filter === 'low_water') return agronomy.waterNeed === 'low';
+  if (filter === 'high_water') return agronomy.waterNeed === 'high';
+
+  return true;
+}
+
 interface PlannerToolbarProps {
   planId: string;
   planName: string;
@@ -252,6 +337,7 @@ export function PlannerToolbar({
   const [showPlantLibrary, setShowPlantLibrary] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeQuickFilter, setActiveQuickFilter] = useState<PlantQuickFilter>('all');
   const [librarySearch, setLibrarySearch] = useState('');
   const [selectionPulse, setSelectionPulse] = useState(0);
   const categoryTabs = [
@@ -261,20 +347,43 @@ export function PlannerToolbar({
     { id: 'flower', label: '花卉', icon: '✿' },
     { id: 'fruit', label: '果物', icon: '◆' }
   ];
+  const quickFilterTabs: Array<{ id: PlantQuickFilter; label: string }> = [
+    { id: 'all', label: '全部' },
+    { id: 'current', label: '当前适合' },
+    { id: 'quick', label: '快速收获' },
+    { id: 'beginner', label: '新手友好' },
+    { id: 'perennial', label: '多年生' },
+    { id: 'low_water', label: '低需水' },
+    { id: 'high_water', label: '高需水' }
+  ];
   const kitPlants = useMemo(() => kitPlantIds
     .map(id => plants.find(plant => plant.id === id))
     .filter((plant): plant is (typeof plants)[number] => Boolean(plant)), [kitPlantIds]);
   const libraryPlants = useMemo(() => {
     const query = librarySearch.trim().toLowerCase();
-    return plants.filter(plant => {
-      const matchesCategory = activeCategory === 'all' || plant.category === activeCategory;
-      const matchesSearch = !query
-        || plant.naming.zh.toLowerCase().includes(query)
-        || plant.naming.en.toLowerCase().includes(query)
-        || plant.id.toLowerCase().includes(query);
-      return matchesCategory && matchesSearch;
-    });
-  }, [activeCategory, librarySearch]);
+    return plants
+      .map((plant) => {
+        const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
+        const agronomy = getPlantAgronomy(plant.id);
+        return { plant, windowStatus, agronomy };
+      })
+      .filter(({ plant, windowStatus }) => {
+        const matchesCategory = activeCategory === 'all' || plant.category === activeCategory;
+        const matchesSearch = !query
+          || plant.naming.zh.toLowerCase().includes(query)
+          || plant.naming.en.toLowerCase().includes(query)
+          || plant.id.toLowerCase().includes(query);
+        return matchesCategory && matchesSearch && matchesQuickFilter(plant, activeQuickFilter, windowStatus);
+      })
+      .sort((a, b) => {
+        const windowDelta = windowSortScore(b.windowStatus.status) - windowSortScore(a.windowStatus.status);
+        if (windowDelta !== 0) return windowDelta;
+        const seasonDelta = Number(b.agronomy.seasons.includes(planSeason)) - Number(a.agronomy.seasons.includes(planSeason));
+        if (seasonDelta !== 0) return seasonDelta;
+        return a.agronomy.daysToMaturity - b.agronomy.daysToMaturity;
+      })
+      .map(({ plant }) => plant);
+  }, [activeCategory, activeQuickFilter, climateProfile, librarySearch, planSeason, planYear]);
   const saveKitPlantIds = (nextIds: string[]) => {
     setKitPlantIds(nextIds);
     if (typeof window !== 'undefined') {
@@ -295,6 +404,12 @@ export function PlannerToolbar({
   };
   const selectedPlant = plants.find(plant => plant.id === activeToolId);
   const selectedTile = tiles.find(tile => tile.id === activeTileId);
+  const selectedPlantWindowStatus = selectedPlant
+    ? getPlantingWindowStatus(selectedPlant, climateProfile, planYear, planSeason)
+    : null;
+  const selectedPlantAgronomy = selectedPlant
+    ? getPlantAgronomy(selectedPlant.id)
+    : null;
   const bumpSelection = () => setSelectionPulse((value) => value + 1);
 
   useEffect(() => {
@@ -323,8 +438,9 @@ export function PlannerToolbar({
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [showSettingsPanel]);
 
-  const modeLabel = planName === 'Demo Scenario' ? 'Demo 模式' : '正式规划';
-  const modeClassName = planName === 'Demo Scenario'
+  const isDemoMode = planName === 'Demo Scenario';
+  const modeLabel = isDemoMode ? 'Demo 模式' : '正式规划';
+  const modeClassName = isDemoMode
     ? 'border-amber-300 bg-amber-100 text-amber-800'
     : 'border-green-300 bg-green-50 text-green-800';
 
@@ -336,7 +452,7 @@ export function PlannerToolbar({
             <div className="flex min-w-0 items-center gap-1.5">
               <h2 className="truncate text-sm font-black leading-none text-amber-950">小农场背包</h2>
               <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-black leading-none ${modeClassName}`}>
-                {planName === 'Demo Scenario' ? 'Demo' : '正式'}
+                  {isDemoMode ? 'Demo' : '正式'}
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-1">
@@ -350,7 +466,7 @@ export function PlannerToolbar({
                   {plants.length}
                 </span>
                 <span className="rounded-full border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[8px] font-black leading-none text-sky-800">
-                  Mock
+                  {isDemoMode ? 'Mock' : '气候'}
                 </span>
               </button>
               <button
@@ -365,7 +481,7 @@ export function PlannerToolbar({
           <div className="hidden md:block">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Garden Kit</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">{isDemoMode ? 'Garden Kit' : '我的植物'}</div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-black text-amber-950">小农场背包</h2>
                   <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black ${modeClassName}`}>
@@ -391,10 +507,10 @@ export function PlannerToolbar({
                 {plants.length} crops
               </span>
               <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-[9px] font-black text-sky-800">
-                Mock climate
+                {isDemoMode ? 'Mock climate' : '本地气候'}
               </span>
               <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-700">
-                Reference data
+                {isDemoMode ? 'Reference data' : '作物资料'}
               </span>
             </button>
           </div>
@@ -405,7 +521,7 @@ export function PlannerToolbar({
           className="mt-4 hidden rounded-lg border-2 border-amber-900/20 bg-[#fff3c4] p-3 shadow-[0_3px_0_rgba(120,72,24,0.16)] transition-transform duration-150 ease-out md:block"
           style={{ transform: selectionPulse > 0 ? 'scale(1.015)' : undefined }}
         >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Equipped</div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">{isDemoMode ? 'Equipped' : '当前选择'}</div>
           <div className="mt-2 flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-md border-2 border-amber-900/20 bg-white text-2xl shadow-inner">
               {selectedPlant ? <PlantToken plant={selectedPlant} size="lg" /> : selectedTile?.emoji || '◇'}
@@ -419,11 +535,27 @@ export function PlannerToolbar({
               </div>
             </div>
           </div>
+          {selectedPlant && selectedPlantWindowStatus && selectedPlantAgronomy && (
+            <div className="mt-3 rounded-md border border-amber-900/10 bg-white/55 p-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black ${plantingWindowBadgeClassName(selectedPlantWindowStatus.status)}`}>
+                  {selectedPlantWindowStatus.label}
+                </span>
+                <span className="text-[9px] font-black text-amber-700">
+                  Zone {selectedPlantAgronomy.hardinessZones[0]}-{selectedPlantAgronomy.hardinessZones[1]}
+                </span>
+              </div>
+              <PlantFactPills plant={selectedPlant} />
+              <div className="mt-2 text-[10px] font-bold leading-4 text-amber-800">
+                {selectedPlantWindowStatus.detail}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-2 flex items-center justify-end gap-2 md:mt-4 md:justify-between">
           <div className="hidden md:block">
-            <h3 className="text-xs font-black uppercase tracking-wider text-amber-800">My Garden Kit</h3>
+            <h3 className="text-xs font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'My Garden Kit' : '我的植物列表'}</h3>
             <div className="text-[10px] font-bold text-amber-700">{kitPlants.length} 个可种项目</div>
           </div>
           <button
@@ -531,6 +663,28 @@ export function PlannerToolbar({
                     </button>
                   ))}
                 </div>
+                <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
+                  {quickFilterTabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveQuickFilter(tab.id)}
+                      className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black transition ${
+                        activeQuickFilter === tab.id
+                          ? 'border-green-700 bg-green-700 text-white shadow-[0_2px_0_rgba(22,101,52,0.18)]'
+                          : 'border-green-900/15 bg-green-50 text-green-900 hover:bg-green-100'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 rounded-md border border-amber-900/10 bg-white/70 px-3 py-2 text-[10px] font-black leading-4 text-amber-900">
+                  当前显示 {libraryPlants.length} 种
+                  {activeQuickFilter !== 'all' ? ` · ${quickFilterTabs.find(tab => tab.id === activeQuickFilter)?.label}` : ''}
+                  {activeCategory !== 'all' ? ` · ${categoryTabs.find(tab => tab.id === activeCategory)?.label}` : ''}
+                  ，已按当前种植窗口优先排序。
+                </div>
               </div>
               <div className="max-h-[52vh] overflow-y-auto p-3">
                 <div className="grid grid-cols-2 gap-2">
@@ -539,14 +693,12 @@ export function PlannerToolbar({
                     const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
                     return (
                       <div key={plant.id} className="rounded-md border border-amber-900/10 bg-white/70 p-2">
-                        <div className="flex items-center gap-2">
+                        <div className="grid grid-cols-[auto_1fr_auto] items-start gap-2">
                           <PlantToken plant={plant} size="sm" />
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-black text-amber-950">{plant.naming.zh}</div>
                             <div className="truncate text-[10px] font-bold text-amber-700">{plant.naming.en} · {plant.dimensions.grid_span_x}x{plant.dimensions.grid_span_y}</div>
-                            <div className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-black ${plantingWindowBadgeClassName(windowStatus.status)}`}>
-                              {windowStatus.shortLabel}
-                            </div>
+                            <PlantCompactFacts plant={plant} />
                           </div>
                           <button
                             type="button"
@@ -556,6 +708,14 @@ export function PlannerToolbar({
                           >
                             {inKit ? '已加入' : '加入'}
                           </button>
+                        </div>
+                        <div className="mt-2 flex items-start gap-2">
+                          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black ${plantingWindowBadgeClassName(windowStatus.status)}`}>
+                            {windowStatus.shortLabel}
+                          </span>
+                          <div className="line-clamp-2 text-[10px] font-bold leading-4 text-amber-800">
+                            {windowStatus.detail}
+                          </div>
                         </div>
                       </div>
                     );

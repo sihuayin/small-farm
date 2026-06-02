@@ -126,7 +126,7 @@ export function GardenSettingsPanel({
       const ok = onImportPlan(parsed);
       setImportMessage(ok ? '已导入为新方案' : '导入失败：文件格式不匹配');
     } catch {
-      setImportMessage('导入失败：无法读取 JSON');
+      setImportMessage('导入失败：无法读取方案文件');
     }
   };
 
@@ -168,7 +168,7 @@ export function GardenSettingsPanel({
       }`}>
         <div className="flex items-center justify-between gap-2">
           <div className="text-[10px] font-black uppercase tracking-wider">
-            {planName === 'Demo Scenario' ? 'Demo Mode' : 'Planner Mode'}
+            {planName === 'Demo Scenario' ? '示例模式' : '正式方案'}
           </div>
           <span className="rounded-full border border-current/20 bg-white/65 px-2 py-0.5 text-[10px] font-black">
             {planName === 'Demo Scenario' ? '示例体验' : '正式规划'}
@@ -177,24 +177,49 @@ export function GardenSettingsPanel({
         <div className="mt-1 text-[10px] font-bold leading-4">
           {planName === 'Demo Scenario'
             ? '这是用于体验功能的示例菜园，包含预置作物、任务和导览。'
-            : '当前方案为正式规划，尺寸、气候、植物选择和后续调整会保存到本地方案库。'}
+            : '当前方案为正式规划，尺寸、气候、植物选择和后续调整会保存在你的方案列表里。'}
         </div>
       </div>
 
-      <label className="block mt-3 text-xs text-amber-800">
-        当前方案
-        <select
-          value={planId}
-          onChange={(event) => onSwitchPlan(event.target.value)}
-          className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-bold text-amber-950 shadow-inner"
-        >
-          {planSummaries.map(plan => (
-            <option key={plan.id} value={plan.id}>
-              {plan.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="mt-3 rounded-md border border-amber-900/10 bg-white/55 p-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">菜园方案</div>
+          <span className="rounded-full border border-amber-900/10 bg-white/70 px-2 py-0.5 text-[10px] font-black text-amber-800">
+            {planSummaries.length} 个
+          </span>
+        </div>
+        <div className="mt-2 max-h-[28dvh] space-y-1 overflow-y-auto pr-1 md:max-h-36">
+          {planSummaries.map(plan => {
+            const isActive = plan.id === planId;
+            const isDemoPlan = plan.name === 'Demo Scenario';
+            return (
+              <button
+                key={plan.id}
+                type="button"
+                onClick={() => onSwitchPlan(plan.id)}
+                className={`w-full rounded-md border px-2 py-1.5 text-left shadow-[0_1px_0_rgba(120,72,24,0.08)] ${
+                  isActive
+                    ? 'border-green-300 bg-green-50 text-green-900'
+                    : isDemoPlan
+                      ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                      : 'border-amber-900/10 bg-white/80 text-amber-900 hover:bg-amber-50'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-xs font-black">{isDemoPlan ? '示例菜园' : plan.name}</span>
+                  <span className="shrink-0 rounded-full border border-current/20 bg-white/65 px-1.5 py-0.5 text-[9px] font-black">
+                    {isDemoPlan ? 'Demo' : isActive ? '当前' : '正式'}
+                  </span>
+                </div>
+                <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] font-bold opacity-75">
+                  <span>{plan.width}x{plan.height} 格</span>
+                  <span>{formatPlanUpdatedAt(plan.updatedAt)}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <label className="text-xs text-amber-800">
@@ -282,7 +307,7 @@ export function GardenSettingsPanel({
       {error && <div className="mt-2 text-xs text-red-600">{error}</div>}
 
       <div className="mt-3 rounded-md border border-amber-900/10 bg-white/55 p-2">
-        <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">Climate</div>
+        <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">地区气候</div>
         <div className="mt-2 grid grid-cols-[1fr_88px] gap-2">
           <label className="text-xs text-amber-800">
             ZIP
@@ -337,7 +362,7 @@ export function GardenSettingsPanel({
           </label>
         </div>
         <label className="mt-2 block text-xs text-amber-800">
-          Mock 天气
+          模拟天气
           <select
             value={draftClimate.mockWeatherScenario || 'auto'}
             onChange={(event) => updateMockScenario(event.target.value as MockWeatherScenario)}
@@ -362,7 +387,7 @@ export function GardenSettingsPanel({
 
       <div className="mt-3 rounded-md border border-slate-200 bg-white/65 p-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[10px] font-black uppercase tracking-wider text-slate-700">Data Confidence</div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-slate-700">资料可信度</div>
           <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-700">
             Alpha
           </span>
@@ -372,10 +397,10 @@ export function GardenSettingsPanel({
             作物资料：{plants.length} 种，参考园艺数据结构，待正式来源逐项复核。
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
-            地区气候：ZIP/Zone/霜冻日为本地 Mock 推断，可手动校准。
+            地区气候：ZIP/Zone/霜冻日为本地模拟推断，可手动校准。
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
-            天气提醒：Mock 场景，尚未接入实时天气 API。
+            天气提醒：模拟场景，尚未接入实时天气 API。
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
             推荐系统：综合伴生、轮作、季节、地区窗口和天气压力。
@@ -387,13 +412,13 @@ export function GardenSettingsPanel({
       </div>
 
       <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-2">
-        <div className="text-[10px] font-black uppercase tracking-wider text-green-800">5-Minute Test</div>
+        <div className="text-[10px] font-black uppercase tracking-wider text-green-800">体验清单</div>
         <div className="mt-2 grid gap-1 text-[10px] font-bold leading-4 text-green-900">
           {[
             '快速生成一版菜园',
             '点击一个植物查看任务',
             '完成一次浇水、覆盖或排水',
-            '点空地查看 Smart Pick',
+            '点空地查看智能推荐',
             '导出一张分享图'
           ].map((item, index) => (
             <div key={item} className="flex items-center gap-2 rounded-md border border-green-200 bg-white/75 px-2 py-1">
@@ -406,18 +431,18 @@ export function GardenSettingsPanel({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-4 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <button onClick={onCreatePlan} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.14)] hover:bg-amber-50">
-          新建
+          新建菜园
         </button>
         <button onClick={onDuplicatePlan} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.14)] hover:bg-amber-50">
-          复制
+          复制方案
         </button>
         <button onClick={onLoad} className="rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-xs font-bold text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.14)] hover:bg-amber-50">
-          读取
+          读取本地
         </button>
         <button onClick={onSave} className="rounded-md border-2 border-green-800/20 bg-green-50 px-2 py-1.5 text-xs font-bold text-green-800 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-100">
-          保存
+          保存当前方案
         </button>
       </div>
 
@@ -440,10 +465,10 @@ export function GardenSettingsPanel({
 
       <div className="mt-2 grid grid-cols-2 gap-2">
         <button onClick={exportPlan} className="rounded-md border-2 border-sky-900/20 bg-sky-50 px-2 py-1.5 text-xs font-bold text-sky-900 shadow-[0_2px_0_rgba(12,74,110,0.12)] hover:bg-sky-100">
-          导出 JSON
+          导出方案
         </button>
         <label className="cursor-pointer rounded-md border-2 border-sky-900/20 bg-white px-2 py-1.5 text-center text-xs font-bold text-sky-900 shadow-[0_2px_0_rgba(12,74,110,0.12)] hover:bg-sky-50">
-          导入 JSON
+          导入方案
           <input type="file" accept="application/json,.json" onChange={importPlan} className="hidden" />
         </label>
       </div>
@@ -454,6 +479,16 @@ export function GardenSettingsPanel({
 
 function sanitizeFileName(name: string) {
   return name.replace(/[\\/:*?"<>|]+/g, '-').trim() || 'garden-plan';
+}
+
+function formatPlanUpdatedAt(updatedAt: number) {
+  if (!updatedAt) return '未保存';
+  return new Date(updatedAt).toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 function isSameClimate(a: ClimateProfile, b: ClimateProfile) {

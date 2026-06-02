@@ -5,6 +5,7 @@ This folder contains first-round alpha marketing materials for Small Farm Planne
 ## Contents
 
 - `social-copy.md`: social media copy for X, Threads, LinkedIn, Indie Hackers, and tester outreach.
+- `xiaohongshu/README.md`: 小红书图文笔记、配图顺序、视频字幕和发布话题。
 - `screenshots/01-planner-overview.png`: product overview screenshot.
 - `screenshots/02-plant-library.png`: Plant Library screenshot.
 - `screenshots/03-action-button.png`: action-oriented planner screenshot.
@@ -26,10 +27,19 @@ Optional poster frame:
 pnpm --filter video still
 ```
 
+Xiaohongshu vertical video:
+
+```bash
+pnpm --filter video render:xhs
+pnpm --filter video still:xhs
+```
+
 Outputs:
 
 - `marketing/small-farm-promo.mp4`
 - `marketing/small-farm-promo-poster.png`
+- `marketing/small-farm-xhs.mp4`
+- `marketing/small-farm-xhs-poster.png`
 
 ## Current Note
 

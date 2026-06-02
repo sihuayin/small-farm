@@ -54,6 +54,7 @@ interface PlannerInspectorProps {
   onDeleteSelected: () => void;
   onRotateSelected: () => void;
   onFocusSelected: () => void;
+  isDemoMode?: boolean;
   firstRunFocus?: {
     label: string;
     area: FirstRunFocusArea;
@@ -94,6 +95,7 @@ export function PlannerInspector({
   onDeleteSelected,
   onRotateSelected,
   onFocusSelected,
+  isDemoMode = false,
   firstRunFocus,
   smartRecommendations = []
 }: PlannerInspectorProps) {
@@ -134,6 +136,7 @@ export function PlannerInspector({
   const [resolvedWeatherReminderIds, setResolvedWeatherReminderIds] = useState<Set<string>>(() => new Set());
   const [repairIntent, setRepairIntent] = useState<{ type: 'task' | 'harvest'; entityId?: string } | null>(null);
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
+  const [showFullIdleInspector, setShowFullIdleInspector] = useState(false);
   const pendingManualTabRef = useRef<InspectorTab | null>(null);
   const calendarReminders = rawCalendarReminders.filter(reminder => !resolvedWeatherReminderIds.has(reminder.id));
   const seasonSnapshot = {
@@ -422,6 +425,67 @@ export function PlannerInspector({
     : mobilePrimaryAction
       ? 'max-h-[156px]'
       : 'max-h-[104px]';
+  const shouldShowQuietIdleInspector = !isDemoMode && !showFullIdleInspector && !selectedEntity && !selectedTileStatus && !placementInsight;
+  const firstGardenTask = gardenTasks[0] || null;
+
+  if (shouldShowQuietIdleInspector) {
+    const scoreTone = gardenScoreTone(seasonSnapshot.score);
+    const mainScoreReason = seasonSnapshot.scoreReasons[0]?.label || (seasonSnapshot.plantCount > 0 ? '点击作物查看任务、规则和采收操作。' : '先在画布上种下第一批作物。');
+
+    return (
+      <aside className="absolute inset-x-3 bottom-3 z-20 overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:w-72">
+        <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-3 md:p-4">
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Today</div>
+          <div className="mt-1 text-lg font-black text-amber-950">今日概览</div>
+          <div className="mt-1 rounded-md bg-white/55 px-2 py-1 text-xs font-bold text-amber-800">
+            {seasonSnapshot.plantCount > 0
+              ? `${seasonSnapshot.plantCount} 株 · ${seasonSnapshot.speciesCount} 种植物`
+              : '还没有作物，先从左侧选择植物。'}
+          </div>
+        </div>
+        <div className="p-3 md:p-4">
+          <div className="grid grid-cols-3 gap-2">
+            <QuietMetric label="任务" value={gardenTasks.length} tone={gardenTasks.length > 0 ? 'amber' : 'green'} />
+            <QuietMetric label="采收" value={seasonSnapshot.harvestReadyCount} tone={seasonSnapshot.harvestReadyCount > 0 ? 'green' : 'neutral'} />
+            <QuietMetric label="提醒" value={calendarReminders.length} tone={calendarReminders.length > 0 ? 'amber' : 'neutral'} />
+          </div>
+          <div className={`mt-3 rounded-md border p-3 ${gardenScorePanelClassName(scoreTone)}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider">Garden Score</div>
+                <div className="mt-1 text-xs font-black">{gardenScoreLabel(seasonSnapshot.score)}</div>
+              </div>
+              <div className="text-2xl font-black leading-none">{seasonSnapshot.score}</div>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/60">
+              <div className={`h-full rounded-full ${gardenScoreBarClassName(scoreTone)}`} style={{ width: `${seasonSnapshot.score}%` }} />
+            </div>
+            <div className="mt-2 text-[10px] font-black leading-4 opacity-85">{mainScoreReason}</div>
+          </div>
+          {firstGardenTask && (
+            <button
+              type="button"
+              onClick={() => onSelectEntity(firstGardenTask.id)}
+              className="mt-3 w-full rounded-md border-2 border-amber-900/15 bg-amber-100 px-3 py-2 text-left text-xs font-black text-amber-950 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-200"
+            >
+              今日优先 · {firstGardenTask.task.label} · {firstGardenTask.plantName}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setShowFullIdleInspector(true);
+              setIsMobilePanelOpen(true);
+              setActiveTab(gardenTasks.length > 0 ? 'tasks' : 'planning');
+            }}
+            className="mt-3 w-full rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+          >
+            查看建议
+          </button>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className={`absolute inset-x-3 bottom-3 z-20 overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur transition-[max-height] duration-200 md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:max-h-[calc(100vh-2rem)] md:w-72 ${mobileCollapsedMaxHeight}`}>
@@ -429,7 +493,7 @@ export function PlannerInspector({
       <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-3 md:p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Inspector</div>
+            <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Inspector' : '详情'}</div>
             <div className="mt-1 truncate text-lg font-black text-amber-950">{selectedTitle}</div>
           </div>
           <button
@@ -544,7 +608,7 @@ export function PlannerInspector({
 
           <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'tasks')}`}>
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Today Board</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Today Board' : '今日任务'}</div>
               <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
                 {gardenTasks.length} 项
               </span>
@@ -663,7 +727,7 @@ export function PlannerInspector({
 
           <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'harvest')}`}>
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Harvest</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Harvest' : '采收记录'}</div>
               <div className="flex items-center gap-1">
                 <span className="rounded-full border border-green-300 bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-800">
                   {filteredHarvests.length} 条
@@ -674,7 +738,7 @@ export function PlannerInspector({
                   onClick={() => exportHarvestCsv(filteredHarvests, harvestExportName)}
                   className="rounded-md border border-amber-900/15 bg-white px-2 py-0.5 text-[10px] font-black text-amber-900 hover:bg-amber-50 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                 >
-                  CSV
+                  {isDemoMode ? 'CSV' : '导出'}
                 </button>
               </div>
             </div>
@@ -1137,6 +1201,21 @@ function taskToneClassName(tone: 'blue' | 'green' | 'amber') {
   return 'border-amber-300 bg-amber-100 text-amber-800';
 }
 
+function QuietMetric({ label, value, tone }: { label: string; value: number; tone: 'green' | 'amber' | 'neutral' }) {
+  const className = tone === 'green'
+    ? 'border-green-300 bg-green-100 text-green-800'
+    : tone === 'amber'
+      ? 'border-amber-300 bg-amber-100 text-amber-800'
+      : 'border-amber-900/10 bg-white/70 text-amber-800';
+
+  return (
+    <div className={`rounded-md border p-2 text-center ${className}`}>
+      <div className="text-lg font-black leading-none">{value}</div>
+      <div className="mt-1 text-[10px] font-black">{label}</div>
+    </div>
+  );
+}
+
 function TaskCounter({ label, value, tone }: { label: string; value: number; tone: 'blue' | 'green' | 'amber' }) {
   return (
     <div className={`rounded-md border p-2 text-center ${taskCounterClassName(tone)}`}>
@@ -1331,7 +1410,7 @@ function TileStatusPanel({
   return (
     <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(highlight)}`}>
       <div className="flex items-center justify-between">
-        <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Tile Status</div>
+        <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">地块状态</div>
         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${tileStatusBadgeClassName(status.tone)}`}>
           {status.gridX},{status.gridY}
         </span>
@@ -1346,7 +1425,7 @@ function TileStatusPanel({
       {(status.kind === 'idle' || status.kind === 'cleanup') && smartRecommendations.length > 0 && (
         <div className="mt-3 rounded-md border border-sky-900/10 bg-sky-50/80 p-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-[10px] font-black uppercase tracking-wider text-sky-800">Smart Pick</div>
+            <div className="text-[10px] font-black uppercase tracking-wider text-sky-800">智能推荐</div>
             <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[10px] font-black text-sky-800">
               空地推荐
             </span>
@@ -1444,7 +1523,7 @@ function ActivityPanel({
   return (
     <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(highlight)}`}>
       <div className="flex items-center justify-between">
-        <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Activity</div>
+        <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">养护记录</div>
         <div className="flex items-center gap-1">
           <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
             {records.length} 条
@@ -1455,7 +1534,7 @@ function ActivityPanel({
             onClick={() => exportActivityCsv(records, exportName)}
             className="rounded-md border border-amber-900/15 bg-white px-2 py-0.5 text-[10px] font-black text-amber-900 hover:bg-amber-50 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
           >
-            CSV
+            导出
           </button>
         </div>
       </div>

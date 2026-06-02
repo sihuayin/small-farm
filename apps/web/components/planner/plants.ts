@@ -370,6 +370,78 @@ export const plants: Plant[] = [
     dimensions: { grid_span_x: 1, grid_span_y: 2, spacing_inch: 18 },
     styling: { bg_color: '#86efac', border_color: '#15803d' },
     relationships: { companions: ['parsley', 'tomato', 'basil'], enemies: ['onion', 'garlic'] }
+  },
+  {
+    id: 'mint',
+    category: 'herb',
+    naming: { en: 'Mint', zh: '薄荷', emoji: '🌿' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 18 },
+    styling: { bg_color: '#34d399', border_color: '#059669' },
+    relationships: { companions: ['cabbage', 'tomato', 'pea'], enemies: ['lavender', 'rosemary'] }
+  },
+  {
+    id: 'hyssop',
+    category: 'herb',
+    naming: { en: 'Hyssop', zh: '牛膝草', emoji: '🌿' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 12 },
+    styling: { bg_color: '#6366f1', border_color: '#4338ca' },
+    relationships: { companions: ['cabbage', 'strawberry', 'lavender'], enemies: ['radish'] }
+  },
+  {
+    id: 'turnip',
+    category: 'vegetable',
+    naming: { en: 'Turnip', zh: '芜菁', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 4 },
+    styling: { bg_color: '#f3e8ff', border_color: '#a855f7' },
+    relationships: { companions: ['pea', 'onion', 'lettuce'], enemies: ['potato'] }
+  },
+  {
+    id: 'leek',
+    category: 'vegetable',
+    naming: { en: 'Leek', zh: '韭葱', emoji: '🧅' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 6 },
+    styling: { bg_color: '#bbf7d0', border_color: '#16a34a' },
+    relationships: { companions: ['carrot', 'celery', 'strawberry'], enemies: ['bean', 'pea'] }
+  },
+  {
+    id: 'sweet_potato',
+    category: 'vegetable',
+    naming: { en: 'Sweet Potato', zh: '红薯', emoji: '🍠' },
+    dimensions: { grid_span_x: 2, grid_span_y: 2, spacing_inch: 12 },
+    styling: { bg_color: '#f97316', border_color: '#c2410c' },
+    relationships: { companions: ['bean', 'thyme', 'dill'], enemies: ['pumpkin', 'potato'] }
+  },
+  {
+    id: 'winter_squash',
+    category: 'vegetable',
+    naming: { en: 'Winter Squash', zh: '冬南瓜', emoji: '🎃' },
+    dimensions: { grid_span_x: 3, grid_span_y: 3, spacing_inch: 36 },
+    styling: { bg_color: '#f59e0b', border_color: '#b45309' },
+    relationships: { companions: ['corn', 'bean', 'borage'], enemies: ['potato', 'rosemary'] }
+  },
+  {
+    id: 'bok_choy',
+    category: 'vegetable',
+    naming: { en: 'Bok Choy', zh: '小白菜', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 8 },
+    styling: { bg_color: '#86efac', border_color: '#22c55e' },
+    relationships: { companions: ['dill', 'onion', 'nasturtium'], enemies: ['strawberry', 'tomato'] }
+  },
+  {
+    id: 'calendula',
+    category: 'flower',
+    naming: { en: 'Calendula', zh: '金盏花', emoji: '🌼' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 10 },
+    styling: { bg_color: '#facc15', border_color: '#ca8a04' },
+    relationships: { companions: ['tomato', 'cucumber', 'lettuce'], enemies: [] }
+  },
+  {
+    id: 'borage',
+    category: 'flower',
+    naming: { en: 'Borage', zh: '琉璃苣', emoji: '🌸' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 12 },
+    styling: { bg_color: '#38bdf8', border_color: '#0284c7' },
+    relationships: { companions: ['tomato', 'strawberry', 'winter_squash'], enemies: [] }
   }
 ];
 
@@ -438,7 +510,16 @@ const agronomyByPlantId: Record<string, Partial<PlantAgronomy>> = {
   arugula: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'medium', daysToMaturity: 35, spacing: { plantInch: 4, rowInch: 8 }, germinationDays: [3, 7], plantingDepthInch: 0.25, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -42, endOffsetDays: 170 } },
   chard: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'summer', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'medium', daysToMaturity: 60, spacing: { plantInch: 10, rowInch: 18 }, germinationDays: [5, 10], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -14, endOffsetDays: 150 } },
   okra: { family: 'other', rotationGroup: 'fruiting', seasons: ['summer'], waterNeed: 'medium', hardinessZones: [7, 11], daysToMaturity: 60, spacing: { plantInch: 18, rowInch: 30 }, germinationDays: [7, 14], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 21, endOffsetDays: 90 } },
-  asparagus: { family: 'other', rotationGroup: 'perennial', seasons: ['spring'], waterNeed: 'medium', hardinessZones: [3, 8], daysToMaturity: 730, spacing: { plantInch: 18, rowInch: 48 }, germinationDays: [14, 21], plantingDepthInch: 6, startMethod: 'transplant', sowingWindow: { startOffsetDays: -28, endOffsetDays: 28 }, harvestWindow: { startOffsetDays: 730, endOffsetDays: 1095 } }
+  asparagus: { family: 'other', rotationGroup: 'perennial', seasons: ['spring'], waterNeed: 'medium', hardinessZones: [3, 8], daysToMaturity: 730, spacing: { plantInch: 18, rowInch: 48 }, germinationDays: [14, 21], plantingDepthInch: 6, startMethod: 'transplant', sowingWindow: { startOffsetDays: -28, endOffsetDays: 28 }, harvestWindow: { startOffsetDays: 730, endOffsetDays: 1095 } },
+  mint: { family: 'lamiaceae', rotationGroup: 'perennial', seasons: ['spring', 'summer'], sunRequirement: 'partial_sun', waterNeed: 'medium', hardinessZones: [3, 9], daysToMaturity: 70, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [10, 15], plantingDepthInch: 0.125, startMethod: 'transplant', sowingWindow: { startOffsetDays: 0, endOffsetDays: 84 } },
+  hyssop: { family: 'lamiaceae', rotationGroup: 'perennial', seasons: ['spring', 'summer'], waterNeed: 'low', hardinessZones: [4, 9], daysToMaturity: 85, spacing: { plantInch: 12, rowInch: 18 }, germinationDays: [14, 21], plantingDepthInch: 0.125, startMethod: 'transplant', sowingWindow: { startOffsetDays: 0, endOffsetDays: 84 } },
+  turnip: { family: 'brassica', rotationGroup: 'root', seasons: ['spring', 'fall'], waterNeed: 'medium', daysToMaturity: 50, spacing: { plantInch: 4, rowInch: 12 }, germinationDays: [3, 10], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -28, endOffsetDays: 170 } },
+  leek: { family: 'allium', rotationGroup: 'root', seasons: ['spring', 'fall'], waterNeed: 'medium', daysToMaturity: 120, spacing: { plantInch: 6, rowInch: 18 }, germinationDays: [7, 14], plantingDepthInch: 0.25, startMethod: 'transplant', sowingWindow: { startOffsetDays: -42, endOffsetDays: 112 } },
+  sweet_potato: { family: 'root', rotationGroup: 'root', seasons: ['summer'], waterNeed: 'medium', hardinessZones: [8, 11], daysToMaturity: 110, spacing: { plantInch: 12, rowInch: 36 }, germinationDays: [14, 28], plantingDepthInch: 4, startMethod: 'transplant', sowingWindow: { startOffsetDays: 28, endOffsetDays: 84 } },
+  winter_squash: { family: 'cucurbit', rotationGroup: 'fruiting', seasons: ['summer'], waterNeed: 'high', daysToMaturity: 100, spacing: { plantInch: 36, rowInch: 72 }, germinationDays: [5, 10], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 14, endOffsetDays: 70 } },
+  bok_choy: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [4, 10], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -42, endOffsetDays: 170 } },
+  calendula: { family: 'aster', rotationGroup: 'flower', seasons: ['spring', 'summer', 'fall'], waterNeed: 'low', daysToMaturity: 55, spacing: { plantInch: 10, rowInch: 12 }, germinationDays: [5, 15], plantingDepthInch: 0.25, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -14, endOffsetDays: 120 } },
+  borage: { family: 'flower', rotationGroup: 'flower', seasons: ['spring', 'summer'], waterNeed: 'medium', daysToMaturity: 60, spacing: { plantInch: 12, rowInch: 18 }, germinationDays: [5, 15], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 0, endOffsetDays: 90 } }
 };
 
 export function getPlantAgronomy(plantId: string): PlantAgronomy {
@@ -452,6 +533,41 @@ export function getPlantAgronomy(plantId: string): PlantAgronomy {
       rowInch: override.spacing?.rowInch || agronomyDefaults.spacing.rowInch
     }
   };
+}
+
+export interface PlantCatalogIssue {
+  plantId: string;
+  field: 'companions' | 'enemies' | 'agronomy';
+  message: string;
+}
+
+export function getPlantCatalogIssues(): PlantCatalogIssue[] {
+  const knownPlantIds = new Set(plants.map(plant => plant.id));
+  const issues: PlantCatalogIssue[] = [];
+
+  for (const plant of plants) {
+    for (const field of ['companions', 'enemies'] as const) {
+      for (const relatedPlantId of plant.relationships[field]) {
+        if (!knownPlantIds.has(relatedPlantId)) {
+          issues.push({
+            plantId: plant.id,
+            field,
+            message: `${plant.id}.${field} references missing plant "${relatedPlantId}".`
+          });
+        }
+      }
+    }
+
+    if (!agronomyByPlantId[plant.id]) {
+      issues.push({
+        plantId: plant.id,
+        field: 'agronomy',
+        message: `${plant.id} uses only the default agronomy profile.`
+      });
+    }
+  }
+
+  return issues;
 }
 
 export function getPlantSpacingLabel(plantId: string): string {

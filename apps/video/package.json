@@ -5,7 +5,9 @@
   "scripts": {
     "preview": "remotion preview src/index.ts",
     "render": "remotion render src/index.ts SmallFarmPromo ../../marketing/small-farm-promo.mp4",
-    "still": "remotion still src/index.ts SmallFarmPromo ../../marketing/small-farm-promo-poster.png --frame=45"
+    "still": "remotion still src/index.ts SmallFarmPromo ../../marketing/small-farm-promo-poster.png --frame=45",
+    "render:xhs": "remotion render src/index.ts SmallFarmXhs ../../marketing/small-farm-xhs.mp4",
+    "still:xhs": "remotion still src/index.ts SmallFarmXhs ../../marketing/small-farm-xhs-poster.png --frame=30"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.247",
@@ -14,6 +16,8 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "typescript": "^5.3.0"
   }
 }

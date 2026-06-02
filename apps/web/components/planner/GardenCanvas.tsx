@@ -719,6 +719,79 @@ function placementScoreStroke(result: SynergyResult) {
   return '#3f6212';
 }
 
+function getPlacementFeedback(
+  plant: Plant,
+  gridX: number,
+  gridY: number,
+  result: SynergyResult,
+  gardenWidth: number,
+  gardenHeight: number,
+  occupancyIndex: Record<string, string>,
+  entities: Record<string, GardenEntity>
+) {
+  const spanX = plant.dimensions.grid_span_x;
+  const spanY = plant.dimensions.grid_span_y;
+  const outOfBounds = gridX < 0 || gridY < 0 || gridX + spanX > gardenWidth || gridY + spanY > gardenHeight;
+
+  if (outOfBounds) {
+    return {
+      canPlace: false,
+      tone: 'bad' as const,
+      label: '空间不足',
+      detail: `${plant.naming.zh} 需要 ${spanX}x${spanY} 格`
+    };
+  }
+
+  for (let x = gridX; x < gridX + spanX; x++) {
+    for (let y = gridY; y < gridY + spanY; y++) {
+      const entityId = occupancyIndex[`${x},${y}`];
+      const entity = entityId ? entities[entityId] : null;
+      if (entity) {
+        return {
+          canPlace: false,
+          tone: 'bad' as const,
+          label: '已有内容',
+          detail: entity.type === 'plant' ? `这里已有${entity.plant.naming.zh}` : '目标区域已被占用'
+        };
+      }
+    }
+  }
+
+  if (result.enemyCount > 0 || result.status === 'bad' || result.recommendation === 'bad') {
+    return {
+      canPlace: false,
+      tone: 'bad' as const,
+      label: '不建议种',
+      detail: result.enemyCount > 0 ? '附近有相克作物' : result.details[0] || '该位置风险较高'
+    };
+  }
+
+  if (result.recommendation === 'caution') {
+    return {
+      canPlace: true,
+      tone: 'caution' as const,
+      label: '谨慎尝试',
+      detail: result.details.find(detail => detail.includes('窗口') || detail.includes('季节')) || '可以种，但确定性较低'
+    };
+  }
+
+  if (result.recommendation === 'excellent' || result.status === 'good') {
+    return {
+      canPlace: true,
+      tone: 'good' as const,
+      label: '很适合',
+      detail: result.companionCount > 0 ? '附近有伴生伙伴' : '当前条件匹配度高'
+    };
+  }
+
+  return {
+    canPlace: true,
+    tone: 'ok' as const,
+    label: '适合种',
+    detail: '没有明显冲突'
+  };
+}
+
 function smartRecommendationReason(result: SynergyResult, plant: Plant, planSeason: PlanSeason, climateProfile: ClimateProfile, planYear: number) {
   const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
   if (result.enemyCount > 0) return '附近存在冲突植物，建议换个位置。';
@@ -869,6 +942,50 @@ function seasonLabel(season: PlanSeason) {
   return labels[season];
 }
 
+type SetupPlantQuickFilter = 'all' | 'current' | 'quick' | 'beginner' | 'perennial' | 'low_water' | 'high_water';
+
+function shortSeasonLabel(season: PlanSeason) {
+  const labels: Record<PlanSeason, string> = {
+    spring: '春',
+    summer: '夏',
+    fall: '秋',
+    winter: '冬'
+  };
+  return labels[season];
+}
+
+function setupWindowSortScore(status: ReturnType<typeof getPlantingWindowStatus>['status']) {
+  if (status === 'in_window') return 5;
+  if (status === 'too_early') return 3;
+  if (status === 'late') return 2;
+  if (status === 'harvest_risk') return 1;
+  return 0;
+}
+
+function matchesSetupQuickFilter(
+  plant: Plant,
+  filter: SetupPlantQuickFilter,
+  windowStatus: ReturnType<typeof getPlantingWindowStatus>
+) {
+  if (filter === 'all') return true;
+  const agronomy = getPlantAgronomy(plant.id);
+
+  if (filter === 'current') return windowStatus.status === 'in_window';
+  if (filter === 'quick') return agronomy.daysToMaturity <= 60 && agronomy.rotationGroup !== 'perennial';
+  if (filter === 'beginner') {
+    return agronomy.daysToMaturity <= 80
+      && agronomy.waterNeed !== 'high'
+      && plant.dimensions.grid_span_x * plant.dimensions.grid_span_y <= 2
+      && windowStatus.status !== 'off_season'
+      && windowStatus.status !== 'harvest_risk';
+  }
+  if (filter === 'perennial') return agronomy.rotationGroup === 'perennial';
+  if (filter === 'low_water') return agronomy.waterNeed === 'low';
+  if (filter === 'high_water') return agronomy.waterNeed === 'high';
+
+  return true;
+}
+
 interface GardenCanvasProps {
   gridWidth?: number;
   gridHeight?: number;
@@ -896,9 +1013,12 @@ export default function GardenCanvas({
   const [showGuidedPath, setShowGuidedPath] = useState(false);
   const [showFirstRunCheck, setShowFirstRunCheck] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showEmptyPlanTip, setShowEmptyPlanTip] = useState(false);
+  const [showPlanningTools, setShowPlanningTools] = useState(false);
   const [setupMode, setSetupMode] = useState<'choice' | 'custom'>('choice');
   const [setupStep, setSetupStep] = useState<'size' | 'climate' | 'plants' | 'review'>('size');
   const [setupPlantCategory, setSetupPlantCategory] = useState<string>('all');
+  const [setupPlantQuickFilter, setSetupPlantQuickFilter] = useState<SetupPlantQuickFilter>('all');
   const [setupPlantSearch, setSetupPlantSearch] = useState('');
   const [setupPlanName, setSetupPlanName] = useState('我的菜园');
   const [setupWidth, setSetupWidth] = useState(12);
@@ -909,6 +1029,7 @@ export default function GardenCanvas({
   const [setupLastFrost, setSetupLastFrost] = useState('04-15');
   const [setupFirstFrost, setSetupFirstFrost] = useState('10-15');
   const [setupPlantIds, setSetupPlantIds] = useState<string[]>(DEFAULT_GARDEN_KIT_PLANT_IDS);
+  const [setupAutoGenerate, setSetupAutoGenerate] = useState(false);
   const [hasDismissedWelcome, setHasDismissedWelcome] = useState(false);
   const [firstRunCompletedAt, setFirstRunCompletedAt] = useState<number | null>(null);
   const [completedDemoTourItems, setCompletedDemoTourItems] = useState<Set<string>>(() => new Set());
@@ -949,6 +1070,7 @@ export default function GardenCanvas({
     y: number;
     status: 'ok' | 'blocked' | 'moved';
     label: string;
+    detail?: string;
   } | null>(null);
   const [starterSummary, setStarterSummary] = useState<StarterPlanSummary | null>(null);
   const [shareExportMessage, setShareExportMessage] = useState<string | null>(null);
@@ -1801,6 +1923,16 @@ export default function GardenCanvas({
     } else if (activeToolId && activePlant) {
       setSelectedTileStatus(null);
       const insightResult = evaluatePlacement(x, y);
+      const placementFeedback = getPlacementFeedback(
+        activePlant,
+        x,
+        y,
+        insightResult,
+        effectiveGridWidth,
+        effectiveGridHeight,
+        occupancyIndex,
+        entities
+      );
       setPlacementInsight({
         gridX: x,
         gridY: y,
@@ -1811,11 +1943,15 @@ export default function GardenCanvas({
         result: getLayerResult(insightResult, heatmapLayer, activePlant, planSeason, climateProfile)
       });
       const placed = placePlant(x, y, activeToolId);
+      if (placed) {
+        setShowEmptyPlanTip(false);
+      }
       setActionFeedback({
         x,
         y,
         status: placed ? 'ok' : 'blocked',
-        label: placed ? 'OK' : 'NO'
+        label: placed ? '已种下' : placementFeedback.label,
+        detail: placed ? activePlant.naming.zh : placementFeedback.detail
       });
       addEffect(x, y, placed ? 'plant' : 'blocked');
     } else {
@@ -1823,7 +1959,7 @@ export default function GardenCanvas({
       setSelectedTileStatus(getTileStatusInfo(x, y));
       selectEntity(null);
     }
-  }, [hoveredCell, activeToolId, activeTileId, activePlant, heatmapLayer, heatmapLayerLabel, heatmapLegend.scoreLabel, planSeason, climateProfile, effectiveGridWidth, effectiveGridHeight, screenToWorld, worldToGrid, getTileAt, getEntityAt, setTileOverride, removeTileOverride, evaluatePlacement, placePlant, selectEntity, addEffect, getTileStatusInfo]);
+  }, [hoveredCell, activeToolId, activeTileId, activePlant, heatmapLayer, heatmapLayerLabel, heatmapLegend.scoreLabel, planSeason, climateProfile, effectiveGridWidth, effectiveGridHeight, occupancyIndex, entities, screenToWorld, worldToGrid, getTileAt, getEntityAt, setTileOverride, removeTileOverride, evaluatePlacement, placePlant, selectEntity, addEffect, getTileStatusInfo]);
 
   const handleSelectPlant = useCallback((plantId: string) => {
     // 选择植物时清除地块绘制工具
@@ -1835,8 +1971,21 @@ export default function GardenCanvas({
       setActiveTool(plantId);
       setPlacementInsight(null);
       setSelectedTileStatus(null);
+      setShowEmptyPlanTip(false);
     }
   }, [activeToolId, setActiveTool]);
+
+  const handleCycleStarterPlant = useCallback(() => {
+    const kitPlantIds = getGardenKitPlantIds();
+    const fallbackPlantIds = kitPlantIds.length > 0 ? kitPlantIds : DEFAULT_GARDEN_KIT_PLANT_IDS;
+    const currentIndex = activeToolId ? fallbackPlantIds.indexOf(activeToolId) : -1;
+    const nextPlantId = fallbackPlantIds[(currentIndex + 1 + fallbackPlantIds.length) % fallbackPlantIds.length];
+    setActiveTile(null);
+    setSelectedTileStatus(null);
+    setPlacementInsight(null);
+    setActiveTool(nextPlantId);
+    setShowHeatmap(true);
+  }, [activeToolId, getGardenKitPlantIds, setActiveTile, setActiveTool]);
 
   const handleSelectTile = useCallback((tileId: TileType) => {
     // 选择地块时清除植物工具
@@ -2842,12 +2991,39 @@ export default function GardenCanvas({
           <Text
             x={pos.x - 10}
             y={pos.y - 10}
-            text="✓"
+            text={activePlant ? '!' : '✓'}
             fontSize={18}
             fill="#fff"
             stroke="#000"
             strokeWidth={0.5}
           />
+          {activePlant && (
+            <Group x={pos.x + 32} y={pos.y - 44} listening={false}>
+              <Rect
+                x={-34}
+                y={-13}
+                width={68}
+                height={26}
+                cornerRadius={6}
+                fill="#ef4444"
+                stroke="#b91c1c"
+                strokeWidth={2}
+                shadowColor="rgba(43,31,16,0.26)"
+                shadowBlur={6}
+                shadowOffset={{ x: 0, y: 2 }}
+              />
+              <Text
+                x={-32}
+                y={-9}
+                width={64}
+                align="center"
+                text="已有内容"
+                fontSize={10}
+                fontStyle="bold"
+                fill="#fff"
+              />
+            </Group>
+          )}
         </Group>
       );
     }
@@ -2856,6 +3032,16 @@ export default function GardenCanvas({
       const plant = activePlant;
 
       const synergy = evaluatePlacement(x, y);
+      const feedback = getPlacementFeedback(
+        plant,
+        x,
+        y,
+        synergy,
+        effectiveGridWidth,
+        effectiveGridHeight,
+        occupancyIndex,
+        entities
+      );
       let fillColor = 'rgba(100,100,100,0.3)';
       let strokeColor = '#666';
       let previewOffsetX = 0;
@@ -2930,29 +3116,39 @@ export default function GardenCanvas({
             shadowBlur={synergy?.status === 'neutral' ? 0 : 12}
           />
           {typeof synergy?.score === 'number' && (
-            <Group x={pos.x + previewOffsetX + 30} y={pos.y - 48 - pulse * 4} listening={false}>
+            <Group x={pos.x + previewOffsetX + 36} y={pos.y - 56 - pulse * 4} listening={false}>
               <Rect
-                x={-30}
-                y={-13}
-                width={60}
-                height={26}
+                x={-46}
+                y={-18}
+                width={92}
+                height={38}
                 cornerRadius={6}
-                fill={placementScoreFill(synergy)}
-                stroke={placementScoreStroke(synergy)}
+                fill={feedback.tone === 'bad' ? '#ef4444' : feedback.tone === 'caution' ? '#f59e0b' : placementScoreFill(synergy)}
+                stroke={feedback.tone === 'bad' ? '#b91c1c' : feedback.tone === 'caution' ? '#b45309' : placementScoreStroke(synergy)}
                 strokeWidth={2}
                 shadowColor="rgba(43,31,16,0.26)"
                 shadowBlur={6}
                 shadowOffset={{ x: 0, y: 2 }}
               />
               <Text
-                x={-28}
-                y={-10}
-                width={56}
+                x={-43}
+                y={-14}
+                width={86}
                 align="center"
-                text={`${synergy.score} ${placementScoreLabel(synergy)}`}
+                text={feedback.label}
                 fontSize={10}
                 fontStyle="bold"
                 fill="#fff"
+              />
+              <Text
+                x={-43}
+                y={1}
+                width={86}
+                align="center"
+                text={`${synergy.score} · ${placementScoreLabel(synergy)}`}
+                fontSize={8}
+                fontStyle="bold"
+                fill="rgba(255,255,255,0.88)"
               />
             </Group>
           )}
@@ -2962,7 +3158,7 @@ export default function GardenCanvas({
     }
 
     return null;
-  }, [hoveredCell, getEntityAt, activePlant, activeTileId, entities, animationTick, gridToCanvas, getDiamondPoints, getTileImage, evaluatePlacement, renderPlantSprite]);
+  }, [hoveredCell, getEntityAt, activePlant, activeTileId, entities, animationTick, gridToCanvas, getDiamondPoints, getTileImage, evaluatePlacement, effectiveGridWidth, effectiveGridHeight, occupancyIndex, renderPlantSprite]);
 
   const renderActionFeedback = useMemo(() => {
     if (!actionFeedback) return null;
@@ -2989,18 +3185,44 @@ export default function GardenCanvas({
           shadowColor={color}
           shadowBlur={12 + pulse * 14}
         />
-        <Text
-          x={pos.x - 22}
-          y={pos.y - 42 - lift}
-          width={44}
-          align="center"
-          text={actionFeedback.label}
-          fontSize={13}
-          fontStyle="bold"
-          fill="#fff8df"
-          stroke="rgba(44, 29, 14, 0.75)"
-          strokeWidth={1.5}
-        />
+        <Group x={pos.x} y={pos.y - 48 - lift} listening={false}>
+          <Rect
+            x={actionFeedback.detail ? -58 : -34}
+            y={actionFeedback.detail ? -18 : -14}
+            width={actionFeedback.detail ? 116 : 68}
+            height={actionFeedback.detail ? 38 : 28}
+            cornerRadius={7}
+            fill={actionFeedback.status === 'blocked' ? '#ef4444' : actionFeedback.status === 'moved' ? '#3b82f6' : '#22c55e'}
+            stroke="rgba(255,248,223,0.82)"
+            strokeWidth={1.5}
+            shadowColor="rgba(43,31,16,0.28)"
+            shadowBlur={7}
+            shadowOffset={{ x: 0, y: 2 }}
+          />
+          <Text
+            x={actionFeedback.detail ? -54 : -30}
+            y={actionFeedback.detail ? -14 : -8}
+            width={actionFeedback.detail ? 108 : 60}
+            align="center"
+            text={actionFeedback.label}
+            fontSize={12}
+            fontStyle="bold"
+            fill="#fff8df"
+          />
+          {actionFeedback.detail && (
+            <Text
+              x={-54}
+              y={3}
+              width={108}
+              align="center"
+              text={actionFeedback.detail}
+              fontSize={8}
+              fontStyle="bold"
+              fill="rgba(255,248,223,0.88)"
+              ellipsis
+            />
+          )}
+        </Group>
       </Group>
     );
   }, [actionFeedback, animationTick, getDiamondPoints, gridToCanvas]);
@@ -3085,9 +3307,14 @@ export default function GardenCanvas({
     }
   }, [isDemoMode, plantCount]);
   useEffect(() => {
+    if (showWelcome && (plantCount > 0 || planName === 'Demo Scenario')) {
+      setShowWelcome(false);
+      setHasDismissedWelcome(true);
+      return;
+    }
     if (hasDismissedWelcome || plantCount > 0 || planName === 'Demo Scenario') return;
     setShowWelcome(true);
-  }, [hasDismissedWelcome, planName, plantCount]);
+  }, [hasDismissedWelcome, planName, plantCount, showWelcome]);
 
   const growthPreviewSummary = useMemo(() => {
     const summary: Record<GrowthStageId, number> = {
@@ -3248,20 +3475,47 @@ export default function GardenCanvas({
     { id: 'flower', label: '花卉' },
     { id: 'fruit', label: '果物' }
   ];
-  const setupPresetItems = [
-    { id: 'starter', label: '蔬菜入门', plantIds: ['tomato', 'lettuce', 'carrot', 'pepper', 'basil', 'marigold'] },
-    { id: 'herbs', label: '香草搭配', plantIds: ['basil', 'rosemary', 'sage', 'thyme', 'oregano', 'cilantro'] },
-    { id: 'flowers', label: '花卉伴生', plantIds: ['marigold', 'nasturtium', 'lavender', 'sunflower', 'dill', 'basil'] },
-    { id: 'berries', label: '浆果多年生', plantIds: ['strawberry', 'blueberry', 'raspberry', 'blackberry', 'thyme', 'lavender'] }
+  const setupQuickFilterItems: Array<{ id: SetupPlantQuickFilter; label: string }> = [
+    { id: 'all', label: '全部' },
+    { id: 'current', label: '当前适合' },
+    { id: 'quick', label: '快速收获' },
+    { id: 'beginner', label: '新手友好' },
+    { id: 'perennial', label: '多年生' },
+    { id: 'low_water', label: '低需水' },
+    { id: 'high_water', label: '高需水' }
   ];
-  const setupFilteredPlants = plants.filter(plant => {
+  const setupPresetItems = [
+    { id: 'spring-fast', label: '春季快收', plantIds: ['radish', 'arugula', 'lettuce', 'spinach', 'cilantro', 'bok_choy'] },
+    { id: 'beginner-low', label: '新手低维护', plantIds: ['radish', 'lettuce', 'basil', 'marigold', 'thyme', 'calendula'] },
+    { id: 'summer-fruit', label: '夏季果菜', plantIds: ['tomato', 'pepper', 'cucumber', 'bean', 'zucchini', 'borage'] },
+    { id: 'small-space', label: '小空间友好', plantIds: ['lettuce', 'radish', 'basil', 'cilantro', 'bok_choy', 'marigold'] }
+  ];
+  const setupClimateProfileForFilters = {
+    ...climateProfile,
+    hardinessZone: setupZone,
+    lastFrostDate: setupLastFrost,
+    firstFrostDate: setupFirstFrost
+  };
+  const setupPlantRows = plants.map((plant) => {
+    const agronomy = getPlantAgronomy(plant.id);
+    const windowStatus = getPlantingWindowStatus(plant, setupClimateProfileForFilters, planYear, planSeason);
+    return { plant, agronomy, windowStatus };
+  });
+  const setupCurrentWindowCount = setupPlantRows.filter(row => row.windowStatus.status === 'in_window').length;
+  const setupFilteredPlantRows = setupPlantRows.filter(({ plant, windowStatus }) => {
     const query = setupPlantSearch.trim().toLowerCase();
     const matchesCategory = setupPlantCategory === 'all' || plant.category === setupPlantCategory;
     const matchesSearch = !query
       || plant.naming.zh.toLowerCase().includes(query)
       || plant.naming.en.toLowerCase().includes(query)
       || plant.id.toLowerCase().includes(query);
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesSearch && matchesSetupQuickFilter(plant, setupPlantQuickFilter, windowStatus);
+  }).sort((a, b) => {
+    const windowDelta = setupWindowSortScore(b.windowStatus.status) - setupWindowSortScore(a.windowStatus.status);
+    if (windowDelta !== 0) return windowDelta;
+    const seasonDelta = Number(b.agronomy.seasons.includes(planSeason)) - Number(a.agronomy.seasons.includes(planSeason));
+    if (seasonDelta !== 0) return seasonDelta;
+    return a.agronomy.daysToMaturity - b.agronomy.daysToMaturity;
   });
   const setupSelectedPlants = setupPlantIds
     .map(id => plantMap.get(id))
@@ -3290,6 +3544,8 @@ export default function GardenCanvas({
     setSelectedTileStatus(null);
     setPlacementInsight(null);
     setActionFeedback(null);
+    setShowEmptyPlanTip(false);
+    setShowPlanningTools(false);
     setShowFirstPlantTip(false);
     setNextSeasonTarget(null);
     selectEntity(null);
@@ -3321,6 +3577,8 @@ export default function GardenCanvas({
     setSelectedTileStatus(null);
     setPlacementInsight(null);
     setActionFeedback(null);
+    setShowEmptyPlanTip(true);
+    setShowPlanningTools(false);
     setShowFirstPlantTip(false);
     setNextSeasonTarget(null);
     selectEntity(null);
@@ -3359,20 +3617,32 @@ export default function GardenCanvas({
       status: 'ok',
       label: `${selectedPlantIds.length} 作物`
     });
+    setShowEmptyPlanTip(true);
+    setShowPlanningTools(false);
     setShowFirstPlantTip(false);
     setStarterSummary(null);
     setNextSeasonTarget(null);
     selectEntity(null);
     setActiveTile(null);
-    setActiveTool(selectedPlantIds[0] || null);
+    if (setupAutoGenerate) {
+      const result = generateStarterPlan(selectedPlantIds);
+      setActiveTool(null);
+      setShowEmptyPlanTip(false);
+      setStarterSummary(buildStarterPlanSummary(result, selectedPlantIds, planSeason));
+    } else {
+      setActiveTool(selectedPlantIds[0] || null);
+    }
   }, [
     createPlan,
+    generateStarterPlan,
     renamePlan,
     resizeGarden,
     saveGardenKitPlantIds,
     selectEntity,
     setActiveTile,
     setActiveTool,
+    planSeason,
+    setupAutoGenerate,
     setupCellSize,
     setupFirstFrost,
     setupHeight,
@@ -3410,6 +3680,8 @@ export default function GardenCanvas({
       status: 'ok',
       label: result.placed > 0 ? `生成 ${result.placed}` : '未生成'
     });
+    setShowEmptyPlanTip(false);
+    setShowPlanningTools(false);
     setShowFirstPlantTip(false);
     setStarterSummary(buildStarterPlanSummary(result, requestedPlantIds, planSeason));
   }, [generateStarterPlan, getGardenKitPlantIds, planSeason, selectEntity, setActiveTile, setActiveTool]);
@@ -3826,47 +4098,104 @@ export default function GardenCanvas({
             {firstRunFocus.label} · {firstRunFocus.hint}
           </div>
         )}
-        <div className="absolute left-3 top-[112px] z-10 flex max-w-[calc(100%-1.5rem)] gap-1 overflow-x-auto rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-1 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:left-[292px] md:top-[92px] md:max-w-none">
-          <button
-            type="button"
-            onClick={handleGenerateStarterPlan}
-            className="shrink-0 rounded-md border border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
-          >
-            一键生成
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTool(null);
-              setActiveTile(null);
-              setRequestedInspectorTab('tasks');
-              setSelectedTileStatus({
-                kind: 'idle',
-                gridX: 1,
-                gridY: 1,
-                label: '空地智能推荐',
-                detail: '点击任意空地也可以获得推荐。这里先给你一个起步位置。',
-                recommendation: '展开底部面板，选择推荐植物后会进入放置模式。',
-                tone: 'green'
-              });
-            }}
-            className="shrink-0 rounded-md border border-sky-900/15 bg-sky-100 px-3 py-1.5 text-xs font-black text-sky-900 shadow-[0_2px_0_rgba(14,116,144,0.12)] hover:bg-sky-200"
-          >
-            智能推荐
-          </button>
-          <button
-            type="button"
-            onClick={handleShareGardenImage}
-            className="shrink-0 rounded-md border border-amber-900/15 bg-white px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
-          >
-            导出分享图
-          </button>
+        <div className={`absolute left-3 top-[112px] z-10 ${isDemoMode ? 'flex max-w-[calc(100%-1.5rem)] gap-1 overflow-x-auto rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-1 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:left-[292px] md:top-[92px] md:max-w-none' : 'md:left-[292px] md:top-[92px]'}`}>
+          {isDemoMode ? (
+            <>
+              <button
+                type="button"
+                onClick={handleGenerateStarterPlan}
+                className="shrink-0 rounded-md border border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+              >
+                一键生成
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTool(null);
+                  setActiveTile(null);
+                  setRequestedInspectorTab('tasks');
+                  setSelectedTileStatus({
+                    kind: 'idle',
+                    gridX: 1,
+                    gridY: 1,
+                    label: '空地智能推荐',
+                    detail: '点击任意空地也可以获得推荐。这里先给你一个起步位置。',
+                    recommendation: '展开底部面板，选择推荐植物后会进入放置模式。',
+                    tone: 'green'
+                  });
+                }}
+                className="shrink-0 rounded-md border border-sky-900/15 bg-sky-100 px-3 py-1.5 text-xs font-black text-sky-900 shadow-[0_2px_0_rgba(14,116,144,0.12)] hover:bg-sky-200"
+              >
+                智能推荐
+              </button>
+              <button
+                type="button"
+                onClick={handleShareGardenImage}
+                className="shrink-0 rounded-md border border-amber-900/15 bg-white px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+              >
+                导出分享图
+              </button>
+            </>
+          ) : (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowPlanningTools(value => !value)}
+                className="rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/92 px-3 py-2 text-xs font-black text-amber-900 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur hover:bg-amber-50"
+                aria-expanded={showPlanningTools}
+              >
+                工具
+              </button>
+              {showPlanningTools && (
+                <div className="absolute left-0 top-10 w-44 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/96 p-1.5 shadow-[0_4px_0_rgba(120,72,24,0.14),0_14px_24px_rgba(61,40,20,0.18)] backdrop-blur">
+                  <button
+                    type="button"
+                    onClick={handleGenerateStarterPlan}
+                    className="block w-full rounded-md border border-green-900/15 bg-green-100 px-3 py-2 text-left text-xs font-black text-green-900 hover:bg-green-200"
+                  >
+                    一键生成起步布局
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTool(null);
+                      setActiveTile(null);
+                      setRequestedInspectorTab('tasks');
+                      setSelectedTileStatus({
+                        kind: 'idle',
+                        gridX: 1,
+                        gridY: 1,
+                        label: '空地智能推荐',
+                        detail: '点击任意空地也可以获得推荐。这里先给你一个起步位置。',
+                        recommendation: '展开底部面板，选择推荐植物后会进入放置模式。',
+                        tone: 'green'
+                      });
+                      setShowPlanningTools(false);
+                    }}
+                    className="mt-1 block w-full rounded-md border border-sky-900/15 bg-sky-100 px-3 py-2 text-left text-xs font-black text-sky-900 hover:bg-sky-200"
+                  >
+                    查看智能推荐
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPlanningTools(false);
+                      handleShareGardenImage();
+                    }}
+                    className="mt-1 block w-full rounded-md border border-amber-900/15 bg-white px-3 py-2 text-left text-xs font-black text-amber-900 hover:bg-amber-50"
+                  >
+                    导出分享图
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {starterSummary && (
           <div className="absolute left-3 right-3 top-[156px] z-30 max-h-[36vh] overflow-y-auto rounded-lg border-2 border-green-900/15 bg-green-50 p-2 text-[10px] font-black leading-4 text-green-950 shadow-[0_3px_0_rgba(22,101,52,0.12),0_14px_24px_rgba(61,40,20,0.14)] md:left-[292px] md:right-auto md:top-[140px] md:max-h-[calc(100vh-180px)] md:w-80 md:p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[9px] uppercase tracking-wider text-green-800">Generated Plan</div>
+                <div className="text-[9px] uppercase tracking-wider text-green-800">{isDemoMode ? 'Generated Plan' : '起步布局'}</div>
                 <div className="mt-0.5 text-xs font-black text-green-950">
                   已生成 {starterSummary.placed}/{starterSummary.requested} 个种植位
                 </div>
@@ -4134,7 +4463,7 @@ export default function GardenCanvas({
         <div className="absolute bottom-12 left-8 z-10 hidden w-64 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-3 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:block">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Growth Preview</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Growth Preview' : '生长预览'}</div>
               <div className="mt-0.5 text-xs font-black text-amber-950">
                 {growthPreviewDays === 0 ? '今天' : `+${growthPreviewDays} 天`}
               </div>
@@ -4181,7 +4510,7 @@ export default function GardenCanvas({
           </div>
           <div className="mt-2 rounded-md border border-amber-900/10 bg-white/65 px-2 py-1.5">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-[9px] font-black uppercase tracking-wider text-amber-700">Harvest Forecast</div>
+              <div className="text-[9px] font-black uppercase tracking-wider text-amber-700">{isDemoMode ? 'Harvest Forecast' : '采收预测'}</div>
               {growthPreviewFirstHarvestId && (
                 <button
                   type="button"
@@ -4210,7 +4539,7 @@ export default function GardenCanvas({
           <div className="absolute right-3 top-16 z-10 w-44 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/92 p-2 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:right-80 md:w-56">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Placement</div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Placement' : '放置建议'}</div>
                 <div className="text-xs font-black text-amber-950">推荐热力图</div>
               </div>
               <button
@@ -4300,14 +4629,49 @@ export default function GardenCanvas({
           activeTileId={activeTileId}
         />
 
-        {!showWelcome && !isDemoMode && plantCount === 0 && (
-          <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 w-[min(340px,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/88 p-3 text-center shadow-[0_4px_0_rgba(120,72,24,0.12),0_14px_24px_rgba(61,40,20,0.16)] backdrop-blur">
-            <div className="text-[10px] font-black uppercase tracking-wider text-green-800">正式规划</div>
-            <div className="mt-1 text-sm font-black text-amber-950">
-              {activePlant ? `已选择${activePlant.naming.zh}，点击地块种下` : '选择一种植物，然后点击地块种下'}
+        {!showWelcome && !isDemoMode && plantCount === 0 && showEmptyPlanTip && (
+          <div className="absolute bottom-4 left-1/2 z-10 w-[min(420px,calc(100%-2rem))] -translate-x-1/2 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/94 p-3 shadow-[0_4px_0_rgba(120,72,24,0.12),0_14px_24px_rgba(61,40,20,0.16)] backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-green-800">开始种植</div>
+                <div className="mt-1 text-sm font-black text-amber-950">
+                  {activePlant ? `已选择${activePlant.naming.zh}，点击一块空地种下` : '先选择一种植物，再点击空地种下'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEmptyPlanTip(false)}
+                className="h-7 w-7 shrink-0 rounded-md border border-amber-900/15 bg-white/75 text-[10px] font-black text-amber-900 hover:bg-amber-50"
+                aria-label="关闭开始种植提示"
+              >
+                x
+              </button>
             </div>
             <div className="mt-1 text-[10px] font-bold leading-4 text-amber-700">
-              移动到地块会先显示预览和适配分数；也可以空手点地块查看 Smart Pick 推荐。
+              鼠标移到地块会显示预览和适配分数；不确定种什么时，可以直接生成一个起步布局。
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={handleCycleStarterPlant}
+                className="rounded-md border border-amber-900/15 bg-white/85 px-2 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+              >
+                换一种
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateStarterPlan}
+                className="rounded-md border-2 border-green-900/15 bg-green-100 px-2 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
+              >
+                一键生成
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEmptyPlanTip(false)}
+                className="rounded-md border border-sky-900/15 bg-sky-100 px-2 py-1.5 text-xs font-black text-sky-900 shadow-[0_1px_0_rgba(14,116,144,0.1)] hover:bg-sky-200"
+              >
+                我知道了
+              </button>
             </div>
           </div>
         )}
@@ -4342,9 +4706,9 @@ export default function GardenCanvas({
         )}
 
         {showWelcome && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-emerald-950/24 px-4 backdrop-blur-[2px]">
-            <div className="max-h-[88vh] w-full max-w-xl overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df] shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.24)]">
-              <div className="p-4">
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-emerald-950/24 px-2 py-2 backdrop-blur-[2px] md:px-4">
+            <div className="max-h-[calc(100dvh-1rem)] w-full max-w-xl overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df] shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.24)] md:max-h-[88vh]">
+              <div className="max-h-[calc(100dvh-1rem)] overflow-y-auto p-3 md:max-h-[88vh] md:p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Small Farm</div>
@@ -4579,9 +4943,28 @@ export default function GardenCanvas({
                         </button>
                       ))}
                     </div>
-                    <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-amber-900/10 bg-white/55 p-2">
+                    <div className="mt-1 flex gap-1 overflow-x-auto pb-1">
+                      {setupQuickFilterItems.map(filter => (
+                        <button
+                          key={filter.id}
+                          type="button"
+                          onClick={() => setSetupPlantQuickFilter(filter.id)}
+                          className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-black ${
+                            setupPlantQuickFilter === filter.id
+                              ? 'border-green-800 bg-green-700 text-white'
+                              : 'border-green-900/10 bg-white/70 text-green-800'
+                          }`}
+                        >
+                          {filter.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-1 text-[10px] font-black leading-4 text-amber-700">
+                      当前显示 {setupFilteredPlantRows.length} 种 · 已选 {setupPlantIds.length} 种 · 当前适合 {setupCurrentWindowCount} 种
+                    </div>
+                    <div className="mt-2 max-h-[34dvh] overflow-y-auto rounded-md border border-amber-900/10 bg-white/55 p-2 md:max-h-40">
                       <div className="grid grid-cols-2 gap-1">
-                        {setupFilteredPlants.map(plant => {
+                        {setupFilteredPlantRows.map(({ plant, agronomy, windowStatus }) => {
                           const selected = setupPlantIds.includes(plant.id);
                           return (
                             <button
@@ -4600,7 +4983,14 @@ export default function GardenCanvas({
                             >
                               <span className="flex items-center justify-between gap-2">
                                 <span>{plant.naming.zh}</span>
-                                <span className="text-[9px] opacity-70">{plant.category}</span>
+                                <span className="text-[9px] opacity-70">{windowStatus.shortLabel}</span>
+                              </span>
+                              <span className="mt-1 grid grid-cols-3 gap-1 text-[9px] leading-none opacity-80">
+                                <span className="rounded border border-amber-900/10 bg-white/70 px-1 py-0.5">{agronomy.daysToMaturity}d</span>
+                                <span className="rounded border border-amber-900/10 bg-white/70 px-1 py-0.5">{agronomy.spacing.plantInch}in</span>
+                                <span className="rounded border border-amber-900/10 bg-white/70 px-1 py-0.5">
+                                  {agronomy.seasons.map(season => shortSeasonLabel(season as PlanSeason)).join('/')}
+                                </span>
                               </span>
                             </button>
                           );
@@ -4610,21 +5000,73 @@ export default function GardenCanvas({
                   </div>
                   )}
                   {setupStep === 'review' && (
-                    <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-3 text-xs font-bold leading-5 text-green-900">
-                      已准备创建「{setupPlanName.trim() || '我的菜园'}」：{setupWidth}x{setupHeight} 格，{setupCellSize} ft/格，地区 Zone {setupZone || '未设定'}，工具箱包含 {setupPlantIds.length} 种植物。
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {setupSelectedPlants.slice(0, 10).map(plant => (
-                          <span key={plant.id} className="rounded-full border border-green-300 bg-white/80 px-2 py-0.5 text-[10px] font-black text-green-900">
-                            {plant.naming.zh}
-                          </span>
-                        ))}
+                    <div className="mt-3 space-y-2 text-xs font-bold leading-5">
+                      <div className="rounded-md border border-green-900/10 bg-green-50/85 p-3 text-green-900">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-green-800">创建摘要</div>
+                        <div className="mt-1 text-sm font-black text-green-950">{setupPlanName.trim() || '我的菜园'}</div>
+                        <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+                          <div className="rounded-md border border-green-900/10 bg-white/70 px-2 py-1.5">
+                            <div className="text-[9px] font-black text-green-700">菜园尺寸</div>
+                            <div className="mt-0.5 text-[11px] font-black text-green-950">
+                              {setupWidth}x{setupHeight} 格 · {setupCellSize} ft/格
+                            </div>
+                          </div>
+                          <div className="rounded-md border border-green-900/10 bg-white/70 px-2 py-1.5">
+                            <div className="text-[9px] font-black text-green-700">地区气候</div>
+                            <div className="mt-0.5 text-[11px] font-black text-green-950">
+                              Zone {setupZone || '未设定'} · 末霜 {setupLastFrost || '未设定'}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2 rounded-md bg-white/70 px-2 py-1 text-[10px] font-black text-green-800">
-                        进入后可直接拖放植物，也可以点空地查看 Smart Pick。
+
+                      <div className="rounded-md border border-amber-900/10 bg-white/70 p-3 text-amber-900">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">已选植物</div>
+                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                            setupPlantIds.length > 0
+                              ? 'border-green-300 bg-green-50 text-green-800'
+                              : 'border-red-300 bg-red-50 text-red-700'
+                          }`}>
+                            {setupPlantIds.length} 种
+                          </span>
+                        </div>
+                        {setupSelectedPlants.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {setupSelectedPlants.slice(0, 12).map(plant => (
+                              <span key={plant.id} className="rounded-full border border-green-300 bg-green-50 px-2 py-0.5 text-[10px] font-black text-green-900">
+                                {plant.naming.zh}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-black text-red-700">
+                            至少选择 1 种植物，进入后才会出现在左侧工具箱。
+                          </div>
+                        )}
+                      </div>
+
+                      <label className="flex items-start gap-2 rounded-md border border-sky-900/10 bg-sky-50/80 p-3 text-sky-900">
+                        <input
+                          type="checkbox"
+                          checked={setupAutoGenerate}
+                          onChange={(event) => setSetupAutoGenerate(event.target.checked)}
+                          className="mt-1 h-4 w-4 accent-green-700"
+                        />
+                        <span>
+                          <span className="block text-[11px] font-black">进入后自动生成起步布局</span>
+                          <span className="mt-0.5 block text-[10px] font-bold leading-4 text-sky-800">
+                            默认关闭。关闭时会先选中第一种植物，由你手动点击地块开始规划。
+                          </span>
+                        </span>
+                      </label>
+
+                      <div className="rounded-md border border-amber-900/10 bg-white/70 px-3 py-2 text-[10px] font-black text-amber-800">
+                        进入后第一步：{setupAutoGenerate ? '查看系统生成的起步布局，再根据需要调整。' : '点击一块空地种下当前植物，或打开工具选择一键生成。'}
                       </div>
                     </div>
                   )}
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="sticky bottom-0 z-10 -mx-3 mt-4 grid grid-cols-2 gap-2 border-t border-amber-900/10 bg-[#fff8df]/96 px-3 py-2 backdrop-blur md:static md:mx-0 md:border-t-0 md:bg-transparent md:p-0">
                     <button
                       type="button"
                       onClick={() => {
@@ -4653,7 +5095,7 @@ export default function GardenCanvas({
                       disabled={setupStep === 'review' && setupPlantIds.length === 0}
                       className="rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-2 text-xs font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
                     >
-                      {setupStep === 'review' ? '进入规划器' : '下一步'}
+                      {setupStep === 'review' ? '创建并开始规划' : '下一步'}
                     </button>
                   </div>
                 </>
@@ -4691,6 +5133,7 @@ export default function GardenCanvas({
           onDeleteSelected={handleDeleteSelected}
           onRotateSelected={handleRotateSelected}
           onFocusSelected={handleFocusSelected}
+          isDemoMode={isDemoMode}
           firstRunFocus={firstRunFocus}
           smartRecommendations={smartRecommendations}
         />
@@ -4774,7 +5217,7 @@ export default function GardenCanvas({
         {activityDraft && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/28 px-4 backdrop-blur-[2px]">
             <div className="w-full max-w-sm rounded-lg border-2 border-amber-950/20 bg-[#fff8df] p-4 text-sm shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.28)]">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Activity Log</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Activity Log' : '养护记录'}</div>
               <div className="mt-1 text-lg font-black text-amber-950">
                 {activityEntity?.type === 'plant' ? activityEntity.plant.naming.zh : '操作记录'}
               </div>
