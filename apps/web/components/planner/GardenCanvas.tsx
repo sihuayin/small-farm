@@ -748,7 +748,8 @@ function getPlacementFeedback(
   gardenWidth: number,
   gardenHeight: number,
   occupancyIndex: Record<string, string>,
-  entities: Record<string, GardenEntity>
+  entities: Record<string, GardenEntity>,
+  getTileAt: (gridX: number, gridY: number) => TileType
 ) {
   const spanX = plant.dimensions.grid_span_x;
   const spanY = plant.dimensions.grid_span_y;
@@ -765,6 +766,14 @@ function getPlacementFeedback(
 
   for (let x = gridX; x < gridX + spanX; x++) {
     for (let y = gridY; y < gridY + spanY; y++) {
+      if (getTileAt(x, y) === 'stone_path') {
+        return {
+          canPlace: false,
+          tone: 'bad' as const,
+          label: '石板路',
+          detail: '先取消石板路，才能在这里种植'
+        };
+      }
       const entityId = occupancyIndex[`${x},${y}`];
       const entity = entityId ? entities[entityId] : null;
       if (entity) {
@@ -2125,7 +2134,18 @@ export default function GardenCanvas({
       if (currentTile === activeTileId) {
         removeTileOverride(x, y);
       } else {
-        setTileOverride(x, y, activeTileId);
+        const changed = setTileOverride(x, y, activeTileId);
+        if (!changed) {
+          setActionFeedback({
+            x,
+            y,
+            status: 'blocked',
+            label: '无法铺路',
+            detail: '这里已有植物，先移除植物再铺石板路'
+          });
+          addEffect(x, y, 'blocked');
+          return;
+        }
       }
       addEffect(x, y, 'tile');
       return;
@@ -2148,7 +2168,8 @@ export default function GardenCanvas({
         effectiveGridWidth,
         effectiveGridHeight,
         occupancyIndex,
-        entities
+        entities,
+        getTileAt
       );
       setPlacementInsight({
         gridX: x,
@@ -2583,7 +2604,7 @@ export default function GardenCanvas({
           />
           <Text
             x={pos.x - 5}
-            y={pos.y - 13}
+            y={pos.y - 9}
             width={10}
             align="center"
             text={status === 'water' ? '~' : status === 'drainage' ? 'D' : status === 'water_done' ? 'W' : 'R'}
@@ -2619,7 +2640,7 @@ export default function GardenCanvas({
           />
           <Text
             x={pos.x - 5}
-            y={pos.y - 13}
+            y={pos.y - 9}
             width={10}
             align="center"
             text="C"
@@ -3116,7 +3137,7 @@ export default function GardenCanvas({
                 shadowBlur={3 + weatherPulse * 4}
                 listening={false}
               />
-              <Group x={18} y={-34 - weatherPulse} listening={false}>
+              <Group x={7} y={-24 - weatherPulse * 0.6} listening={false}>
                 <Circle
                   radius={7}
                   fill={weatherTaskFill(visibleWeatherTask.task.id)}
@@ -3377,12 +3398,15 @@ export default function GardenCanvas({
         effectiveGridWidth,
         effectiveGridHeight,
         occupancyIndex,
-        entities
+        entities,
+        getTileAt
       );
+      const shouldShowRelationLines = feedback.canPlace;
       let fillColor = 'rgba(100,100,100,0.3)';
       let strokeColor = '#666';
       let previewOffsetX = 0;
-      const relationLines = Object.values(entities)
+      const relationLines = shouldShowRelationLines
+        ? Object.values(entities)
         .filter((entity): entity is Extract<GardenEntity, { type: 'plant' }> => entity.type === 'plant')
         .map((entity) => {
           const rule = getCompanionRule(plant.id, entity.plantId);
@@ -3410,7 +3434,8 @@ export default function GardenCanvas({
               <Circle x={target.x} y={target.y - 8} radius={4} fill={color} stroke="#fff8dc" strokeWidth={1.5} />
             </Group>
           );
-        });
+        })
+        : null;
 
       if (synergy?.status === 'bad') {
         fillColor = '#ef4444';
@@ -3456,9 +3481,9 @@ export default function GardenCanvas({
             <Group x={pos.x + previewOffsetX + 36} y={pos.y - 56 - pulse * 4} listening={false}>
               <Rect
                 x={-46}
-                y={-18}
+                y={feedback.tone === 'bad' ? -13 : -18}
                 width={92}
-                height={38}
+                height={feedback.tone === 'bad' ? 28 : 38}
                 cornerRadius={6}
                 fill={feedback.tone === 'bad' ? '#ef4444' : feedback.tone === 'caution' ? '#f59e0b' : placementScoreFill(synergy)}
                 stroke={feedback.tone === 'bad' ? '#b91c1c' : feedback.tone === 'caution' ? '#b45309' : placementScoreStroke(synergy)}
@@ -3469,7 +3494,7 @@ export default function GardenCanvas({
               />
               <Text
                 x={-43}
-                y={-14}
+                y={feedback.tone === 'bad' ? -9 : -14}
                 width={86}
                 align="center"
                 text={feedback.label}
@@ -3477,16 +3502,18 @@ export default function GardenCanvas({
                 fontStyle="bold"
                 fill="#fff"
               />
-              <Text
-                x={-43}
-                y={1}
-                width={86}
-                align="center"
-                text={`${synergy.score} · ${placementScoreLabel(synergy)}`}
-                fontSize={8}
-                fontStyle="bold"
-                fill="rgba(255,255,255,0.88)"
-              />
+              {feedback.tone !== 'bad' && (
+                <Text
+                  x={-43}
+                  y={1}
+                  width={86}
+                  align="center"
+                  text={`${synergy.score} · ${placementScoreLabel(synergy)}`}
+                  fontSize={8}
+                  fontStyle="bold"
+                  fill="rgba(255,255,255,0.88)"
+                />
+              )}
             </Group>
           )}
           {renderPlantSprite(plant, pos.x + previewOffsetX, pos.y - pulse * 4, 0.72, defaultPlantVisualState, pulse)}

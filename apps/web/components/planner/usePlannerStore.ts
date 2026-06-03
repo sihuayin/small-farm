@@ -76,7 +76,7 @@ interface PlannerState {
   completePlantTask: (entityId: string, taskId: string, input?: HarvestInput | ActivityInput) => boolean;
   moveEntity: (entityId: string, gridX: number, gridY: number) => boolean;
   rotateEntity: (entityId: string) => void;
-  setTileOverride: (gridX: number, gridY: number, tileId: TileType) => void;
+  setTileOverride: (gridX: number, gridY: number, tileId: TileType) => boolean;
   removeTileOverride: (gridX: number, gridY: number) => void;
   resolveCleanupTile: (key: string) => void;
   clearGrid: () => void;
@@ -393,6 +393,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       return false;
     }
 
+    if (hasBlockedPlantingTile(gridX, gridY, spanX, spanY, state.surfaceIndex, state.entities)) {
+      return false;
+    }
+
     const synergy = evaluateCompanionRules(gridX, gridY, plant, state.entities);
     if (synergy.status === 'bad') return false;
 
@@ -597,7 +601,8 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
 
   setTileOverride: (gridX, gridY, tileId) => {
     const state = get();
-    if (!isWithinBounds(gridX, gridY, 1, 1, state.gridWidth, state.gridHeight)) return;
+    if (!isWithinBounds(gridX, gridY, 1, 1, state.gridWidth, state.gridHeight)) return false;
+    if (tileId === 'stone_path' && state.occupancyIndex[gridKey(gridX, gridY)]) return false;
 
     const existingId = state.surfaceIndex[gridKey(gridX, gridY)];
     const type = tileToEntityType(tileId);
@@ -633,6 +638,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
         hasUnsavedChanges: true
       };
     });
+    return true;
   },
 
   removeTileOverride: (gridX, gridY) => {
@@ -712,6 +718,18 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
         companionCount: 0,
         enemyCount: 1,
         details: ['目标区域已被其他对象占用']
+      };
+    }
+
+    if (hasBlockedPlantingTile(gridX, gridY, plant.dimensions.grid_span_x, plant.dimensions.grid_span_y, state.surfaceIndex, state.entities)) {
+      return {
+        valid: false,
+        status: 'bad',
+        recommendation: 'bad',
+        score: 0,
+        companionCount: 0,
+        enemyCount: 1,
+        details: ['石板路上不能种植，先取消石板后再种植']
       };
     }
 
@@ -1183,6 +1201,26 @@ function tileToEntityType(tileId: TileType): SurfaceEntity['type'] {
   if (tileId === 'stone_path') return 'path';
   if (tileId.startsWith('fence')) return 'fence';
   return 'soil';
+}
+
+function hasBlockedPlantingTile(
+  gridX: number,
+  gridY: number,
+  spanX: number,
+  spanY: number,
+  surfaceIndex: OccupancyIndex,
+  entities: Record<string, GardenEntity>
+) {
+  for (let dx = 0; dx < spanX; dx++) {
+    for (let dy = 0; dy < spanY; dy++) {
+      const surfaceId = surfaceIndex[gridKey(gridX + dx, gridY + dy)];
+      const surface = surfaceId ? entities[surfaceId] : null;
+      if (surface && surface.type !== 'plant' && 'tileId' in surface && surface.tileId === 'stone_path') {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function readPlanLibrary(): GardenPlanLibrary | null {
