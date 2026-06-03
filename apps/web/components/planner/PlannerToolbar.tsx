@@ -1,7 +1,7 @@
 import { plants, tiles, type TileType } from './usePlannerStore';
 import { GardenSettingsPanel } from './GardenSettingsPanel';
 import { getPlantAgronomy } from './plants';
-import { getPlantingWindowStatus, plantingWindowBadgeClassName } from './plantingWindow';
+import { getPlantingWindowStatus, getSupplementCandidateResult, plantingWindowBadgeClassName } from './plantingWindow';
 import type { PlantAgronomy, Season } from './plants.d';
 import type { ClimateProfile, GardenPlan, GardenPlanSummary, PlanSeason } from './usePlannerStore';
 import { useEffect, useMemo, useState } from 'react';
@@ -269,6 +269,7 @@ interface PlannerToolbarProps {
   lastSavedAt: number | null;
   canUndo: boolean;
   canRedo: boolean;
+  workflowMode: 'planning' | 'maintenance';
   activeToolId: string | null;
   activeTileId: TileType | null;
   onRenamePlan: (name: string) => void;
@@ -302,6 +303,7 @@ export function PlannerToolbar({
   lastSavedAt,
   canUndo,
   canRedo,
+  workflowMode,
   activeToolId,
   activeTileId,
   onRenamePlan,
@@ -320,6 +322,7 @@ export function PlannerToolbar({
   onExportPlan,
   onImportPlan
 }: PlannerToolbarProps) {
+  const isMaintenanceModeForLibrary = workflowMode === 'maintenance';
   const [kitPlantIds, setKitPlantIds] = useState<string[]>(() => {
     if (typeof window === 'undefined') return DEFAULT_KIT_PLANT_IDS;
     try {
@@ -365,17 +368,28 @@ export function PlannerToolbar({
       .map((plant) => {
         const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
         const agronomy = getPlantAgronomy(plant.id);
-        return { plant, windowStatus, agronomy };
+        const supplement = getSupplementCandidateResult(plant, climateProfile, planYear, planSeason);
+        return { plant, windowStatus, agronomy, supplement };
       })
-      .filter(({ plant, windowStatus }) => {
+      .filter(({ plant, windowStatus, supplement }) => {
         const matchesCategory = activeCategory === 'all' || plant.category === activeCategory;
         const matchesSearch = !query
           || plant.naming.zh.toLowerCase().includes(query)
           || plant.naming.en.toLowerCase().includes(query)
           || plant.id.toLowerCase().includes(query);
-        return matchesCategory && matchesSearch && matchesQuickFilter(plant, activeQuickFilter, windowStatus);
+        return matchesCategory
+          && matchesSearch
+          && matchesQuickFilter(plant, activeQuickFilter, windowStatus)
+          && (!isMaintenanceModeForLibrary || supplement.eligible || activeQuickFilter !== 'all');
       })
       .sort((a, b) => {
+        if (isMaintenanceModeForLibrary && a.supplement.eligible !== b.supplement.eligible) {
+          return Number(b.supplement.eligible) - Number(a.supplement.eligible);
+        }
+        if (isMaintenanceModeForLibrary && a.supplement.eligible && b.supplement.eligible) {
+          const supplementDelta = b.supplement.score - a.supplement.score;
+          if (supplementDelta !== 0) return supplementDelta;
+        }
         const windowDelta = windowSortScore(b.windowStatus.status) - windowSortScore(a.windowStatus.status);
         if (windowDelta !== 0) return windowDelta;
         const seasonDelta = Number(b.agronomy.seasons.includes(planSeason)) - Number(a.agronomy.seasons.includes(planSeason));
@@ -383,7 +397,7 @@ export function PlannerToolbar({
         return a.agronomy.daysToMaturity - b.agronomy.daysToMaturity;
       })
       .map(({ plant }) => plant);
-  }, [activeCategory, activeQuickFilter, climateProfile, librarySearch, planSeason, planYear]);
+  }, [activeCategory, activeQuickFilter, climateProfile, isMaintenanceModeForLibrary, librarySearch, planSeason, planYear]);
   const saveKitPlantIds = (nextIds: string[]) => {
     setKitPlantIds(nextIds);
     if (typeof window !== 'undefined') {
@@ -443,6 +457,9 @@ export function PlannerToolbar({
   const modeClassName = isDemoMode
     ? 'border-amber-300 bg-amber-100 text-amber-800'
     : 'border-green-300 bg-green-50 text-green-800';
+  const isMaintenanceMode = workflowMode === 'maintenance' && !isDemoMode;
+  const plantSectionTitle = isDemoMode ? 'My Garden Kit' : isMaintenanceMode ? '补种工具' : '我的植物列表';
+  const plantSectionSubtitle = isMaintenanceMode ? '当前以养护为主，植物列表用于补种或替换。' : `${kitPlants.length} 个可种项目`;
 
   return (
     <div className="z-20 h-[132px] w-full shrink-0 overflow-y-auto border-b border-amber-900/20 bg-[#f7e8c8] shadow-[inset_0_-6px_0_rgba(120,72,24,0.08)] md:h-auto md:w-72 md:border-b-0 md:border-r md:shadow-[inset_-8px_0_0_rgba(120,72,24,0.08)]">
@@ -555,19 +572,25 @@ export function PlannerToolbar({
 
         <div className="mt-2 flex items-center justify-end gap-2 md:mt-4 md:justify-between">
           <div className="hidden md:block">
-            <h3 className="text-xs font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'My Garden Kit' : '我的植物列表'}</h3>
-            <div className="text-[10px] font-bold text-amber-700">{kitPlants.length} 个可种项目</div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-amber-800">{plantSectionTitle}</h3>
+            <div className="text-[10px] font-bold text-amber-700">{plantSectionSubtitle}</div>
           </div>
           <button
             type="button"
             onClick={() => setShowPlantLibrary(true)}
             className="rounded-md border-2 border-green-900/15 bg-green-100 px-2 py-1 text-[10px] font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
           >
-            添加植物
+            {isMaintenanceMode ? '补种植物' : '添加植物'}
           </button>
         </div>
 
-        <div className="relative mt-1 md:mt-3">
+        {isMaintenanceMode && (
+          <div className="mt-2 hidden rounded-md border border-sky-200 bg-sky-50 px-2 py-1.5 text-[10px] font-black leading-4 text-sky-900 md:block">
+            花园已进入养护阶段。默认先查看任务、风险和采收，左侧植物仅作为补种入口保留。
+          </div>
+        )}
+
+        <div className={`relative mt-1 md:mt-3 ${isMaintenanceMode ? 'md:opacity-90' : ''}`}>
           <div className="flex gap-2 overflow-x-auto pb-1 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
             {kitPlants.map(plant => (
               <div key={plant.id} className="group relative w-[60px] shrink-0 md:w-auto">
@@ -683,7 +706,7 @@ export function PlannerToolbar({
                   当前显示 {libraryPlants.length} 种
                   {activeQuickFilter !== 'all' ? ` · ${quickFilterTabs.find(tab => tab.id === activeQuickFilter)?.label}` : ''}
                   {activeCategory !== 'all' ? ` · ${categoryTabs.find(tab => tab.id === activeCategory)?.label}` : ''}
-                  ，已按当前种植窗口优先排序。
+                  {isMaintenanceMode ? '，已优先保留适合季中补种的候选。' : '，已按当前种植窗口优先排序。'}
                 </div>
               </div>
               <div className="max-h-[52vh] overflow-y-auto p-3">
@@ -691,6 +714,7 @@ export function PlannerToolbar({
                   {libraryPlants.map(plant => {
                     const inKit = kitPlantIds.includes(plant.id);
                     const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
+                    const supplement = getSupplementCandidateResult(plant, climateProfile, planYear, planSeason);
                     return (
                       <div key={plant.id} className="rounded-md border border-amber-900/10 bg-white/70 p-2">
                         <div className="grid grid-cols-[auto_1fr_auto] items-start gap-2">
@@ -714,9 +738,16 @@ export function PlannerToolbar({
                             {windowStatus.shortLabel}
                           </span>
                           <div className="line-clamp-2 text-[10px] font-bold leading-4 text-amber-800">
-                            {windowStatus.detail}
+                            {isMaintenanceMode ? supplement.reason : windowStatus.detail}
                           </div>
                         </div>
+                        {isMaintenanceMode && (
+                          <div className="mt-2">
+                            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black ${supplement.eligible ? 'border-green-300 bg-green-100 text-green-800' : 'border-slate-300 bg-slate-100 text-slate-600'}`}>
+                              {supplement.eligible ? '适合补种' : '不建议补种'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

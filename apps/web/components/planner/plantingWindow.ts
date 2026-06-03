@@ -15,6 +15,12 @@ export interface PlantingWindowResult {
   planDate: Date;
 }
 
+export interface SupplementCandidateResult {
+  eligible: boolean;
+  score: number;
+  reason: string;
+}
+
 export function getPlantingWindowStatus(
   plant: Plant,
   climateProfile: ClimateProfile,
@@ -90,6 +96,65 @@ export function plantingWindowBadgeClassName(status: PlantingWindowStatus) {
   if (status === 'too_early') return 'border-sky-300 bg-sky-100 text-sky-800';
   if (status === 'late' || status === 'harvest_risk') return 'border-amber-300 bg-amber-100 text-amber-800';
   return 'border-slate-300 bg-slate-100 text-slate-700';
+}
+
+export function getSupplementCandidateResult(
+  plant: Plant,
+  climateProfile: ClimateProfile,
+  planYear: number,
+  planSeason: PlanSeason
+): SupplementCandidateResult {
+  const agronomy = getPlantAgronomy(plant.id);
+  const windowStatus = getPlantingWindowStatus(plant, climateProfile, planYear, planSeason);
+  const footprint = plant.dimensions.grid_span_x * plant.dimensions.grid_span_y;
+  const isCompact = footprint <= 2;
+  const isQuick = agronomy.daysToMaturity <= 75;
+  const isPerennial = agronomy.rotationGroup === 'perennial';
+  const needsTransplant = agronomy.startMethod === 'transplant';
+  const waterLabel = agronomy.waterNeed === 'low' ? '低需水' : agronomy.waterNeed === 'high' ? '高需水' : '中等需水';
+  const footprintLabel = `${plant.dimensions.grid_span_x}x${plant.dimensions.grid_span_y}`;
+
+  if (windowStatus.status !== 'in_window') {
+    return {
+      eligible: false,
+      score: 0,
+      reason: `当前更适合补种处于建议窗口内的作物；${plant.naming.zh} 现在是“${windowStatus.shortLabel}”。`
+    };
+  }
+
+  if (isPerennial) {
+    return {
+      eligible: false,
+      score: 0,
+      reason: '多年生作物更适合季初规划，不适合作为季中补种。'
+    };
+  }
+
+  if (!isCompact) {
+    return {
+      eligible: false,
+      score: 0,
+      reason: '占地偏大，不适合在养护阶段插空补种。'
+    };
+  }
+
+  if (!isQuick) {
+    return {
+      eligible: false,
+      score: 0,
+      reason: `成熟周期 ${agronomy.daysToMaturity} 天偏长，更适合季初布局。`
+    };
+  }
+
+  const waterBonus = agronomy.waterNeed === 'low' ? 10 : agronomy.waterNeed === 'medium' ? 6 : 0;
+  const transplantPenalty = needsTransplant ? 8 : 0;
+  const score = 100 - footprint * 8 - Math.max(0, agronomy.daysToMaturity - 45) - transplantPenalty + waterBonus;
+
+  return {
+    eligible: true,
+    score,
+    reason: `${windowStatus.shortLabel} · ${agronomy.daysToMaturity} 天左右可收 · ${footprintLabel} 小占地 · ${waterLabel}${needsTransplant ? ' · 需移栽' : ' · 直播友好'}`
+  };
 }
 
 function getPlanSeasonDate(year: number, season: PlanSeason) {

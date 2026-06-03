@@ -47,6 +47,23 @@ export type SunRequirement = 'full_sun' | 'partial_sun' | 'shade';
 export type WaterNeed = 'low' | 'medium' | 'high';
 export type PlantStartMethod = 'direct_sow' | 'transplant' | 'either';
 export type PlantDataConfidence = 'mock' | 'reference';
+export type PlantReviewTag =
+  | '怕霜'
+  | '喜暖土'
+  | '冷凉季'
+  | '易抽薹'
+  | '直播更稳'
+  | '出苗保湿'
+  | '需支撑'
+  | '需引蔓'
+  | '怕移栽'
+  | '需稳水'
+  | '需稳肥';
+
+export interface PlantReviewSummary {
+  tags: PlantReviewTag[];
+  notes: string[];
+}
 
 export interface PlantAgronomy {
   /** 作物科属/功能族，用于轮作、病虫害与推荐系统 */

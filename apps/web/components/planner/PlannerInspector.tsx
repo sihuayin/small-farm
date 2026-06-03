@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { tiles } from './usePlannerStore';
-import { getPlantAgronomy, getPlantCredibilityNotes, plantMap } from './plants';
+import { getPlantAgronomy, getPlantCredibilityNotes, getPlantReviewSummary, isCoreReviewedPlant, plantMap } from './plants';
 import { getNextRotationSuggestions } from './rotation';
 import { getGardenTaskBoard, getPlantGrowthStatus, summarizeGardenTasks, type GrowthStageId } from './growth';
 import { getGardenCalendarReminders } from './calendar';
@@ -54,6 +54,7 @@ interface PlannerInspectorProps {
   onDeleteSelected: () => void;
   onRotateSelected: () => void;
   onFocusSelected: () => void;
+  workflowMode?: 'planning' | 'maintenance';
   isDemoMode?: boolean;
   firstRunFocus?: {
     label: string;
@@ -63,7 +64,11 @@ interface PlannerInspectorProps {
     id: string;
     name: string;
     score: number;
+    actionLabel: string;
     reason: string;
+    facts: string[];
+    reviewTags: string[];
+    confidenceLabel: string;
   }>;
 }
 
@@ -95,6 +100,7 @@ export function PlannerInspector({
   onDeleteSelected,
   onRotateSelected,
   onFocusSelected,
+  workflowMode = 'planning',
   isDemoMode = false,
   firstRunFocus,
   smartRecommendations = []
@@ -158,6 +164,12 @@ export function PlannerInspector({
   const selectedPlantCredibilityNotes = selectedEntity?.type === 'plant'
     ? getPlantCredibilityNotes(selectedEntity.plantId)
     : [];
+  const selectedPlantReviewSummary = selectedEntity?.type === 'plant'
+    ? getPlantReviewSummary(selectedEntity.plantId)
+    : null;
+  const selectedPlantReviewed = selectedEntity?.type === 'plant'
+    ? isCoreReviewedPlant(selectedEntity.plantId)
+    : false;
   const selectedPlantingWindow = selectedEntity?.type === 'plant'
     ? getPlantingWindowStatus(selectedEntity.plant, climateProfile, planYear, planSeason)
     : null;
@@ -602,6 +614,7 @@ export function PlannerInspector({
               onResolve={onResolveTileStatus}
               onResolveTask={onResolveTileTask}
               onSelectPlant={onSelectRecommendedPlant}
+              workflowMode={workflowMode}
               highlight={focusCue?.area === 'tasks'}
             />
           )}
@@ -849,9 +862,16 @@ export function PlannerInspector({
             <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'planning')}`}>
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Plant Plan</div>
-                <span className="rounded-full border border-green-300 bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-800">
-                  {rotationGroupLabel(selectedPlantAgronomy.rotationGroup)}
-                </span>
+                <div className="flex items-center gap-1">
+                  {selectedPlantReviewed && (
+                    <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+                      核心校对
+                    </span>
+                  )}
+                  <span className="rounded-full border border-green-300 bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-800">
+                    {rotationGroupLabel(selectedPlantAgronomy.rotationGroup)}
+                  </span>
+                </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-md border border-green-900/10 bg-green-50/80 p-2 text-green-900">
@@ -866,6 +886,29 @@ export function PlannerInspector({
               <div className="mt-2 rounded-md border border-amber-900/10 bg-white/70 p-2 text-[11px] font-bold leading-5 text-amber-800">
                 {familyLabel(selectedPlantAgronomy.family)} · {sunRequirementLabel(selectedPlantAgronomy.sunRequirement)} · Zone {selectedPlantAgronomy.hardinessZones[0]}-{selectedPlantAgronomy.hardinessZones[1]}
               </div>
+              {selectedPlantReviewSummary && (
+                <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50/80 p-2">
+                  <div className="flex flex-wrap gap-1">
+                    {selectedPlantReviewSummary.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-emerald-300 bg-white/90 px-2 py-0.5 text-[10px] font-black text-emerald-800"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  {selectedPlantReviewSummary.notes.length > 0 && (
+                    <div className="mt-2 grid gap-1">
+                      {selectedPlantReviewSummary.notes.slice(0, 2).map(note => (
+                        <div key={note} className="text-[10px] font-bold leading-4 text-emerald-900">
+                          {note}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {selectedPlantingWindow && (
                 <div className="mt-2 rounded-md border border-amber-900/10 bg-white/75 p-2">
                   <div className="flex items-center justify-between gap-2">
@@ -884,7 +927,7 @@ export function PlannerInspector({
                   </div>
                 ))}
                 <div className="rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-black leading-4 text-sky-800">
-                  气候: ZIP/Zone 为本地 mock 推断，真实天气 API 暂未接入。
+                  气候: 当前先按本地演示数据推断，后续可接入真实地区天气。
                 </div>
               </div>
               {isRuleRepairFocus && (
@@ -1396,17 +1439,21 @@ function TileStatusPanel({
   onResolve,
   onResolveTask,
   onSelectPlant,
+  workflowMode,
   highlight
 }: {
   status: TileStatusInfo;
   rotationSuggestions: Array<{ group: string; label: string; examples: Array<{ id: string; name: string }>; reason: string }>;
-  smartRecommendations: Array<{ id: string; name: string; score: number; reason: string }>;
+  smartRecommendations: Array<{ id: string; name: string; score: number; actionLabel: string; reason: string; facts: string[]; reviewTags: string[]; confidenceLabel: string }>;
   onResolve: (status: TileStatusInfo) => void;
   onResolveTask: (status: TileStatusInfo) => void;
   onSelectPlant: (plantId: string) => void;
+  workflowMode: 'planning' | 'maintenance';
   highlight?: boolean;
 }) {
   const tileAction = getTilePrimaryAction(status);
+  const isSupplementMode = workflowMode === 'maintenance' && (status.kind === 'idle' || status.kind === 'cleanup');
+  const isSupplementIdle = status.kind === 'idle' && status.label.includes('补种');
   return (
     <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(highlight)}`}>
       <div className="flex items-center justify-between">
@@ -1427,7 +1474,7 @@ function TileStatusPanel({
           <div className="flex items-center justify-between gap-2">
             <div className="text-[10px] font-black uppercase tracking-wider text-sky-800">智能推荐</div>
             <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[10px] font-black text-sky-800">
-              空地推荐
+              {isSupplementMode ? '补种推荐' : '空地推荐'}
             </span>
           </div>
           <div className="mt-2 space-y-2">
@@ -1442,13 +1489,31 @@ function TileStatusPanel({
                   <span className="text-xs font-black text-sky-950">{item.name}</span>
                   <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[10px] font-black text-sky-800">{item.score}/100</span>
                 </div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {item.facts.map(fact => (
+                    <span key={fact} className="rounded-full border border-sky-900/10 bg-sky-50 px-1.5 py-0.5 text-[9px] font-black text-sky-800">
+                      {fact}
+                    </span>
+                  ))}
+                  {item.reviewTags.map(tag => (
+                    <span key={tag} className="rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-800">
+                      {tag}
+                    </span>
+                  ))}
+                  <span className="rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-800">
+                    {item.confidenceLabel}
+                  </span>
+                </div>
+                <div className="mt-1 rounded-md border border-sky-200 bg-sky-50/80 px-2 py-1 text-[10px] font-black leading-4 text-sky-900">
+                  {item.actionLabel}
+                </div>
                 <div className="mt-1 text-[10px] font-bold leading-4 text-sky-800">{item.reason}</div>
               </button>
             ))}
           </div>
         </div>
       )}
-      {(status.kind === 'idle' || status.kind === 'cleanup') && rotationSuggestions.length > 0 && (
+      {!isSupplementMode && (status.kind === 'idle' || status.kind === 'cleanup') && rotationSuggestions.length > 0 && (
         <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-2">
           <div className="flex items-center justify-between gap-2">
             <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Next Crop</div>

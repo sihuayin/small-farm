@@ -173,7 +173,15 @@ export interface PlacementInsight {
   result: SynergyResult;
 }
 
-export type TileStatusKind = 'idle' | 'cleanup' | 'water' | 'cover' | 'drainage';
+export type TileStatusKind =
+  | 'idle'
+  | 'cleanup'
+  | 'water'
+  | 'cover'
+  | 'drainage'
+  | 'water_done'
+  | 'cover_done'
+  | 'drainage_done';
 
 export interface TileStatusInfo {
   kind: TileStatusKind;

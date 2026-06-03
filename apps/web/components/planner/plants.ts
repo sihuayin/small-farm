@@ -1,6 +1,23 @@
-import type { Plant, PlantAgronomy } from './plants.d';
+import type { Plant, PlantAgronomy, PlantReviewSummary } from './plants.d';
 
 const withBasePath = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH || ''}${path}`;
+const coreReviewedPlantIds = new Set([
+  'tomato',
+  'basil',
+  'pepper',
+  'lettuce',
+  'spinach',
+  'arugula',
+  'bok_choy',
+  'cilantro',
+  'carrot',
+  'radish',
+  'beet',
+  'cucumber',
+  'bean',
+  'kale',
+  'broccoli'
+]);
 
 /**
  * 植物百科数据库
@@ -580,23 +597,119 @@ export function getPlantTimingLabel(plantId: string): string {
   return `${agronomy.daysToMaturity} 天成熟 · 发芽 ${agronomy.germinationDays[0]}-${agronomy.germinationDays[1]} 天`;
 }
 
+const alphaGuidanceNotesByPlantId: Record<string, string[]> = {
+  tomato: ['怕霜，夜温稳定后再定植更稳妥。', '结果期通常需要支撑和持续整枝。'],
+  basil: ['怕冷，低温会明显拖慢生长。'],
+  pepper: ['偏爱暖土，地温不足时前期会很慢。'],
+  chili: ['偏爱暖土，前期升温越稳定越容易坐果。'],
+  lettuce: ['冷凉季更稳，升温后容易抽薹变苦。'],
+  spinach: ['更适合冷凉季，高温下容易抽薹。'],
+  arugula: ['生长很快，但高温时也容易抽薹。'],
+  bok_choy: ['冷凉季表现更好，热天容易抽薹。'],
+  cilantro: ['偏冷凉，热起来后很容易抽薹。'],
+  carrot: ['直播更稳，出苗期需要持续保湿。'],
+  radish: ['快收型根菜，缺水时容易变辣或空心。'],
+  beet: ['直播更稳，幼苗期保持均匀水分更重要。'],
+  cucumber: ['喜温，冷土里容易停滞；开始攀爬后要及时引蔓。'],
+  zucchini: ['长势快但占地扩张明显，通风不够时容易出问题。'],
+  bean: ['暖土后出苗更整齐，通常不喜欢频繁移栽。'],
+  kale: ['冷凉季品质更稳，轻霜后口感通常更甜。'],
+  broccoli: ['需水和肥力比较敏感，结球期波动会更明显。']
+};
+
+const coreReviewSummaryByPlantId: Record<string, PlantReviewSummary> = {
+  tomato: {
+    tags: ['怕霜', '喜暖土', '需支撑'],
+    notes: ['夜温稳定后再定植更稳。', '结果期尽早绑蔓和整枝，后期更省心。']
+  },
+  basil: {
+    tags: ['怕霜', '喜暖土'],
+    notes: ['低温会明显拖慢生长，稳定回暖后状态更好。']
+  },
+  pepper: {
+    tags: ['怕霜', '喜暖土', '需支撑'],
+    notes: ['地温不足时启动慢，挂果后建议轻支撑。']
+  },
+  lettuce: {
+    tags: ['冷凉季', '易抽薹', '需稳水'],
+    notes: ['适合春秋窗口，热起来后口感和状态都会下滑。']
+  },
+  spinach: {
+    tags: ['冷凉季', '易抽薹', '需稳水'],
+    notes: ['高温很容易抽薹，冷凉季更稳更甜。']
+  },
+  arugula: {
+    tags: ['冷凉季', '易抽薹'],
+    notes: ['生长快，适合补种，但热天要尽快采收。']
+  },
+  bok_choy: {
+    tags: ['冷凉季', '易抽薹', '需稳水'],
+    notes: ['温度波动大时更容易抽薹，水分均匀更稳。']
+  },
+  cilantro: {
+    tags: ['冷凉季', '易抽薹'],
+    notes: ['适合冷凉季，升温后要预期它很快抽薹。']
+  },
+  carrot: {
+    tags: ['直播更稳', '出苗保湿', '需稳水'],
+    notes: ['直播更省折腾，出苗前保持表层湿润很关键。']
+  },
+  radish: {
+    tags: ['直播更稳', '出苗保湿', '需稳水'],
+    notes: ['快收型根菜，缺水时口感和根形都会变差。']
+  },
+  beet: {
+    tags: ['直播更稳', '出苗保湿', '需稳水'],
+    notes: ['幼苗期最怕忽干忽湿，均匀水分比猛浇更重要。']
+  },
+  cucumber: {
+    tags: ['怕霜', '喜暖土', '需引蔓'],
+    notes: ['冷土里容易停滞，开始攀爬后及时引蔓。']
+  },
+  bean: {
+    tags: ['喜暖土', '直播更稳', '怕移栽'],
+    notes: ['暖土后出苗更整齐，通常比移栽更稳。']
+  },
+  kale: {
+    tags: ['冷凉季', '需稳肥'],
+    notes: ['冷凉季品质更好，肥水稳定时叶片状态更整齐。']
+  },
+  broccoli: {
+    tags: ['冷凉季', '需稳水', '需稳肥'],
+    notes: ['结球阶段对水肥波动更敏感，管理节奏要稳。']
+  }
+};
+
 export function getPlantCredibilityNotes(plantId: string): string[] {
   const agronomy = getPlantAgronomy(plantId);
   const depth = agronomy.plantingDepthInch ? `播种深度 ${agronomy.plantingDepthInch} in` : '移栽为主';
+  const alphaNotes = alphaGuidanceNotesByPlantId[plantId] || [];
   return [
+    isCoreReviewedPlant(plantId)
+      ? '核心校对作物: 已优先整理成熟天数、种植窗口、需水与基础经验提示。'
+      : '扩展作物: 已有基础参数，可用于推荐解释，后续继续补充校对。',
     getPlantSpacingLabel(plantId),
     getPlantTimingLabel(plantId),
     `${startMethodLabel(agronomy.startMethod)} · ${depth}`,
+    ...alphaNotes.slice(0, 2),
     agronomy.dataConfidence === 'reference'
       ? `资料: ${agronomy.dataSourceLabel} · ${agronomy.lastReviewedAt}`
       : `资料: 演示占位 · ${agronomy.confidenceNote}`
   ];
 }
 
+export function getPlantReviewSummary(plantId: string): PlantReviewSummary | null {
+  return coreReviewSummaryByPlantId[plantId] || null;
+}
+
 function startMethodLabel(method: PlantAgronomy['startMethod']) {
   if (method === 'direct_sow') return '适合直播';
   if (method === 'transplant') return '适合移栽';
   return '直播/移栽均可';
+}
+
+export function isCoreReviewedPlant(plantId: string) {
+  return coreReviewedPlantIds.has(plantId);
 }
 
 /**

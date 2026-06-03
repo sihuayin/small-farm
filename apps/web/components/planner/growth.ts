@@ -115,6 +115,37 @@ export function summarizeGardenTasks(tasks: GardenTaskItem[]) {
   return { harvestCount, waterCount, inspectCount };
 }
 
+export function getPlantStarterTask(
+  plantId: string,
+  climateProfile?: ClimateProfile,
+  planSeason?: PlanSeason
+): GrowthTask {
+  const agronomy = getPlantAgronomy(plantId);
+  const defaultTask = getNextTask('seed', agronomy.waterNeed, agronomy.daysToMaturity);
+  const weatherSignals = climateProfile && planSeason ? getMockWeatherSignals(climateProfile, planSeason) : [];
+  return getWeatherAdjustedTask({
+    id: `starter-${plantId}`,
+    type: 'plant',
+    plantId,
+    plant: {
+      id: plantId,
+      category: 'starter',
+      naming: { en: plantId, zh: plantId, emoji: '' },
+      dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: agronomy.spacing.plantInch },
+      styling: { bg_color: '#000000', border_color: '#000000' },
+      relationships: { companions: [], enemies: [] }
+    },
+    originX: 0,
+    originY: 0,
+    spanX: 1,
+    spanY: 1,
+    rotation: 0,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    completedTaskIds: []
+  }, defaultTask, weatherSignals);
+}
+
 function getStage(progressPercent: number): GrowthStageId {
   if (progressPercent >= 100) return 'harvest';
   if (progressPercent >= 75) return 'mature';
