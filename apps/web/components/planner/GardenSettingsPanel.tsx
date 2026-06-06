@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { inferClimateProfileFromZip } from './climate';
+import { inferChinaClimateProfile, inferClimateProfileFromZip } from './climate';
 import { plants } from './plants';
+import { getClimateCalibrationStatus } from './plantingWindow';
 import type { ClimateProfile, GardenPlan, GardenPlanSummary, MockWeatherScenario, PlanSeason } from './usePlannerStore';
 
 interface GardenSettingsPanelProps {
@@ -86,6 +87,7 @@ export function GardenSettingsPanel({
   const area = useMemo(() => {
     return Math.round(gridWidth * gridHeight * cellSizeFeet * cellSizeFeet * 10) / 10;
   }, [gridWidth, gridHeight, cellSizeFeet]);
+  const calibrationStatus = useMemo(() => getClimateCalibrationStatus(draftClimate), [draftClimate]);
 
   const savedText = hasUnsavedChanges
     ? '自动保存中'
@@ -131,9 +133,11 @@ export function GardenSettingsPanel({
   };
 
   const inferClimate = () => {
-    const inferred = inferClimateProfileFromZip(draftClimate.zipCode);
+    const inferred = draftClimate.province && draftClimate.city
+      ? inferChinaClimateProfile(draftClimate.province, draftClimate.city, draftClimate.district || '')
+      : inferClimateProfileFromZip(draftClimate.zipCode);
     if (!inferred) {
-      setClimateMessage('暂未匹配该 ZIP，请手动填写。');
+      setClimateMessage('暂未匹配该地区，请手动填写。');
       return;
     }
 
@@ -153,7 +157,7 @@ export function GardenSettingsPanel({
     <section className="m-4 rounded-lg border-2 border-amber-900/20 bg-[#fff8df] p-3 shadow-[0_3px_0_rgba(120,72,24,0.18)]">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Farm Ledger</div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">方案设置</div>
           <h3 className="text-sm font-black text-amber-950">方案与季节</h3>
         </div>
         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${hasUnsavedChanges ? 'border-amber-300 bg-amber-100 text-amber-800' : 'border-green-300 bg-green-50 text-green-800'}`}>
@@ -168,15 +172,15 @@ export function GardenSettingsPanel({
       }`}>
         <div className="flex items-center justify-between gap-2">
           <div className="text-[10px] font-black uppercase tracking-wider">
-            {planName === 'Demo Scenario' ? '示例模式' : '正式方案'}
+            {planName === 'Demo Scenario' ? '参考菜园' : '正式方案'}
           </div>
           <span className="rounded-full border border-current/20 bg-white/65 px-2 py-0.5 text-[10px] font-black">
-            {planName === 'Demo Scenario' ? '示例体验' : '正式规划'}
+            {planName === 'Demo Scenario' ? '快速上手' : '正式规划'}
           </span>
         </div>
         <div className="mt-1 text-[10px] font-bold leading-4">
           {planName === 'Demo Scenario'
-            ? '这是用于体验功能的示例菜园，包含预置作物、任务和导览。'
+            ? '这是一个参考菜园，内含预置作物、养护任务和布局示范，适合快速熟悉功能。'
             : '当前方案为正式规划，尺寸、气候、植物选择和后续调整会保存在你的方案列表里。'}
         </div>
       </div>
@@ -206,9 +210,9 @@ export function GardenSettingsPanel({
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-xs font-black">{isDemoPlan ? '示例菜园' : plan.name}</span>
+                  <span className="truncate text-xs font-black">{isDemoPlan ? '参考菜园' : plan.name}</span>
                   <span className="shrink-0 rounded-full border border-current/20 bg-white/65 px-1.5 py-0.5 text-[9px] font-black">
-                    {isDemoPlan ? 'Demo' : isActive ? '当前' : '正式'}
+                    {isDemoPlan ? '参考' : isActive ? '当前' : '正式'}
                   </span>
                 </div>
                 <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] font-bold opacity-75">
@@ -310,13 +314,13 @@ export function GardenSettingsPanel({
         <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">地区气候</div>
         <div className="mt-2 grid grid-cols-[1fr_88px] gap-2">
           <label className="text-xs text-amber-800">
-            ZIP
+            省 / 直辖市
             <input
-              value={draftClimate.zipCode}
-              onChange={(event) => setDraftClimate(current => ({ ...current, zipCode: event.target.value }))}
+              value={draftClimate.province || ''}
+              onChange={(event) => setDraftClimate(current => ({ ...current, province: event.target.value }))}
               onBlur={applySettings}
               className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-bold text-amber-950 shadow-inner"
-              placeholder="97205"
+              placeholder="浙江"
             />
           </label>
           <button
@@ -329,13 +333,35 @@ export function GardenSettingsPanel({
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <label className="text-xs text-amber-800">
-            耐寒区
+            城市
             <input
-              value={draftClimate.hardinessZone}
-              onChange={(event) => setDraftClimate(current => ({ ...current, hardinessZone: event.target.value }))}
+              value={draftClimate.city || ''}
+              onChange={(event) => setDraftClimate(current => ({ ...current, city: event.target.value }))}
               onBlur={applySettings}
               className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-bold text-amber-950 shadow-inner"
-              placeholder="7a"
+              placeholder="杭州"
+            />
+          </label>
+          <label className="text-xs text-amber-800">
+            区县 / 片区
+            <input
+              value={draftClimate.district || ''}
+              onChange={(event) => setDraftClimate(current => ({ ...current, district: event.target.value }))}
+              onBlur={applySettings}
+              className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-bold text-amber-950 shadow-inner"
+              placeholder="余杭 / 朝阳"
+            />
+          </label>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <label className="text-xs text-amber-800">
+            气候分区
+            <input
+              value={draftClimate.climateLabel || draftClimate.hardinessZone}
+              onChange={(event) => setDraftClimate(current => ({ ...current, climateLabel: event.target.value }))}
+              onBlur={applySettings}
+              className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-bold text-amber-950 shadow-inner"
+              placeholder="华东"
             />
           </label>
         </div>
@@ -362,17 +388,17 @@ export function GardenSettingsPanel({
           </label>
         </div>
         <label className="mt-2 block text-xs text-amber-800">
-          模拟天气
+          天气参考情景
           <select
             value={draftClimate.mockWeatherScenario || 'auto'}
             onChange={(event) => updateMockScenario(event.target.value as MockWeatherScenario)}
             className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-2 py-1.5 text-sm font-bold text-amber-950 shadow-inner"
           >
-            <option value="auto">自动场景</option>
-            <option value="cold_snap">寒潮</option>
-            <option value="heat">高温</option>
-            <option value="rain">降雨</option>
-            <option value="dry">干旱</option>
+            <option value="auto">按季节节奏参考</option>
+            <option value="cold_snap">偏冷参考</option>
+            <option value="heat">偏热参考</option>
+            <option value="rain">偏湿参考</option>
+            <option value="dry">偏干参考</option>
           </select>
         </label>
         {climateMessage && (
@@ -380,46 +406,58 @@ export function GardenSettingsPanel({
             {climateMessage}
           </div>
         )}
+        <div className={`mt-2 rounded-md border px-2 py-1 text-[10px] font-black leading-4 ${
+          calibrationStatus.level === 'city_refined'
+            ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+            : calibrationStatus.level === 'regional'
+              ? 'border-sky-300 bg-sky-50 text-sky-900'
+              : 'border-slate-300 bg-slate-50 text-slate-700'
+        }`}>
+          {calibrationStatus.label}：{calibrationStatus.detail}
+        </div>
         <div className="mt-2 rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-bold leading-4 text-sky-900">
-          ZIP/Zone/霜冻日期会影响植物列表标签、智能推荐、日历提醒和 Garden Score。
+          地区、季节与霜冻日期会影响植物标签、智能推荐、时令提醒和菜园评分。
         </div>
       </div>
 
       <div className="mt-3 rounded-md border border-slate-200 bg-white/65 p-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[10px] font-black uppercase tracking-wider text-slate-700">资料可信度</div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-slate-700">数据范围</div>
           <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-700">
             Alpha
           </span>
         </div>
         <div className="mt-2 grid gap-1 text-[10px] font-bold leading-4 text-slate-700">
           <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
-            作物资料：{plants.length} 种，参考园艺数据结构，待正式来源逐项复核。
+            作物资料：已覆盖 {plants.length} 种常见家庭菜园作物，适合做选种、轮作和补种的第一轮判断。
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
-            地区气候：ZIP/Zone/霜冻日为本地模拟推断，可手动校准。
+            地区画像：当前按中国省市气候画像与霜冻日期推断，适合先做本地化规划，必要时可手动校准。
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
-            天气提醒：模拟场景，尚未接入实时天气 API。
+            精调覆盖：当前已对部分高频城市启用城市级窗口微调；未覆盖城市仍按区域画像推断。
           </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
-            推荐系统：综合伴生、轮作、季节、地区窗口和天气压力。
+            天气参考：当前使用季节参考情景辅助判断播种窗口和养护节奏，不等同于实时天气。
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
+            推荐逻辑：综合伴生、轮作、季节窗口、地区修正和天气参考，给出当前更适合的落点建议。
           </div>
         </div>
         <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-black leading-4 text-amber-900">
-          当前适合体验规划逻辑；真实种植前建议结合当地 extension、nursery 或农艺资料复核。
+          当前版本已经适合做后院菜园的规划、预演和体验测试；真正落地种植前，建议再结合你所在地区经验做最后确认。
         </div>
       </div>
 
       <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-2">
-        <div className="text-[10px] font-black uppercase tracking-wider text-green-800">体验清单</div>
+        <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Alpha 体验重点</div>
         <div className="mt-2 grid gap-1 text-[10px] font-bold leading-4 text-green-900">
           {[
-            '快速生成一版菜园',
-            '点击一个植物查看任务',
-            '完成一次浇水、覆盖或排水',
-            '点空地查看智能推荐',
-            '导出一张分享图'
+            '先生成或打开一版菜园，感受画布、推荐和任务是否顺手',
+            '点开番茄、黄瓜、生菜、空心菜、菜心，看看作物节奏是否容易读懂',
+            '完成一次浇水、覆盖、排水或采收，确认任务与地块状态是否连贯',
+            '点空地查看智能推荐，留意推荐理由、可信度和地区说明是否好理解',
+            '如果你熟悉本地种植节奏，重点看窗口判断和提醒是否接近你的经验'
           ].map((item, index) => (
             <div key={item} className="flex items-center gap-2 rounded-md border border-green-200 bg-white/75 px-2 py-1">
               <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-green-300 bg-green-100 text-[8px] font-black text-green-800">
@@ -428,6 +466,9 @@ export function GardenSettingsPanel({
               <span>{item}</span>
             </div>
           ))}
+        </div>
+        <div className="mt-2 rounded-md border border-green-200 bg-white/75 px-2 py-1 text-[10px] font-black leading-4 text-green-900">
+          最有价值的反馈：哪里让你觉得“这个判断像真的”，哪里又让你觉得“不太像我当地的种法”。
         </div>
       </div>
 
@@ -492,7 +533,11 @@ function formatPlanUpdatedAt(updatedAt: number) {
 }
 
 function isSameClimate(a: ClimateProfile, b: ClimateProfile) {
-  return a.zipCode === b.zipCode
+  return (a.province || '') === (b.province || '')
+    && (a.city || '') === (b.city || '')
+    && (a.district || '') === (b.district || '')
+    && (a.climateLabel || '') === (b.climateLabel || '')
+    && a.zipCode === b.zipCode
     && a.hardinessZone === b.hardinessZone
     && a.lastFrostDate === b.lastFrostDate
     && a.firstFrostDate === b.firstFrostDate
@@ -500,7 +545,10 @@ function isSameClimate(a: ClimateProfile, b: ClimateProfile) {
 }
 
 function getCalibrationMessage(climate: ClimateProfile) {
-  return `已按 Zone ${climate.hardinessZone || '未设定'} / 末霜 ${formatMonthDay(climate.lastFrostDate)} / 初霜 ${formatMonthDay(climate.firstFrostDate)} 刷新推荐`;
+  const locationLabel = climate.city
+    ? `${climate.province || ''}${climate.city}${climate.district ? ` · ${climate.district}` : ''}`
+    : climate.zipCode || '本地';
+  return `已按 ${locationLabel} / ${climate.climateLabel || climate.hardinessZone || '地区未设定'} / 末霜 ${formatMonthDay(climate.lastFrostDate)} / 初霜 ${formatMonthDay(climate.firstFrostDate)} 刷新推荐`;
 }
 
 function formatMonthDay(monthDay: string) {

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { tiles } from './usePlannerStore';
-import { getPlantAgronomy, getPlantCredibilityNotes, getPlantReviewSummary, isCoreReviewedPlant, plantMap } from './plants';
+import { getPlantAgronomy, getPlantCredibilityLevel, getPlantCredibilityNotes, getPlantRegionalNotes, getPlantReviewSummary, isCoreReviewedPlant, plantMap } from './plants';
 import { getNextRotationSuggestions } from './rotation';
 import { getGardenTaskBoard, getPlantGrowthStatus, summarizeGardenTasks, type GrowthStageId } from './growth';
 import { getGardenCalendarReminders } from './calendar';
 import { getSeasonTimeline } from './timeline';
 import { getCompanionRule } from './rules';
-import { getPlantingWindowStatus, plantingWindowBadgeClassName } from './plantingWindow';
+import { getClimateCalibrationStatus, getPlantingWindowStatus, plantingWindowBadgeClassName } from './plantingWindow';
 import type { ActivityRecord, ClimateProfile, GardenEntity, HarvestRecord, PlacementInsight, PlantEntity, PlantingRecord, PlanSeason, SynergyResult, TileStatusInfo } from './types';
 import type { HarvestInput } from './usePlannerStore';
 
@@ -25,6 +25,36 @@ type GardenScoreReason = {
   focusArea: InspectorFocusArea;
   focusLabel: string;
 };
+
+function formatClimateSuitability(minZone: number, maxZone: number) {
+  return `适应温区 ${minZone}-${maxZone}`;
+}
+
+function plantingWindowSourceSummary(window: ReturnType<typeof getPlantingWindowStatus>, climateProfile: ClimateProfile) {
+  const parts = [
+    `地区画像: ${climateProfile.climateLabel || climateProfile.city || climateProfile.hardinessZone || '本地地区'}`,
+    '作物经验: 已按该作物在本地区的常见窗口修正'
+  ];
+
+  if ((climateProfile.mockWeatherScenario || 'auto') !== 'auto') {
+    parts.push('天气参考: 已叠加当前参考情景修正');
+  } else {
+    parts.push('天气参考: 当前按常规季节节奏推断');
+  }
+
+  return parts.join(' · ');
+}
+
+function plantingWindowAdjustmentSummary(window: ReturnType<typeof getPlantingWindowStatus>) {
+  const cropAdjustment = window.cropAdjustment.detailHint.trim() || '当前没有额外地区偏移，先按本地区常规窗口判断。';
+  const runtimeAdjustment = window.runtimeAdjustment.detailHint.trim()
+    || '当前没有叠加额外天气风险修正，先按常规季节节奏判断。';
+
+  return {
+    cropAdjustment,
+    runtimeAdjustment
+  };
+}
 
 interface PlannerInspectorProps {
   entities: Record<string, GardenEntity>;
@@ -69,6 +99,8 @@ interface PlannerInspectorProps {
     facts: string[];
     reviewTags: string[];
     confidenceLabel: string;
+    confidenceDetail: string;
+    confidenceLevel: 'core' | 'regional' | 'basic';
   }>;
 }
 
@@ -164,6 +196,12 @@ export function PlannerInspector({
   const selectedPlantCredibilityNotes = selectedEntity?.type === 'plant'
     ? getPlantCredibilityNotes(selectedEntity.plantId)
     : [];
+  const selectedPlantCredibilityLevel = selectedEntity?.type === 'plant'
+    ? getPlantCredibilityLevel(selectedEntity.plantId)
+    : null;
+  const selectedPlantRegionalNotes = selectedEntity?.type === 'plant'
+    ? getPlantRegionalNotes(selectedEntity.plantId, climateProfile, planSeason)
+    : [];
   const selectedPlantReviewSummary = selectedEntity?.type === 'plant'
     ? getPlantReviewSummary(selectedEntity.plantId)
     : null;
@@ -172,6 +210,17 @@ export function PlannerInspector({
     : false;
   const selectedPlantingWindow = selectedEntity?.type === 'plant'
     ? getPlantingWindowStatus(selectedEntity.plant, climateProfile, planYear, planSeason)
+    : null;
+  const climateCalibrationStatus = getClimateCalibrationStatus(climateProfile);
+  const selectedCropRhythmSteps = selectedPlantAgronomy
+    ? buildCropRhythmSteps(selectedPlantAgronomy)
+    : [];
+  const selectedCurrentRhythmStep = selectedPlantAgronomy
+    ? getCurrentRhythmStepLabel(selectedPlantAgronomy, growthStatus, selectedActionTask)
+    : null;
+  const selectedRhythmSummary = currentRhythmSummary(selectedCurrentRhythmStep, selectedActionTask);
+  const selectedWindowAdjustmentSummary = selectedPlantingWindow
+    ? plantingWindowAdjustmentSummary(selectedPlantingWindow)
     : null;
   const selectedPlantActivities = selectedEntity?.type === 'plant'
     ? activityRecords.filter(record => record.entityId === selectedEntity.id || record.plantId === selectedEntity.plantId).slice(0, 4)
@@ -374,7 +423,7 @@ export function PlannerInspector({
     if (completed) {
       setRepairIntent(null);
       setFocusCue({
-        label: '任务已完成，Garden Score 已刷新',
+        label: '任务已完成，菜园评分已刷新',
         area: 'tasks',
         createdAt: Date.now()
       });
@@ -401,7 +450,7 @@ export function PlannerInspector({
 
     setResolvedWeatherReminderIds((current) => new Set([...current, reminderId]));
     setFocusCue({
-      label: completedCount > 0 ? `已防护 ${completedCount} 个作物，Garden Score 已刷新` : '提醒已处理，Garden Score 已刷新',
+      label: completedCount > 0 ? `已防护 ${completedCount} 个作物，菜园评分已刷新` : '提醒已处理，菜园评分已刷新',
       area: 'calendar',
       createdAt: Date.now()
     });
@@ -447,7 +496,7 @@ export function PlannerInspector({
     return (
       <aside className="absolute inset-x-3 bottom-3 z-20 overflow-hidden rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/95 text-sm shadow-[0_6px_0_rgba(120,72,24,0.16),0_16px_30px_rgba(61,40,20,0.18)] backdrop-blur md:inset-x-auto md:bottom-auto md:right-4 md:top-4 md:w-72">
         <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-3 md:p-4">
-          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Today</div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">概览</div>
           <div className="mt-1 text-lg font-black text-amber-950">今日概览</div>
           <div className="mt-1 rounded-md bg-white/55 px-2 py-1 text-xs font-bold text-amber-800">
             {seasonSnapshot.plantCount > 0
@@ -464,7 +513,7 @@ export function PlannerInspector({
           <div className={`mt-3 rounded-md border p-3 ${gardenScorePanelClassName(scoreTone)}`}>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider">Garden Score</div>
+                <div className="text-[10px] font-black uppercase tracking-wider">菜园评分</div>
                 <div className="mt-1 text-xs font-black">{gardenScoreLabel(seasonSnapshot.score)}</div>
               </div>
               <div className="text-2xl font-black leading-none">{seasonSnapshot.score}</div>
@@ -505,7 +554,7 @@ export function PlannerInspector({
       <div className="border-b-2 border-amber-900/10 bg-[#f4d58d] p-3 md:p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Inspector' : '详情'}</div>
+            <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? '示例详情' : '详情'}</div>
             <div className="mt-1 truncate text-lg font-black text-amber-950">{selectedTitle}</div>
           </div>
           <button
@@ -534,15 +583,79 @@ export function PlannerInspector({
           </button>
         )}
 
+        {selectedEntity?.type === 'plant' && selectedRhythmSummary && (
+          <div className="mt-2 rounded-md border border-sky-200 bg-sky-50/85 px-2 py-1 text-[10px] font-black leading-4 text-sky-900">
+            {selectedRhythmSummary}
+          </div>
+        )}
+
         {selectedEntity?.type === 'plant' && selectedPlantAgronomy && (
-          <div className="mt-3 hidden rounded-md border border-amber-900/10 bg-white/65 p-2 md:block">
-            <div className="grid grid-cols-2 gap-1 text-[10px] font-black text-amber-900">
+          <div className="mt-3 rounded-md border border-amber-900/10 bg-white/65 p-2">
+            {selectedCropRhythmSteps.length > 0 && (
+              <div className="mb-2 rounded-md border border-amber-900/10 bg-[#fff8df] p-2">
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">作物节奏</div>
+                <div className="mt-2 grid gap-1.5">
+                  {selectedCropRhythmSteps.map((step, index) => (
+                    <div key={`${step.label}-${index}`} className="grid grid-cols-[18px_1fr] gap-2">
+                      <div className="flex flex-col items-center">
+                        <span className={`flex h-[18px] w-[18px] items-center justify-center rounded-full border text-[9px] font-black ${
+                          selectedCurrentRhythmStep === step.label
+                            ? 'ring-2 ring-amber-300'
+                            : ''
+                        } ${
+                          step.tone === 'sky'
+                            ? 'border-sky-300 bg-sky-50 text-sky-800'
+                            : step.tone === 'violet'
+                              ? 'border-violet-300 bg-violet-50 text-violet-800'
+                              : step.tone === 'amber'
+                                ? 'border-amber-300 bg-amber-50 text-amber-800'
+                                : step.tone === 'green'
+                                  ? 'border-green-300 bg-green-50 text-green-800'
+                                  : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        {index < selectedCropRhythmSteps.length - 1 && (
+                          <span className="mt-1 h-4 w-px bg-amber-300/70" />
+                        )}
+                      </div>
+                      <div className={`rounded-md border px-2 py-1 ${
+                        selectedCurrentRhythmStep === step.label
+                          ? 'border-amber-300 bg-amber-50/90'
+                          : 'border-amber-900/10 bg-white/80'
+                      }`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[10px] font-black text-amber-950">{step.label}</div>
+                          {selectedCurrentRhythmStep === step.label && (
+                            <span className="rounded-full border border-amber-300 bg-white px-1.5 py-0.5 text-[8px] font-black text-amber-800">
+                              当前
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 text-[10px] font-bold leading-4 text-amber-800">{step.detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-1 text-[10px] font-black text-amber-900 md:grid-cols-2">
               <div>{selectedEntity.spanX}x{selectedEntity.spanY} 格</div>
               <div>{selectedPlantAgronomy.daysToMaturity} 天成熟</div>
               <div>{waterNeedLabel(selectedPlantAgronomy.waterNeed)}</div>
               <div>{startMethodLabel(selectedPlantAgronomy.startMethod)}</div>
               <div>{selectedPlantAgronomy.spacing.plantInch} in 株距</div>
               <div>{selectedPlantAgronomy.germinationDays[0]}-{selectedPlantAgronomy.germinationDays[1]} 天发芽</div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1">
+              <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                {harvestHabitLabel(selectedPlantAgronomy.harvestHabit)}
+              </span>
+              {successionLabel(selectedPlantAgronomy.successionIntervalDays) && (
+                <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+                  {successionLabel(selectedPlantAgronomy.successionIntervalDays)}
+                </span>
+              )}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {selectedPlantAgronomy.seasons.map(season => (
@@ -621,7 +734,7 @@ export function PlannerInspector({
 
           <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'tasks')}`}>
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Today Board' : '今日任务'}</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? '今日任务' : '今日任务'}</div>
               <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
                 {gardenTasks.length} 项
               </span>
@@ -688,7 +801,7 @@ export function PlannerInspector({
           {selectedEntity?.type === 'plant' && (
             <div className="border-b-2 border-amber-900/10 p-4">
               <div className="flex items-center justify-between">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Plant Records</div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">单株记录</div>
                 <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
                   {selectedPlantHarvests.length + selectedPlantActivities.length} 条
                 </span>
@@ -740,7 +853,7 @@ export function PlannerInspector({
 
           <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'harvest')}`}>
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">{isDemoMode ? 'Harvest' : '采收记录'}</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">采收记录</div>
               <div className="flex items-center gap-1">
                 <span className="rounded-full border border-green-300 bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-800">
                   {filteredHarvests.length} 条
@@ -751,7 +864,7 @@ export function PlannerInspector({
                   onClick={() => exportHarvestCsv(filteredHarvests, harvestExportName)}
                   className="rounded-md border border-amber-900/15 bg-white px-2 py-0.5 text-[10px] font-black text-amber-900 hover:bg-amber-50 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                 >
-                  {isDemoMode ? 'CSV' : '导出'}
+                  导出
                 </button>
               </div>
             </div>
@@ -791,7 +904,7 @@ export function PlannerInspector({
               <div className="mt-3 space-y-2">
                 {filteredHarvestByPlant.length > 0 && (
                   <div className="rounded-md border border-green-900/10 bg-green-50/80 p-2">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-green-800">By Plant</div>
+                    <div className="text-[10px] font-black uppercase tracking-wider text-green-800">按作物汇总</div>
                     <div className="mt-2 space-y-1.5">
                       {filteredHarvestByPlant.slice(0, 4).map(item => (
                         <div key={item.plantId} className="flex items-center justify-between gap-2 text-[11px] font-black text-green-950">
@@ -823,11 +936,8 @@ export function PlannerInspector({
 
           <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'calendar')}`}>
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Calendar</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">时令提醒</div>
               <div className="flex gap-1">
-                <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-700">
-                  Mock
-                </span>
                 <span className="rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-[10px] font-black text-sky-800">
                   {calendarReminders.length} 条
                 </span>
@@ -861,7 +971,7 @@ export function PlannerInspector({
           {selectedEntity?.type === 'plant' && selectedPlantAgronomy && (
             <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'planning')}`}>
               <div className="flex items-center justify-between">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Plant Plan</div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">种植计划</div>
                 <div className="flex items-center gap-1">
                   {selectedPlantReviewed && (
                     <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-800">
@@ -875,16 +985,16 @@ export function PlannerInspector({
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-md border border-green-900/10 bg-green-50/80 p-2 text-green-900">
-                  <div className="text-[10px] font-black uppercase">Companions</div>
+                  <div className="text-[10px] font-black uppercase">伴生建议</div>
                   <div className="mt-1 font-black">{companionNames.length > 0 ? companionNames.join('、') : '暂无'}</div>
                 </div>
                 <div className="rounded-md border border-red-900/10 bg-red-50/80 p-2 text-red-900">
-                  <div className="text-[10px] font-black uppercase">Conflicts</div>
+                  <div className="text-[10px] font-black uppercase">冲突提醒</div>
                   <div className="mt-1 font-black">{enemyNames.length > 0 ? enemyNames.join('、') : '暂无'}</div>
                 </div>
               </div>
               <div className="mt-2 rounded-md border border-amber-900/10 bg-white/70 p-2 text-[11px] font-bold leading-5 text-amber-800">
-                {familyLabel(selectedPlantAgronomy.family)} · {sunRequirementLabel(selectedPlantAgronomy.sunRequirement)} · Zone {selectedPlantAgronomy.hardinessZones[0]}-{selectedPlantAgronomy.hardinessZones[1]}
+                {familyLabel(selectedPlantAgronomy.family)} · {sunRequirementLabel(selectedPlantAgronomy.sunRequirement)} · {formatClimateSuitability(selectedPlantAgronomy.hardinessZones[0], selectedPlantAgronomy.hardinessZones[1])}
               </div>
               {selectedPlantReviewSummary && (
                 <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50/80 p-2">
@@ -912,22 +1022,67 @@ export function PlannerInspector({
               {selectedPlantingWindow && (
                 <div className="mt-2 rounded-md border border-amber-900/10 bg-white/75 p-2">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Local Window</div>
+                    <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">本地种植窗口</div>
                     <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${plantingWindowBadgeClassName(selectedPlantingWindow.status)}`}>
                       {selectedPlantingWindow.label}
                     </span>
                   </div>
                   <div className="mt-1 text-[10px] font-bold leading-4 text-amber-800">{selectedPlantingWindow.detail}</div>
+                  <div className="mt-2 rounded-md border border-amber-900/10 bg-amber-50/70 px-2 py-1 text-[9px] font-black leading-4 text-amber-900">
+                    判断依据：{plantingWindowSourceSummary(selectedPlantingWindow, climateProfile)}
+                  </div>
+                  <div className={`mt-2 rounded-md border px-2 py-1 text-[9px] font-black leading-4 ${
+                    climateCalibrationStatus.level === 'city_refined'
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                      : climateCalibrationStatus.level === 'regional'
+                        ? 'border-sky-300 bg-sky-50 text-sky-900'
+                        : 'border-slate-300 bg-slate-50 text-slate-700'
+                  }`}>
+                    {climateCalibrationStatus.label}：{climateCalibrationStatus.detail}
+                  </div>
+                  {selectedWindowAdjustmentSummary && (
+                    <div className="mt-2 grid gap-1">
+                      <div className="rounded-md border border-sky-200 bg-sky-50/85 px-2 py-1 text-[9px] font-black leading-4 text-sky-900">
+                        地区经验修正：{selectedWindowAdjustmentSummary.cropAdjustment}
+                      </div>
+                      <div className="rounded-md border border-violet-200 bg-violet-50/85 px-2 py-1 text-[9px] font-black leading-4 text-violet-900">
+                        天气情景修正：{selectedWindowAdjustmentSummary.runtimeAdjustment}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="mt-2 grid gap-1">
+                {selectedPlantCredibilityLevel && (
+                  <div className={`rounded-md border px-2 py-1 text-[10px] font-black leading-4 ${
+                    selectedPlantCredibilityLevel.level === 'core'
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                      : selectedPlantCredibilityLevel.level === 'regional'
+                        ? 'border-sky-300 bg-sky-50 text-sky-900'
+                        : 'border-slate-300 bg-slate-50 text-slate-700'
+                  }`}>
+                    可信度：{selectedPlantCredibilityLevel.label} · {selectedPlantCredibilityLevel.detail}
+                  </div>
+                )}
+                {selectedPlantRegionalNotes.length > 0 && (
+                  <div className="rounded-md border border-sky-200 bg-sky-50/85 p-2">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-sky-800">本地提醒</div>
+                    <div className="mt-1 grid gap-1">
+                      {selectedPlantRegionalNotes.map(note => (
+                        <div key={note} className="text-[10px] font-bold leading-4 text-sky-900">
+                          {note}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {selectedPlantCredibilityNotes.map(note => (
                   <div key={note} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black leading-4 text-slate-700">
                     {note}
                   </div>
                 ))}
                 <div className="rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-black leading-4 text-sky-800">
-                  气候: 当前先按本地演示数据推断，后续可接入真实地区天气。
+                  气候: 当前按本地地区与季节节奏推断，可结合你的实际经验继续校准。
                 </div>
               </div>
               {isRuleRepairFocus && (
@@ -947,7 +1102,7 @@ export function PlannerInspector({
 
           <div className="border-b-2 border-amber-900/10 p-4">
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Timeline</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">季节时间线</div>
               <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
                 {timelineItems.length} 项
               </span>
@@ -977,7 +1132,7 @@ export function PlannerInspector({
         <>
           <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'tasks')}`}>
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Growth</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">生长状态</div>
               <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${growthStageClassName(growthStatus.stage)}`}>
                 {growthStatus.stageLabel}
               </span>
@@ -1041,7 +1196,7 @@ export function PlannerInspector({
           <div className="border-b-2 border-amber-900/10 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Rules</div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">规则说明</div>
                 {ruleResult && <div className="mt-0.5 text-[10px] font-black text-amber-700">{ruleLayerLabel}图层</div>}
               </div>
               {ruleResult && (
@@ -1087,7 +1242,7 @@ export function PlannerInspector({
 
           {rotationSuggestions.length > 0 && (
             <div className="border-b-2 border-amber-900/10 p-4">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Next Season</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">下一季建议</div>
               <div className="mt-2 space-y-2">
                 {rotationSuggestions.map(suggestion => (
                   <div key={suggestion.group} className="rounded-md border border-green-900/10 bg-green-50/80 p-2 text-xs leading-5 text-green-900">
@@ -1203,6 +1358,138 @@ function startMethodLabel(method: string) {
   return '直播/移栽';
 }
 
+function harvestHabitLabel(habit: string | undefined) {
+  if (habit === 'cut_and_come_again') return '可反复剪收';
+  if (habit === 'continuous_pick') return '可连续采收';
+  if (habit === 'multiple_flushes') return '可分轮采收';
+  return '一茬采收';
+}
+
+function nurseryLeadLabel(leadDays: [number, number] | undefined) {
+  if (!leadDays) return null;
+  return `提前育苗 ${leadDays[0]}-${leadDays[1]} 天`;
+}
+
+function successionLabel(interval: [number, number] | undefined) {
+  if (!interval) return null;
+  return `建议每 ${interval[0]}-${interval[1]} 天补一批`;
+}
+
+function offsetWindowLabel(
+  window: { startOffsetDays: number; endOffsetDays: number } | undefined,
+  label: string
+) {
+  if (!window) return null;
+  const start = window.startOffsetDays >= 0 ? `末霜后 ${window.startOffsetDays} 天` : `末霜前 ${Math.abs(window.startOffsetDays)} 天`;
+  const end = window.endOffsetDays >= 0 ? `末霜后 ${window.endOffsetDays} 天` : `末霜前 ${Math.abs(window.endOffsetDays)} 天`;
+  return `${label} ${start} ~ ${end}`;
+}
+
+function harvestWindowLabel(agronomy: ReturnType<typeof getPlantAgronomy>) {
+  const firstHarvest = agronomy.firstHarvestDays ? `首收约 ${agronomy.firstHarvestDays} 天` : null;
+  const duration = agronomy.harvestDurationDays
+    ? `连续采收约 ${agronomy.harvestDurationDays[0]}-${agronomy.harvestDurationDays[1]} 天`
+    : null;
+  return [firstHarvest, duration].filter(Boolean);
+}
+
+function buildCropRhythmSteps(agronomy: ReturnType<typeof getPlantAgronomy>) {
+  const steps: Array<{ label: string; detail: string; tone: 'sky' | 'violet' | 'amber' | 'green' | 'emerald' }> = [];
+
+  if (agronomy.nurseryLeadDays) {
+    steps.push({
+      label: '育苗',
+      detail: `提前 ${agronomy.nurseryLeadDays[0]}-${agronomy.nurseryLeadDays[1]} 天准备`,
+      tone: 'sky'
+    });
+  }
+
+  if (agronomy.directSowWindow) {
+    const directSowDetail = offsetWindowLabel(agronomy.directSowWindow, '');
+    steps.push({
+      label: '直播',
+      detail: directSowDetail ? directSowDetail.replace(/^ /, '').replace(/^直播窗口 /, '') : '',
+      tone: 'violet'
+    });
+  }
+
+  if (agronomy.transplantWindow) {
+    const transplantDetail = offsetWindowLabel(agronomy.transplantWindow, '');
+    steps.push({
+      label: '定植',
+      detail: transplantDetail ? transplantDetail.replace(/^ /, '').replace(/^移栽窗口 /, '') : '',
+      tone: 'amber'
+    });
+  }
+
+  if (agronomy.firstHarvestDays) {
+    steps.push({
+      label: '首收',
+      detail: `约 ${agronomy.firstHarvestDays} 天开始`,
+      tone: 'green'
+    });
+  }
+
+  if (agronomy.harvestDurationDays) {
+    steps.push({
+      label: '采收期',
+      detail: `持续 ${agronomy.harvestDurationDays[0]}-${agronomy.harvestDurationDays[1]} 天`,
+      tone: 'emerald'
+    });
+  }
+
+  if (agronomy.successionIntervalDays) {
+    steps.push({
+      label: '补种',
+      detail: `每 ${agronomy.successionIntervalDays[0]}-${agronomy.successionIntervalDays[1]} 天接一批`,
+      tone: 'sky'
+    });
+  }
+
+  return steps;
+}
+
+function getCurrentRhythmStepLabel(
+  agronomy: ReturnType<typeof getPlantAgronomy>,
+  growthStatus: ReturnType<typeof getPlantGrowthStatus> | null,
+  currentTask: { id: string } | null
+) {
+  if (!growthStatus) {
+    if (agronomy.nurseryLeadDays) return '育苗';
+    if (agronomy.directSowWindow) return '直播';
+    if (agronomy.transplantWindow) return '定植';
+    return null;
+  }
+
+  if (growthStatus.stage === 'seed' || growthStatus.stage === 'seedling') {
+    if (agronomy.startMethod === 'transplant' && agronomy.nurseryLeadDays) return '育苗';
+    if (agronomy.directSowWindow) return '直播';
+  }
+
+  if (growthStatus.stage === 'growing') {
+    if (agronomy.transplantWindow) return '定植';
+    if (agronomy.directSowWindow) return '直播';
+  }
+
+  if (growthStatus.stage === 'mature') return '首收';
+  if (growthStatus.stage === 'harvest') return '采收期';
+
+  if (currentTask?.id === 'harvest' && agronomy.harvestDurationDays) return '采收期';
+  if (currentTask?.id === 'maintain' && agronomy.successionIntervalDays) return '补种';
+
+  return null;
+}
+
+function currentRhythmSummary(
+  stepLabel: string | null,
+  task: { label: string; detail: string } | null
+) {
+  if (!stepLabel && !task) return null;
+  if (stepLabel && task) return `当前处于「${stepLabel}」阶段，眼下优先处理「${task.label}」。`;
+  if (stepLabel) return `当前处于「${stepLabel}」阶段。`;
+  return `当前优先处理「${task?.label}」。`;
+}
+
 function seasonLabel(season: PlanSeason) {
   const labels: Record<PlanSeason, string> = {
     spring: '春季',
@@ -1300,7 +1587,7 @@ function SeasonSnapshotPanel({
     <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(highlight)}`}>
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Season Snapshot</div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">当季快照</div>
           <div className="mt-0.5 text-xs font-black text-amber-950">{planYear} · {seasonLabel(planSeason)}</div>
         </div>
         <span className="rounded-full border border-green-300 bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-800">
@@ -1311,7 +1598,7 @@ function SeasonSnapshotPanel({
       <div className={`mt-3 rounded-md border p-2 ${gardenScorePanelClassName(scoreTone)}`}>
         <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-wider">Garden Score</div>
+            <div className="text-[10px] font-black uppercase tracking-wider">菜园评分</div>
             <div className="mt-1 text-xs font-black">{gardenScoreLabel(snapshot.score)}</div>
           </div>
           <div className="text-2xl font-black leading-none">{snapshot.score}</div>
@@ -1355,14 +1642,14 @@ function SeasonSnapshotPanel({
 
       <div className="mt-3 grid grid-cols-[1fr_1.1fr] gap-2">
         <div className="rounded-md border border-amber-900/10 bg-white/70 p-2">
-          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">Ops</div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">本季操作</div>
           <div className="mt-1 flex items-end justify-between gap-2">
             <span className="text-lg font-black leading-none text-amber-950">{snapshot.activityCount}</span>
             <span className="text-right text-[10px] font-black text-amber-700">{snapshot.topActivity}</span>
           </div>
         </div>
         <div className={`rounded-md border p-2 ${snapshot.latestRecord?.tone === 'green' ? 'border-green-900/10 bg-green-50 text-green-900' : 'border-amber-900/10 bg-amber-50 text-amber-900'}`}>
-          <div className="text-[10px] font-black uppercase tracking-wider">Latest</div>
+          <div className="text-[10px] font-black uppercase tracking-wider">最近记录</div>
           {snapshot.latestRecord ? (
             <>
               <div className="mt-1 truncate text-xs font-black">{snapshot.latestRecord.label}</div>
@@ -1407,7 +1694,7 @@ function LifecycleStrip({
   return (
     <div className="mt-3 rounded-md border border-amber-900/10 bg-amber-50/70 p-2">
       <div className="mb-2 flex items-center justify-between text-[10px] font-black text-amber-800">
-        <span>Lifecycle</span>
+        <span>生长阶段</span>
         <span>{Math.min(140, progressPercent)}% · {daysToMaturity} 天成熟</span>
       </div>
       <div className="grid grid-cols-5 gap-1">
@@ -1444,7 +1731,18 @@ function TileStatusPanel({
 }: {
   status: TileStatusInfo;
   rotationSuggestions: Array<{ group: string; label: string; examples: Array<{ id: string; name: string }>; reason: string }>;
-  smartRecommendations: Array<{ id: string; name: string; score: number; actionLabel: string; reason: string; facts: string[]; reviewTags: string[]; confidenceLabel: string }>;
+  smartRecommendations: Array<{
+    id: string;
+    name: string;
+    score: number;
+    actionLabel: string;
+    reason: string;
+    facts: string[];
+    reviewTags: string[];
+    confidenceLabel: string;
+    confidenceDetail: string;
+    confidenceLevel: 'core' | 'regional' | 'basic';
+  }>;
   onResolve: (status: TileStatusInfo) => void;
   onResolveTask: (status: TileStatusInfo) => void;
   onSelectPlant: (plantId: string) => void;
@@ -1500,7 +1798,13 @@ function TileStatusPanel({
                       {tag}
                     </span>
                   ))}
-                  <span className="rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-800">
+                  <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black ${
+                    item.confidenceLevel === 'core'
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      : item.confidenceLevel === 'regional'
+                        ? 'border-sky-300 bg-sky-50 text-sky-800'
+                        : 'border-slate-300 bg-slate-100 text-slate-700'
+                  }`}>
                     {item.confidenceLabel}
                   </span>
                 </div>
@@ -1508,6 +1812,9 @@ function TileStatusPanel({
                   {item.actionLabel}
                 </div>
                 <div className="mt-1 text-[10px] font-bold leading-4 text-sky-800">{item.reason}</div>
+                <div className="mt-1 text-[9px] font-bold leading-4 text-sky-700/90">
+                  可信度说明：{item.confidenceDetail}
+                </div>
               </button>
             ))}
           </div>
@@ -1516,7 +1823,7 @@ function TileStatusPanel({
       {!isSupplementMode && (status.kind === 'idle' || status.kind === 'cleanup') && rotationSuggestions.length > 0 && (
         <div className="mt-3 rounded-md border border-green-900/10 bg-green-50/80 p-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-[10px] font-black uppercase tracking-wider text-green-800">Next Crop</div>
+            <div className="text-[10px] font-black uppercase tracking-wider text-green-800">下一茬建议</div>
             {status.kind === 'idle' && (
               <span className="rounded-full border border-green-300 bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-800">
                 可规划
@@ -1918,8 +2225,8 @@ function focusCueClassName(active?: boolean) {
 }
 
 function primaryActionLabel(taskId: NonNullable<ReturnType<typeof getPlantGrowthStatus>>['nextTask']['id'], isTaskRepairFocus: boolean, isHarvestRepairFocus: boolean) {
-  if (taskId === 'harvest') return isHarvestRepairFocus ? '记录采收并刷新 Score' : '记录采收';
-  if (isTaskRepairFocus) return '完成并刷新 Score';
+  if (taskId === 'harvest') return isHarvestRepairFocus ? '记录采收并刷新评分' : '记录采收';
+  if (isTaskRepairFocus) return '完成并刷新评分';
   if (taskId === 'water') return '浇水';
   if (taskId === 'cover') return '覆盖保温';
   if (taskId === 'drainage') return '处理排水';

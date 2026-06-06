@@ -92,6 +92,12 @@ export interface ActivityRecord {
 }
 
 export interface ClimateProfile {
+  country?: 'CN';
+  province?: string;
+  city?: string;
+  district?: string;
+  climateBand?: 'north_cold' | 'north_temperate' | 'central' | 'south_humid' | 'southwest_plateau' | 'east_monsoon';
+  climateLabel?: string;
   zipCode: string;
   hardinessZone: string;
   lastFrostDate: string;

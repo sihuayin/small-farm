@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getPlantAgronomy, plantMap, plants, tiles, type TileType } from './plants';
+import { getPlantAgronomy, getPlantRegionalPriorityScore, plantMap, plants, tiles, type TileType } from './plants';
 import type { Plant } from './plants.d';
 import { evaluateCompanionRules } from './rules';
 import { createPlantingRecords, evaluateRotationRules } from './rotation';
@@ -107,6 +107,12 @@ export interface ActivityInput {
 }
 
 const defaultClimateProfile: ClimateProfile = {
+  country: 'CN',
+  province: '浙江',
+  city: '杭州',
+  district: '',
+  climateBand: 'east_monsoon',
+  climateLabel: '江南湿润',
   zipCode: '',
   hardinessZone: '7a',
   lastFrostDate: '04-15',
@@ -164,6 +170,12 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     pushHistory(get, set);
     set({
       climateProfile: {
+        country: 'CN',
+        province: profile.province?.trim() || defaultClimateProfile.province,
+        city: profile.city?.trim() || defaultClimateProfile.city,
+        district: profile.district?.trim() || '',
+        climateBand: profile.climateBand || defaultClimateProfile.climateBand,
+        climateLabel: profile.climateLabel?.trim() || defaultClimateProfile.climateLabel,
         zipCode: profile.zipCode.trim(),
         hardinessZone: profile.hardinessZone.trim() || defaultClimateProfile.hardinessZone,
         lastFrostDate: normalizeMonthDay(profile.lastFrostDate, defaultClimateProfile.lastFrostDate),
@@ -243,7 +255,9 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     let nextPlantingHistory: Record<string, PlantingRecord[]> = {};
     const skipped: string[] = [];
 
-    for (const plantId of orderStarterPlantIds(requestedPlantIds)) {
+    const layoutStyle = getStarterLayoutStyle(state.climateProfile, state.planSeason);
+
+    for (const plantId of orderStarterPlantIds(requestedPlantIds, state.climateProfile, state.planSeason, layoutStyle)) {
       const plant = plantMap.get(plantId);
       if (!plant) {
         skipped.push(plantId);
@@ -259,7 +273,8 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
         state.gridHeight,
         state.planYear,
         state.planSeason,
-        state.climateProfile
+        state.climateProfile,
+        layoutStyle
       );
 
       if (!candidate) {
@@ -917,12 +932,12 @@ function taskLabel(taskId: string) {
   const labels: Record<string, string> = {
     protect: '护苗',
     water: '补水',
-    inspect: '巡检',
-    maintain: '维护',
-    cover: '覆盖',
-    drainage: '排水',
-    fertilize: '施肥',
-    prune: '修剪',
+    inspect: '看苗情',
+    maintain: '养护',
+    cover: '防寒覆盖',
+    drainage: '理沟排水',
+    fertilize: '追肥',
+    prune: '整枝',
     pest: '病虫害'
   };
   return labels[taskId] || taskId;
@@ -1045,14 +1060,50 @@ function normalizeStarterPlantIds(plantIds?: string[]) {
     .slice(0, 10);
 }
 
-function orderStarterPlantIds(plantIds: string[]) {
+type StarterLayoutStyle = 'balanced' | 'cool_season_dense' | 'warm_season_productive' | 'small_space_mixed';
+
+function getStarterLayoutStyle(climateProfile: ClimateProfile, season: PlanSeason): StarterLayoutStyle {
+  const band = climateProfile.climateBand;
+  if (season === 'summer' && (band === 'south_humid' || band === 'east_monsoon' || band === 'southwest_plateau')) {
+    return 'warm_season_productive';
+  }
+  if ((band === 'north_temperate' || band === 'north_cold') && (season === 'spring' || season === 'fall')) {
+    return 'cool_season_dense';
+  }
+  if (band === 'east_monsoon' || band === 'central') {
+    return 'small_space_mixed';
+  }
+  return 'balanced';
+}
+
+function orderStarterPlantIds(
+  plantIds: string[],
+  climateProfile: ClimateProfile,
+  season: PlanSeason,
+  layoutStyle: StarterLayoutStyle
+) {
   const priority = (plantId: string) => {
     const plant = plantMap.get(plantId);
     if (!plant) return 0;
+    const agronomy = getPlantAgronomy(plantId);
     const spanArea = plant.dimensions.grid_span_x * plant.dimensions.grid_span_y;
     const companionWeight = plant.relationships.companions.length;
     const categoryWeight = plant.category === 'vegetable' ? 4 : plant.category === 'herb' ? 3 : plant.category === 'flower' ? 2 : 1;
-    return spanArea * 10 + companionWeight * 2 + categoryWeight;
+    let score = spanArea * 10 + companionWeight * 2 + categoryWeight;
+    score += getPlantRegionalPriorityScore(plantId, climateProfile, season) * 5;
+
+    if (layoutStyle === 'cool_season_dense') {
+      if (agronomy.rotationGroup === 'leafy' || agronomy.rotationGroup === 'root') score += 10;
+      if (spanArea <= 2) score += 8;
+    } else if (layoutStyle === 'warm_season_productive') {
+      if (['fruiting', 'legume'].includes(agronomy.rotationGroup)) score += 12;
+      if (spanArea >= 2) score += 6;
+    } else if (layoutStyle === 'small_space_mixed') {
+      if (spanArea <= 2) score += 10;
+      if (plant.category === 'herb' || agronomy.rotationGroup === 'leafy') score += 6;
+    }
+
+    return score;
   };
   return [...plantIds].sort((a, b) => priority(b) - priority(a));
 }
@@ -1066,7 +1117,8 @@ function findStarterPlacement(
   gridHeight: number,
   year: number,
   season: PlanSeason,
-  climateProfile: ClimateProfile
+  climateProfile: ClimateProfile,
+  layoutStyle: StarterLayoutStyle
 ) {
   const candidates: Array<{ x: number; y: number; score: number }> = [];
   const margin = 1;
@@ -1091,10 +1143,11 @@ function findStarterPlacement(
       const centerBias = starterCenterBias(x, y, plant, gridWidth, gridHeight);
       const companionBias = result.companionCount * 12;
       const categoryBias = plant.category === 'vegetable' ? 6 : plant.category === 'herb' ? 5 : plant.category === 'flower' ? 4 : 2;
+      const layoutBias = starterLayoutBias(x, y, plant, gridWidth, gridHeight, layoutStyle);
       candidates.push({
         x,
         y,
-        score: (result.score || 0) + centerBias + companionBias + categoryBias
+        score: (result.score || 0) + centerBias + companionBias + categoryBias + layoutBias
       });
     }
   }
@@ -1115,6 +1168,46 @@ function starterCenterBias(
   const plantCenterY = y + plant.dimensions.grid_span_y / 2;
   const distance = Math.abs(centerX - plantCenterX) + Math.abs(centerY - plantCenterY);
   return Math.max(0, 18 - distance * 2);
+}
+
+function starterLayoutBias(
+  x: number,
+  y: number,
+  plant: Plant,
+  gridWidth: number,
+  gridHeight: number,
+  layoutStyle: StarterLayoutStyle
+) {
+  const agronomy = getPlantAgronomy(plant.id);
+  const rightWeight = x / Math.max(1, gridWidth - 1);
+  const bottomWeight = y / Math.max(1, gridHeight - 1);
+  const spanArea = plant.dimensions.grid_span_x * plant.dimensions.grid_span_y;
+
+  if (layoutStyle === 'warm_season_productive') {
+    let score = 0;
+    if (['fruiting', 'legume'].includes(agronomy.rotationGroup)) score += 10 + rightWeight * 6;
+    if (spanArea >= 3) score += bottomWeight * 5;
+    if (agronomy.rotationGroup === 'leafy') score -= 2;
+    return score;
+  }
+
+  if (layoutStyle === 'cool_season_dense') {
+    let score = 0;
+    if (agronomy.rotationGroup === 'leafy' || agronomy.rotationGroup === 'root') score += 8;
+    if (spanArea <= 2) score += 6;
+    if (rightWeight > 0.72) score -= 2;
+    return score;
+  }
+
+  if (layoutStyle === 'small_space_mixed') {
+    let score = 0;
+    if (spanArea <= 2) score += 8;
+    if (plant.category === 'herb') score += 6;
+    if (agronomy.rotationGroup === 'leafy') score += 4;
+    return score;
+  }
+
+  return 0;
 }
 
 function starterAgeDays(plantId: string) {

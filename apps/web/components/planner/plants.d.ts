@@ -47,6 +47,7 @@ export type SunRequirement = 'full_sun' | 'partial_sun' | 'shade';
 export type WaterNeed = 'low' | 'medium' | 'high';
 export type PlantStartMethod = 'direct_sow' | 'transplant' | 'either';
 export type PlantDataConfidence = 'mock' | 'reference';
+export type PlantHarvestHabit = 'single' | 'cut_and_come_again' | 'continuous_pick' | 'multiple_flushes';
 export type PlantReviewTag =
   | '怕霜'
   | '喜暖土'
@@ -88,6 +89,8 @@ export interface PlantAgronomy {
   plantingDepthInch?: number;
   /** 更适合直播、移栽，或两者均可 */
   startMethod: PlantStartMethod;
+  /** 若适合育苗/移栽，建议提前育苗的天数范围 */
+  nurseryLeadDays?: [number, number];
   /** 当前资料的可信度标记：reference=参考资料结构，mock=演示占位 */
   dataConfidence: PlantDataConfidence;
   /** 数据来源名称，用于透明说明 */
@@ -100,8 +103,19 @@ export interface PlantAgronomy {
   confidenceNote: string;
   /** 以末霜日为基准的播种窗口，单位：天 */
   sowingWindow: { startOffsetDays: number; endOffsetDays: number };
+  /** 若直播与移栽窗口需要区分，优先显示这两组窗口 */
+  directSowWindow?: { startOffsetDays: number; endOffsetDays: number };
+  transplantWindow?: { startOffsetDays: number; endOffsetDays: number };
   /** 以播种日为基准的收获窗口，单位：天 */
   harvestWindow: { startOffsetDays: number; endOffsetDays: number };
+  /** 若属于持续采收型，首收大致天数 */
+  firstHarvestDays?: number;
+  /** 若属于持续采收型，连续采收期的大致天数 */
+  harvestDurationDays?: [number, number];
+  /** 采收方式：一茬收完 / 可反复摘叶 / 可连续摘果 / 多轮抽薹 */
+  harvestHabit?: PlantHarvestHabit;
+  /** 若适合连续播种，建议的分批补种间隔 */
+  successionIntervalDays?: [number, number];
 }
 
 export interface Plant {

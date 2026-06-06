@@ -1,3 +1,4 @@
+import type { ClimateProfile, PlanSeason } from './types';
 import type { Plant, PlantAgronomy, PlantReviewSummary } from './plants.d';
 
 const withBasePath = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH || ''}${path}`;
@@ -15,6 +16,26 @@ const coreReviewedPlantIds = new Set([
   'beet',
   'cucumber',
   'bean',
+  'kongxin_cai',
+  'amaranth',
+  'chive',
+  'scallion',
+  'youmai_cai',
+  'shanghai_qing',
+  'cai_xin',
+  'garland_chrysanthemum',
+  'suanmiao',
+  'xiaoyoucai',
+  'gai_lan',
+  'ginger',
+  'baby_napa',
+  'wosun',
+  'fava_bean',
+  'donggua',
+  'yardlong_bean',
+  'loofah',
+  'bitter_melon',
+  'daikon',
   'kale',
   'broccoli'
 ]);
@@ -445,6 +466,166 @@ export const plants: Plant[] = [
     relationships: { companions: ['dill', 'onion', 'nasturtium'], enemies: ['strawberry', 'tomato'] }
   },
   {
+    id: 'kongxin_cai',
+    category: 'vegetable',
+    naming: { en: 'Water Spinach', zh: '空心菜', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 6 },
+    styling: { bg_color: '#22c55e', border_color: '#15803d' },
+    relationships: { companions: ['scallion', 'marigold', 'cilantro'], enemies: ['fennel'] }
+  },
+  {
+    id: 'amaranth',
+    category: 'vegetable',
+    naming: { en: 'Amaranth Greens', zh: '苋菜', emoji: '🍃' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 5 },
+    styling: { bg_color: '#f43f5e', border_color: '#be123c' },
+    relationships: { companions: ['scallion', 'lettuce', 'radish'], enemies: ['fennel'] }
+  },
+  {
+    id: 'chive',
+    category: 'herb',
+    naming: { en: 'Chinese Chive', zh: '韭菜', emoji: '🌿' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 6 },
+    styling: { bg_color: '#16a34a', border_color: '#166534' },
+    relationships: { companions: ['carrot', 'tomato', 'strawberry'], enemies: ['bean', 'pea'] }
+  },
+  {
+    id: 'scallion',
+    category: 'vegetable',
+    naming: { en: 'Scallion', zh: '小葱', emoji: '🧅' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 4 },
+    styling: { bg_color: '#bbf7d0', border_color: '#16a34a' },
+    relationships: { companions: ['carrot', 'lettuce', 'kongxin_cai'], enemies: ['bean', 'pea'] }
+  },
+  {
+    id: 'youmai_cai',
+    category: 'vegetable',
+    naming: { en: 'Romaine Lettuce', zh: '油麦菜', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 8 },
+    styling: { bg_color: '#65a30d', border_color: '#3f6212' },
+    relationships: { companions: ['scallion', 'radish', 'cilantro'], enemies: [] }
+  },
+  {
+    id: 'shanghai_qing',
+    category: 'vegetable',
+    naming: { en: 'Shanghai Bok Choy', zh: '上海青', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 8 },
+    styling: { bg_color: '#86efac', border_color: '#22c55e' },
+    relationships: { companions: ['scallion', 'lettuce', 'radish'], enemies: ['tomato'] }
+  },
+  {
+    id: 'cai_xin',
+    category: 'vegetable',
+    naming: { en: 'Choy Sum', zh: '菜心', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 8 },
+    styling: { bg_color: '#22c55e', border_color: '#15803d' },
+    relationships: { companions: ['scallion', 'cilantro', 'lettuce'], enemies: ['tomato'] }
+  },
+  {
+    id: 'garland_chrysanthemum',
+    category: 'vegetable',
+    naming: { en: 'Garland Chrysanthemum', zh: '茼蒿', emoji: '🌿' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 8 },
+    styling: { bg_color: '#84cc16', border_color: '#4d7c0f' },
+    relationships: { companions: ['lettuce', 'scallion', 'cilantro'], enemies: [] }
+  },
+  {
+    id: 'suanmiao',
+    category: 'vegetable',
+    naming: { en: 'Garlic Sprouts', zh: '蒜苗', emoji: '🌿' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 4 },
+    styling: { bg_color: '#a3e635', border_color: '#65a30d' },
+    relationships: { companions: ['lettuce', 'carrot', 'tomato'], enemies: ['bean', 'pea'] }
+  },
+  {
+    id: 'xiaoyoucai',
+    category: 'vegetable',
+    naming: { en: 'Baby Bok Choy', zh: '小油菜', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 8 },
+    styling: { bg_color: '#4ade80', border_color: '#16a34a' },
+    relationships: { companions: ['scallion', 'radish', 'lettuce'], enemies: ['tomato'] }
+  },
+  {
+    id: 'gai_lan',
+    category: 'vegetable',
+    naming: { en: 'Chinese Broccoli', zh: '芥蓝', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 10 },
+    styling: { bg_color: '#15803d', border_color: '#166534' },
+    relationships: { companions: ['scallion', 'cilantro', 'dill'], enemies: ['tomato'] }
+  },
+  {
+    id: 'ginger',
+    category: 'vegetable',
+    naming: { en: 'Ginger', zh: '生姜', emoji: '🫚' },
+    dimensions: { grid_span_x: 1, grid_span_y: 2, spacing_inch: 10 },
+    styling: { bg_color: '#d97706', border_color: '#92400e' },
+    relationships: { companions: ['scallion', 'bean', 'marigold'], enemies: ['potato'] }
+  },
+  {
+    id: 'baby_napa',
+    category: 'vegetable',
+    naming: { en: 'Baby Napa Cabbage', zh: '娃娃菜', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 10 },
+    styling: { bg_color: '#bef264', border_color: '#65a30d' },
+    relationships: { companions: ['scallion', 'lettuce', 'dill'], enemies: ['tomato', 'strawberry'] }
+  },
+  {
+    id: 'wosun',
+    category: 'vegetable',
+    naming: { en: 'Stem Lettuce', zh: '莴笋', emoji: '🥬' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 10 },
+    styling: { bg_color: '#84cc16', border_color: '#4d7c0f' },
+    relationships: { companions: ['scallion', 'carrot', 'cilantro'], enemies: [] }
+  },
+  {
+    id: 'fava_bean',
+    category: 'vegetable',
+    naming: { en: 'Fava Bean', zh: '蚕豆', emoji: '🫘' },
+    dimensions: { grid_span_x: 1, grid_span_y: 2, spacing_inch: 8 },
+    styling: { bg_color: '#65a30d', border_color: '#3f6212' },
+    relationships: { companions: ['corn', 'lettuce', 'radish'], enemies: ['garlic', 'onion', 'suanmiao'] }
+  },
+  {
+    id: 'donggua',
+    category: 'vegetable',
+    naming: { en: 'Wax Gourd', zh: '冬瓜', emoji: '🍈' },
+    dimensions: { grid_span_x: 3, grid_span_y: 2, spacing_inch: 36 },
+    styling: { bg_color: '#a3e635', border_color: '#4d7c0f' },
+    relationships: { companions: ['yardlong_bean', 'marigold', 'scallion'], enemies: ['potato'] }
+  },
+  {
+    id: 'yardlong_bean',
+    category: 'vegetable',
+    naming: { en: 'Yardlong Bean', zh: '豇豆', emoji: '🫘' },
+    dimensions: { grid_span_x: 1, grid_span_y: 2, spacing_inch: 8 },
+    styling: { bg_color: '#65a30d', border_color: '#3f6212' },
+    relationships: { companions: ['corn', 'loofah', 'scallion'], enemies: ['onion', 'garlic', 'chive'] }
+  },
+  {
+    id: 'loofah',
+    category: 'vegetable',
+    naming: { en: 'Loofah', zh: '丝瓜', emoji: '🥒' },
+    dimensions: { grid_span_x: 2, grid_span_y: 2, spacing_inch: 24 },
+    styling: { bg_color: '#84cc16', border_color: '#4d7c0f' },
+    relationships: { companions: ['yardlong_bean', 'nasturtium', 'marigold'], enemies: ['potato', 'sage'] }
+  },
+  {
+    id: 'bitter_melon',
+    category: 'vegetable',
+    naming: { en: 'Bitter Melon', zh: '苦瓜', emoji: '🥒' },
+    dimensions: { grid_span_x: 2, grid_span_y: 1, spacing_inch: 24 },
+    styling: { bg_color: '#65a30d', border_color: '#166534' },
+    relationships: { companions: ['yardlong_bean', 'scallion', 'marigold'], enemies: ['potato'] }
+  },
+  {
+    id: 'daikon',
+    category: 'vegetable',
+    naming: { en: 'Daikon Radish', zh: '白萝卜', emoji: '🥕' },
+    dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 4 },
+    styling: { bg_color: '#f8fafc', border_color: '#94a3b8' },
+    relationships: { companions: ['lettuce', 'pea', 'scallion'], enemies: ['hyssop'] }
+  },
+  {
     id: 'calendula',
     category: 'flower',
     naming: { en: 'Calendula', zh: '金盏花', emoji: '🌼' },
@@ -479,20 +660,21 @@ const agronomyDefaults: PlantAgronomy = {
   lastReviewedAt: '2026-05-31',
   confidenceNote: '人工整理的常见后院园艺参数，适合 Alpha 推荐解释；仍需接入正式地区资料源复核。',
   sowingWindow: { startOffsetDays: -14, endOffsetDays: 28 },
-  harvestWindow: { startOffsetDays: 55, endOffsetDays: 95 }
+  harvestWindow: { startOffsetDays: 55, endOffsetDays: 95 },
+  harvestHabit: 'single'
 };
 
 const agronomyByPlantId: Record<string, Partial<PlantAgronomy>> = {
-  tomato: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 80, spacing: { plantInch: 24, rowInch: 36 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'transplant', sowingWindow: { startOffsetDays: 14, endOffsetDays: 56 } },
+  tomato: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 80, spacing: { plantInch: 24, rowInch: 36 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'transplant', nurseryLeadDays: [28, 42], sowingWindow: { startOffsetDays: 14, endOffsetDays: 56 }, transplantWindow: { startOffsetDays: 14, endOffsetDays: 56 }, firstHarvestDays: 75, harvestDurationDays: [35, 70], harvestHabit: 'continuous_pick' },
   basil: { family: 'lamiaceae', rotationGroup: 'leafy', waterNeed: 'medium', daysToMaturity: 65, spacing: { plantInch: 12, rowInch: 18 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: 7, endOffsetDays: 70 } },
   carrot: { family: 'apiaceae', rotationGroup: 'root', waterNeed: 'medium', daysToMaturity: 75, spacing: { plantInch: 3, rowInch: 12 }, germinationDays: [14, 21], plantingDepthInch: 0.25, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -28, endOffsetDays: 150 } },
-  lettuce: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [2, 10], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -45, endOffsetDays: 170 } },
-  pepper: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 85, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [7, 21], plantingDepthInch: 0.25, startMethod: 'transplant', sowingWindow: { startOffsetDays: 14, endOffsetDays: 56 } },
+  lettuce: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [2, 10], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -45, endOffsetDays: 170 }, directSowWindow: { startOffsetDays: -45, endOffsetDays: 170 }, transplantWindow: { startOffsetDays: -28, endOffsetDays: 150 }, firstHarvestDays: 28, harvestDurationDays: [20, 40], harvestHabit: 'cut_and_come_again', successionIntervalDays: [10, 14] },
+  pepper: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 85, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [7, 21], plantingDepthInch: 0.25, startMethod: 'transplant', nurseryLeadDays: [35, 49], sowingWindow: { startOffsetDays: 14, endOffsetDays: 56 }, transplantWindow: { startOffsetDays: 14, endOffsetDays: 56 }, firstHarvestDays: 80, harvestDurationDays: [30, 60], harvestHabit: 'continuous_pick' },
   onion: { family: 'allium', rotationGroup: 'root', waterNeed: 'low', daysToMaturity: 100, spacing: { plantInch: 4, rowInch: 12 }, germinationDays: [7, 14], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -42, endOffsetDays: 42 } },
   cabbage: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], waterNeed: 'high', daysToMaturity: 90, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'transplant', sowingWindow: { startOffsetDays: -42, endOffsetDays: 150 } },
   corn: { family: 'other', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 90, spacing: { plantInch: 12, rowInch: 30 }, germinationDays: [7, 10], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 14, endOffsetDays: 85 } },
   bean: { family: 'legume', rotationGroup: 'legume', waterNeed: 'medium', daysToMaturity: 60, spacing: { plantInch: 6, rowInch: 18 }, germinationDays: [6, 10], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 14, endOffsetDays: 95 } },
-  cucumber: { family: 'cucurbit', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 60, spacing: { plantInch: 12, rowInch: 36 }, germinationDays: [3, 10], plantingDepthInch: 0.5, startMethod: 'either', sowingWindow: { startOffsetDays: 14, endOffsetDays: 90 } },
+  cucumber: { family: 'cucurbit', rotationGroup: 'fruiting', waterNeed: 'high', daysToMaturity: 60, spacing: { plantInch: 12, rowInch: 36 }, germinationDays: [3, 10], plantingDepthInch: 0.5, startMethod: 'either', nurseryLeadDays: [10, 18], sowingWindow: { startOffsetDays: 14, endOffsetDays: 90 }, directSowWindow: { startOffsetDays: 14, endOffsetDays: 90 }, transplantWindow: { startOffsetDays: 18, endOffsetDays: 70 }, firstHarvestDays: 52, harvestDurationDays: [25, 45], harvestHabit: 'continuous_pick' },
   potato: { family: 'nightshade', rotationGroup: 'root', waterNeed: 'medium', daysToMaturity: 100, spacing: { plantInch: 12, rowInch: 30 }, germinationDays: [14, 28], plantingDepthInch: 4, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -28, endOffsetDays: 42 } },
   eggplant: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 85, spacing: { plantInch: 24, rowInch: 30 }, germinationDays: [7, 14], plantingDepthInch: 0.25, startMethod: 'transplant', sowingWindow: { startOffsetDays: 14, endOffsetDays: 63 } },
   spinach: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45, spacing: { plantInch: 4, rowInch: 12 }, germinationDays: [5, 10], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -42, endOffsetDays: 170 } },
@@ -523,7 +705,7 @@ const agronomyByPlantId: Record<string, Partial<PlantAgronomy>> = {
   blackberry: { family: 'fruit', rotationGroup: 'perennial', seasons: ['spring'], waterNeed: 'medium', hardinessZones: [5, 9], daysToMaturity: 365, spacing: { plantInch: 36, rowInch: 72 }, germinationDays: [21, 35], startMethod: 'transplant', sowingWindow: { startOffsetDays: -28, endOffsetDays: 42 }, harvestWindow: { startOffsetDays: 365, endOffsetDays: 730 } },
   nasturtium: { family: 'flower', rotationGroup: 'flower', seasons: ['spring', 'summer'], waterNeed: 'medium', daysToMaturity: 55, spacing: { plantInch: 10, rowInch: 12 }, germinationDays: [7, 12], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 0, endOffsetDays: 90 } },
   lavender: { family: 'lamiaceae', rotationGroup: 'perennial', seasons: ['spring', 'summer'], waterNeed: 'low', hardinessZones: [5, 9], daysToMaturity: 100, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [14, 28], plantingDepthInch: 0.125, startMethod: 'transplant', sowingWindow: { startOffsetDays: 0, endOffsetDays: 70 } },
-  chili: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 80, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [7, 21], plantingDepthInch: 0.25, startMethod: 'transplant', sowingWindow: { startOffsetDays: 14, endOffsetDays: 56 } },
+  chili: { family: 'nightshade', rotationGroup: 'fruiting', waterNeed: 'medium', daysToMaturity: 80, spacing: { plantInch: 18, rowInch: 24 }, germinationDays: [7, 21], plantingDepthInch: 0.25, startMethod: 'transplant', nurseryLeadDays: [35, 49], sowingWindow: { startOffsetDays: 14, endOffsetDays: 56 }, transplantWindow: { startOffsetDays: 14, endOffsetDays: 56 }, firstHarvestDays: 78, harvestDurationDays: [35, 75], harvestHabit: 'continuous_pick' },
   arugula: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'medium', daysToMaturity: 35, spacing: { plantInch: 4, rowInch: 8 }, germinationDays: [3, 7], plantingDepthInch: 0.25, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -42, endOffsetDays: 170 } },
   chard: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'summer', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'medium', daysToMaturity: 60, spacing: { plantInch: 10, rowInch: 18 }, germinationDays: [5, 10], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -14, endOffsetDays: 150 } },
   okra: { family: 'other', rotationGroup: 'fruiting', seasons: ['summer'], waterNeed: 'medium', hardinessZones: [7, 11], daysToMaturity: 60, spacing: { plantInch: 18, rowInch: 30 }, germinationDays: [7, 14], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 21, endOffsetDays: 90 } },
@@ -535,6 +717,26 @@ const agronomyByPlantId: Record<string, Partial<PlantAgronomy>> = {
   sweet_potato: { family: 'root', rotationGroup: 'root', seasons: ['summer'], waterNeed: 'medium', hardinessZones: [8, 11], daysToMaturity: 110, spacing: { plantInch: 12, rowInch: 36 }, germinationDays: [14, 28], plantingDepthInch: 4, startMethod: 'transplant', sowingWindow: { startOffsetDays: 28, endOffsetDays: 84 } },
   winter_squash: { family: 'cucurbit', rotationGroup: 'fruiting', seasons: ['summer'], waterNeed: 'high', daysToMaturity: 100, spacing: { plantInch: 36, rowInch: 72 }, germinationDays: [5, 10], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 14, endOffsetDays: 70 } },
   bok_choy: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', daysToMaturity: 45, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [4, 10], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -42, endOffsetDays: 170 } },
+  kongxin_cai: { family: 'leafy', rotationGroup: 'leafy', seasons: ['summer'], sunRequirement: 'partial_sun', waterNeed: 'high', hardinessZones: [8, 11], daysToMaturity: 35, spacing: { plantInch: 6, rowInch: 12 }, germinationDays: [5, 10], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 7, endOffsetDays: 120 }, directSowWindow: { startOffsetDays: 7, endOffsetDays: 120 }, firstHarvestDays: 24, harvestDurationDays: [30, 60], harvestHabit: 'cut_and_come_again', successionIntervalDays: [12, 18] },
+  amaranth: { family: 'leafy', rotationGroup: 'leafy', seasons: ['summer'], sunRequirement: 'partial_sun', waterNeed: 'medium', hardinessZones: [7, 11], daysToMaturity: 30, spacing: { plantInch: 5, rowInch: 10 }, germinationDays: [4, 8], plantingDepthInch: 0.25, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 0, endOffsetDays: 110 } },
+  chive: { family: 'allium', rotationGroup: 'perennial', seasons: ['spring', 'fall'], waterNeed: 'medium', hardinessZones: [4, 10], daysToMaturity: 60, spacing: { plantInch: 6, rowInch: 12 }, germinationDays: [7, 14], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -28, endOffsetDays: 112 }, harvestHabit: 'multiple_flushes' },
+  scallion: { family: 'allium', rotationGroup: 'root', seasons: ['spring', 'fall'], waterNeed: 'medium', hardinessZones: [5, 10], daysToMaturity: 55, spacing: { plantInch: 4, rowInch: 10 }, germinationDays: [7, 12], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -35, endOffsetDays: 140 }, directSowWindow: { startOffsetDays: -35, endOffsetDays: 140 }, transplantWindow: { startOffsetDays: -21, endOffsetDays: 120 }, firstHarvestDays: 30, harvestDurationDays: [20, 40], harvestHabit: 'cut_and_come_again', successionIntervalDays: [14, 21] },
+  youmai_cai: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'medium', hardinessZones: [6, 10], daysToMaturity: 45, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [3, 8], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -35, endOffsetDays: 160 }, directSowWindow: { startOffsetDays: -35, endOffsetDays: 160 }, transplantWindow: { startOffsetDays: -21, endOffsetDays: 140 }, firstHarvestDays: 25, harvestDurationDays: [18, 35], harvestHabit: 'cut_and_come_again', successionIntervalDays: [10, 14] },
+  shanghai_qing: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', hardinessZones: [6, 10], daysToMaturity: 40, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [4, 8], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -35, endOffsetDays: 160 }, directSowWindow: { startOffsetDays: -35, endOffsetDays: 160 }, transplantWindow: { startOffsetDays: -18, endOffsetDays: 135 }, firstHarvestDays: 35, harvestDurationDays: [7, 14], harvestHabit: 'single', successionIntervalDays: [10, 14] },
+  cai_xin: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], waterNeed: 'medium', hardinessZones: [7, 10], daysToMaturity: 45, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [4, 8], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -28, endOffsetDays: 150 }, directSowWindow: { startOffsetDays: -28, endOffsetDays: 150 }, transplantWindow: { startOffsetDays: -14, endOffsetDays: 126 }, firstHarvestDays: 30, harvestDurationDays: [15, 28], harvestHabit: 'multiple_flushes', successionIntervalDays: [12, 16] },
+  garland_chrysanthemum: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'medium', hardinessZones: [6, 10], daysToMaturity: 40, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -28, endOffsetDays: 150 } },
+  suanmiao: { family: 'allium', rotationGroup: 'root', seasons: ['spring', 'fall', 'winter'], waterNeed: 'low', hardinessZones: [6, 10], daysToMaturity: 45, spacing: { plantInch: 4, rowInch: 10 }, germinationDays: [7, 14], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -35, endOffsetDays: 180 } },
+  xiaoyoucai: { family: 'brassica', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'high', hardinessZones: [6, 10], daysToMaturity: 35, spacing: { plantInch: 8, rowInch: 12 }, germinationDays: [4, 8], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -35, endOffsetDays: 160 } },
+  gai_lan: { family: 'brassica', rotationGroup: 'leafy', seasons: ['fall', 'winter', 'spring'], waterNeed: 'medium', hardinessZones: [7, 10], daysToMaturity: 55, spacing: { plantInch: 10, rowInch: 14 }, germinationDays: [4, 8], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -28, endOffsetDays: 170 } },
+  ginger: { family: 'root', rotationGroup: 'root', seasons: ['summer'], sunRequirement: 'partial_sun', waterNeed: 'high', hardinessZones: [8, 11], daysToMaturity: 150, spacing: { plantInch: 10, rowInch: 18 }, germinationDays: [14, 28], plantingDepthInch: 2, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 28, endOffsetDays: 110 } },
+  baby_napa: { family: 'brassica', rotationGroup: 'leafy', seasons: ['fall', 'winter', 'spring'], waterNeed: 'high', hardinessZones: [6, 10], daysToMaturity: 55, spacing: { plantInch: 10, rowInch: 14 }, germinationDays: [4, 8], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -28, endOffsetDays: 170 } },
+  wosun: { family: 'leafy', rotationGroup: 'leafy', seasons: ['spring', 'fall'], sunRequirement: 'partial_sun', waterNeed: 'medium', hardinessZones: [6, 10], daysToMaturity: 65, spacing: { plantInch: 10, rowInch: 14 }, germinationDays: [5, 10], plantingDepthInch: 0.25, startMethod: 'either', sowingWindow: { startOffsetDays: -35, endOffsetDays: 160 } },
+  fava_bean: { family: 'legume', rotationGroup: 'legume', seasons: ['fall', 'winter', 'spring'], waterNeed: 'medium', hardinessZones: [6, 10], daysToMaturity: 85, spacing: { plantInch: 8, rowInch: 20 }, germinationDays: [7, 14], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -45, endOffsetDays: 140 } },
+  donggua: { family: 'cucurbit', rotationGroup: 'fruiting', seasons: ['summer'], waterNeed: 'high', hardinessZones: [8, 11], daysToMaturity: 95, spacing: { plantInch: 36, rowInch: 72 }, germinationDays: [5, 12], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 21, endOffsetDays: 90 } },
+  yardlong_bean: { family: 'legume', rotationGroup: 'legume', seasons: ['summer'], waterNeed: 'medium', hardinessZones: [8, 11], daysToMaturity: 65, spacing: { plantInch: 8, rowInch: 24 }, germinationDays: [5, 10], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 14, endOffsetDays: 100 }, directSowWindow: { startOffsetDays: 14, endOffsetDays: 100 }, firstHarvestDays: 58, harvestDurationDays: [30, 55], harvestHabit: 'continuous_pick' },
+  loofah: { family: 'cucurbit', rotationGroup: 'fruiting', seasons: ['summer'], waterNeed: 'high', hardinessZones: [8, 11], daysToMaturity: 80, spacing: { plantInch: 24, rowInch: 48 }, germinationDays: [5, 12], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 21, endOffsetDays: 90 }, directSowWindow: { startOffsetDays: 21, endOffsetDays: 90 }, firstHarvestDays: 70, harvestDurationDays: [35, 65], harvestHabit: 'continuous_pick' },
+  bitter_melon: { family: 'cucurbit', rotationGroup: 'fruiting', seasons: ['summer'], waterNeed: 'high', hardinessZones: [8, 11], daysToMaturity: 75, spacing: { plantInch: 24, rowInch: 48 }, germinationDays: [5, 12], plantingDepthInch: 1, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 21, endOffsetDays: 90 } },
+  daikon: { family: 'brassica', rotationGroup: 'root', seasons: ['fall'], waterNeed: 'medium', hardinessZones: [5, 10], daysToMaturity: 55, spacing: { plantInch: 4, rowInch: 12 }, germinationDays: [3, 7], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 120, endOffsetDays: 200 } },
   calendula: { family: 'aster', rotationGroup: 'flower', seasons: ['spring', 'summer', 'fall'], waterNeed: 'low', daysToMaturity: 55, spacing: { plantInch: 10, rowInch: 12 }, germinationDays: [5, 15], plantingDepthInch: 0.25, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: -14, endOffsetDays: 120 } },
   borage: { family: 'flower', rotationGroup: 'flower', seasons: ['spring', 'summer'], waterNeed: 'medium', daysToMaturity: 60, spacing: { plantInch: 12, rowInch: 18 }, germinationDays: [5, 15], plantingDepthInch: 0.5, startMethod: 'direct_sow', sowingWindow: { startOffsetDays: 0, endOffsetDays: 90 } }
 };
@@ -606,6 +808,26 @@ const alphaGuidanceNotesByPlantId: Record<string, string[]> = {
   spinach: ['更适合冷凉季，高温下容易抽薹。'],
   arugula: ['生长很快，但高温时也容易抽薹。'],
   bok_choy: ['冷凉季表现更好，热天容易抽薹。'],
+  kongxin_cai: ['喜热喜水，盛夏状态往往比春秋更好。', '适合反复掐嫩梢采收，水分不足时容易老。'],
+  amaranth: ['耐热快长，适合夏季补种。', '嫩叶口感最好，长太快时要及时采收。'],
+  chive: ['多年生，成丛后可以多次剪收。', '根系稳定后比一年生叶菜更省心。'],
+  scallion: ['适合分批播种或分株补位。', '水分均匀时葱白更整齐。'],
+  youmai_cai: ['春秋窗口最稳，升温后口感会更容易发苦。', '适合连续补种，空位利用率很高。'],
+  shanghai_qing: ['冷凉季状态最好，热起来后容易抽薹。', '长势整齐，适合家庭菜园分批收叶。'],
+  cai_xin: ['升温太快时容易抽薹，冷凉到温暖过渡期更稳。', '嫩薹阶段口感最好，适合快收快种。'],
+  garland_chrysanthemum: ['偏冷凉，春秋种更稳更香。', '长得快，适合补种和边采边收。'],
+  suanmiao: ['冷凉到温和季节都能种，适合拿来补边角空位。', '蒜香类作物通常更省心，但不适合和豆科挤在一起。'],
+  xiaoyoucai: ['长得很快，适合春秋连续补种。', '热起来后要尽早采，不然容易抽薹。'],
+  gai_lan: ['更适合冷凉到温暖过渡期，热天品质会变粗。', '抽薹阶段最适合采收，别拖太久。'],
+  ginger: ['喜欢温暖和稳定湿度，启动慢但后劲足。', '更适合夏季长周期地块，不是快收型作物。'],
+  baby_napa: ['冷凉季更稳，热起来后很容易抽薹或松散。', '适合秋冬到早春窗口，补种价值很高。'],
+  wosun: ['春秋更稳，长杆阶段对水分波动比较敏感。', '既能吃叶也能吃茎，适合家庭菜园提高利用率。'],
+  fava_bean: ['冷凉季更适合，通常比豇豆更早进入春季菜园。', '豆科能帮助轮作过渡，但别和葱蒜挤太近。'],
+  donggua: ['典型夏季长周期瓜类，占地和搭架空间都要提前留足。', '适合院子型空间，不适合小阳台盒子。'],
+  yardlong_bean: ['喜热，搭架后结果会更持续。', '温度不够高时前期容易慢。'],
+  loofah: ['典型夏季瓜类，需要尽早搭架引蔓。', '水肥不足时雌花和坐果会受影响。'],
+  bitter_melon: ['高温阶段长势更稳，搭架后管理更顺手。', '水分波动大时坐果和果形会受影响。'],
+  daikon: ['更适合秋播，热天种容易空心或辣味重。', '土壤疏松时根形更直更整齐。'],
   cilantro: ['偏冷凉，热起来后很容易抽薹。'],
   carrot: ['直播更稳，出苗期需要持续保湿。'],
   radish: ['快收型根菜，缺水时容易变辣或空心。'],
@@ -645,6 +867,86 @@ const coreReviewSummaryByPlantId: Record<string, PlantReviewSummary> = {
   bok_choy: {
     tags: ['冷凉季', '易抽薹', '需稳水'],
     notes: ['温度波动大时更容易抽薹，水分均匀更稳。']
+  },
+  kongxin_cai: {
+    tags: ['喜暖土', '需稳水'],
+    notes: ['高温季节长得快，适合一茬茬掐梢采收。']
+  },
+  amaranth: {
+    tags: ['喜暖土', '直播更稳'],
+    notes: ['夏季快收型叶菜，长势很快，适合补种空位。']
+  },
+  chive: {
+    tags: ['需稳水'],
+    notes: ['成丛后维护轻，适合长期留在菜园边角。']
+  },
+  scallion: {
+    tags: ['直播更稳', '需稳水'],
+    notes: ['适合分批次补种，能把零散空位利用起来。']
+  },
+  youmai_cai: {
+    tags: ['冷凉季', '易抽薹', '需稳水'],
+    notes: ['春秋更稳，适合家庭菜园连续补种。']
+  },
+  shanghai_qing: {
+    tags: ['冷凉季', '易抽薹', '需稳水'],
+    notes: ['长势整齐，热起来后要预期它容易抽薹。']
+  },
+  cai_xin: {
+    tags: ['冷凉季', '易抽薹', '需稳水'],
+    notes: ['适合快收快种，嫩薹阶段品质最好。']
+  },
+  garland_chrysanthemum: {
+    tags: ['冷凉季', '直播更稳'],
+    notes: ['春秋更稳，适合边采边收和零散补位。']
+  },
+  suanmiao: {
+    tags: ['冷凉季', '直播更稳'],
+    notes: ['适合边角空位和分批补种，管理压力较小。']
+  },
+  xiaoyoucai: {
+    tags: ['冷凉季', '易抽薹', '需稳水'],
+    notes: ['长得快，适合春秋快速补种和分批采收。']
+  },
+  gai_lan: {
+    tags: ['冷凉季', '需稳水', '需稳肥'],
+    notes: ['适合冷凉到温暖过渡期，抽薹阶段品质最好。']
+  },
+  ginger: {
+    tags: ['喜暖土', '需稳水'],
+    notes: ['暖湿环境更稳，适合夏季长周期布局。']
+  },
+  baby_napa: {
+    tags: ['冷凉季', '易抽薹', '需稳水'],
+    notes: ['秋冬到早春更稳，适合连续补种。']
+  },
+  wosun: {
+    tags: ['冷凉季', '需稳水'],
+    notes: ['叶和茎都能利用，适合家庭菜园提高产出密度。']
+  },
+  fava_bean: {
+    tags: ['冷凉季', '直播更稳'],
+    notes: ['适合冷凉季豆类窗口，也能帮助轮作过渡。']
+  },
+  donggua: {
+    tags: ['喜暖土', '需引蔓', '需稳水'],
+    notes: ['典型大体量夏季瓜类，更适合院子型空间。']
+  },
+  yardlong_bean: {
+    tags: ['喜暖土', '需引蔓'],
+    notes: ['热起来后表现更好，搭架后采收会更连续。']
+  },
+  loofah: {
+    tags: ['喜暖土', '需引蔓', '需稳水'],
+    notes: ['典型夏季攀援作物，架子和水肥节奏都要跟上。']
+  },
+  bitter_melon: {
+    tags: ['喜暖土', '需引蔓', '需稳水'],
+    notes: ['典型夏季瓜类，高温阶段表现更稳定。']
+  },
+  daikon: {
+    tags: ['冷凉季', '直播更稳', '需稳水'],
+    notes: ['秋播更稳，土壤疏松时根形和口感都更好。']
   },
   cilantro: {
     tags: ['冷凉季', '易抽薹'],
@@ -700,6 +1002,208 @@ export function getPlantCredibilityNotes(plantId: string): string[] {
 
 export function getPlantReviewSummary(plantId: string): PlantReviewSummary | null {
   return coreReviewSummaryByPlantId[plantId] || null;
+}
+
+export function getPlantCredibilityLevel(plantId: string): {
+  level: 'core' | 'regional' | 'basic';
+  label: string;
+  detail: string;
+} {
+  if (isCoreReviewedPlant(plantId)) {
+    return {
+      level: 'core',
+      label: '核心校对',
+      detail: '成熟天数、窗口、需水和基础经验已优先整理。'
+    };
+  }
+
+  const regionalizedPlantIds = new Set([
+    'kongxin_cai',
+    'bitter_melon',
+    'donggua',
+    'ginger',
+    'loofah',
+    'yardlong_bean',
+    'youmai_cai',
+    'shanghai_qing',
+    'cai_xin',
+    'garland_chrysanthemum',
+    'xiaoyoucai',
+    'gai_lan',
+    'baby_napa',
+    'wosun',
+    'daikon',
+    'fava_bean',
+    'suanmiao',
+    'lettuce',
+    'bok_choy',
+    'spinach',
+    'cilantro',
+    'radish',
+    'scallion',
+    'chive',
+    'carrot',
+    'pea',
+    'tomato',
+    'pepper',
+    'eggplant',
+    'chili',
+    'cucumber',
+    'corn',
+    'bean',
+    'pumpkin',
+    'winter_squash',
+    'sweet_potato',
+    'okra',
+    'garlic',
+    'onion',
+    'leek',
+    'broccoli',
+    'cauliflower',
+    'cabbage',
+    'celery',
+    'turnip',
+    'beet',
+    'potato'
+  ]);
+
+  if (regionalizedPlantIds.has(plantId)) {
+    return {
+      level: 'regional',
+      label: '地区已校正',
+      detail: '已加入中国地区窗口或补种规则，适合本地化推荐。'
+    };
+  }
+
+  return {
+    level: 'basic',
+    label: '基础资料',
+    detail: '已有基础参数，可参与推荐解释，后续继续补充校对。'
+  };
+}
+
+export function getPlantRegionalNotes(
+  plantId: string,
+  climateProfile?: ClimateProfile | null,
+  planSeason?: PlanSeason
+): string[] {
+  const band = climateProfile?.climateBand;
+  const season = planSeason || 'spring';
+  const notes: string[] = [];
+
+  const add = (note: string) => {
+    if (!notes.includes(note)) notes.push(note);
+  };
+
+  const warmSeasonPlants = new Set(['kongxin_cai', 'bitter_melon', 'donggua', 'ginger', 'loofah', 'yardlong_bean']);
+  const coolSeasonLeafyPlants = new Set([
+    'youmai_cai',
+    'shanghai_qing',
+    'cai_xin',
+    'garland_chrysanthemum',
+    'xiaoyoucai',
+    'gai_lan',
+    'baby_napa',
+    'wosun',
+    'daikon',
+    'fava_bean',
+    'suanmiao',
+    'bok_choy',
+    'lettuce',
+    'spinach',
+    'cilantro',
+    'radish',
+    'broccoli',
+    'kale'
+  ]);
+
+  if (warmSeasonPlants.has(plantId)) {
+    add('偏暖地块更稳，尽量等土温起来后再连续种。');
+    if (band === 'south_humid' || band === 'east_monsoon' || band === 'southwest_plateau') {
+      add('在华南、江南或西南盆地，这类夏季作物通常更容易起势。');
+    }
+    if (band === 'north_cold' || band === 'north_temperate') {
+      add('在华北、东北或西北，建议晚一点下地，先避开冷土和倒春寒。');
+    }
+    if (season === 'spring') {
+      add('春季如果夜温还低，前期用地膜或小拱棚会更稳。');
+    }
+  }
+
+  if (coolSeasonLeafyPlants.has(plantId)) {
+    add('这类冷凉型蔬菜更怕闷热，水分要稳，别忽干忽湿。');
+    if (band === 'south_humid') {
+      add('在华南更适合秋冬春连续安排，盛夏容易抽薹或口感变粗。');
+    }
+    if (band === 'east_monsoon' || band === 'central') {
+      add('在长江流域更适合春秋安排，梅雨和暑热阶段要防徒长、烂叶。');
+    }
+    if (band === 'north_temperate' || band === 'north_cold') {
+      add('在华北、东北通常春秋窗口更稳，夏天要防高温催薹。');
+    }
+    if (season === 'summer') {
+      add('当前季节偏热，若坚持种，优先选半日照并缩短采收周期。');
+    }
+  }
+
+  if (plantId === 'tomato' || plantId === 'pepper' || plantId === 'eggplant') {
+    if (band === 'south_humid') {
+      add('华南湿热环境里要更早做通风和病害预防，连雨后尤其要看叶面。');
+    }
+    if (band === 'north_cold' || band === 'north_temperate') {
+      add('北方春季前期先保温，等夜温稳定后再放开长势会更顺。');
+    }
+  }
+
+  if (plantId === 'scallion' || plantId === 'chive' || plantId === 'suanmiao') {
+    if (band === 'south_humid') {
+      add('南方潮湿时注意通风，叶尖发黄多半先从积水和闷根排查。');
+    }
+    if (band === 'north_cold') {
+      add('北方冷凉季表现更稳，越夏时要避免长期暴晒和断水。');
+    }
+  }
+
+  return notes.slice(0, 3);
+}
+
+export function getPlantRegionalPriorityScore(
+  plantId: string,
+  climateProfile?: ClimateProfile | null,
+  planSeason?: PlanSeason
+) {
+  const band = climateProfile?.climateBand;
+  const season = planSeason || 'spring';
+  let score = 0;
+
+  if (!band) return score;
+
+  if (['kongxin_cai', 'bitter_melon', 'donggua', 'ginger', 'loofah', 'yardlong_bean'].includes(plantId)) {
+    if (band === 'south_humid' || band === 'east_monsoon' || band === 'southwest_plateau') score += 4;
+    if (band === 'north_temperate') score += 1;
+    if (band === 'north_cold') score -= 2;
+  }
+
+  if (['youmai_cai', 'shanghai_qing', 'cai_xin', 'garland_chrysanthemum', 'xiaoyoucai', 'gai_lan', 'baby_napa', 'wosun', 'daikon', 'fava_bean', 'suanmiao'].includes(plantId)) {
+    if (band === 'south_humid' && (season === 'fall' || season === 'winter' || season === 'spring')) score += 4;
+    if ((band === 'east_monsoon' || band === 'central') && (season === 'spring' || season === 'fall')) score += 4;
+    if ((band === 'north_temperate' || band === 'north_cold') && (season === 'spring' || season === 'fall')) score += 3;
+    if (season === 'summer') score -= 2;
+  }
+
+  if (['tomato', 'pepper', 'eggplant', 'cucumber', 'chili'].includes(plantId)) {
+    if (band === 'south_humid') score += 2;
+    if (band === 'east_monsoon' || band === 'central') score += 2;
+    if (band === 'north_temperate') score += 1;
+    if (band === 'north_cold' && season === 'spring') score -= 1;
+  }
+
+  if (['scallion', 'chive', 'suanmiao', 'radish', 'lettuce', 'bok_choy', 'cilantro'].includes(plantId)) {
+    if (band === 'north_temperate' || band === 'north_cold') score += 2;
+    if (band === 'south_humid' && season === 'summer') score -= 1;
+  }
+
+  return score;
 }
 
 function startMethodLabel(method: PlantAgronomy['startMethod']) {

@@ -34,7 +34,7 @@ export function scorePlacement(
     const [minZone, maxZone] = agronomy.hardinessZones;
     if (zoneNumber < minZone || zoneNumber > maxZone) {
       score -= 12;
-      details.push(`耐寒区扣分: Zone ${climateProfile.hardinessZone} 超出建议 ${minZone}-${maxZone}。`);
+      details.push(`气候适应扣分: 当前地区对应温区 ${climateProfile.hardinessZone}，超出建议 ${minZone}-${maxZone}。`);
     } else {
       score += 5;
     }
@@ -42,7 +42,7 @@ export function scorePlacement(
 
   if (agronomy.waterNeed === 'high' && climateProfile.mockWeatherScenario === 'dry') {
     score -= 10;
-    details.push('天气扣分: Mock 干旱场景下，高需水作物维护压力更高，仅供体验验证。');
+    details.push('天气扣分: 当前按少雨偏干节奏估算，高需水作物后续补水与保墒压力会更高。');
   }
 
   const clampedScore = Math.max(0, Math.min(100, Math.round(score)));
