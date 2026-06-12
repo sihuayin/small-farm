@@ -1751,28 +1751,19 @@ export default function GardenCanvas({
         await new Promise(resolve => setTimeout(resolve, 50));
         if (cancelled) return;
         const result = usePlannerStore.getState().generateStarterPlan(initialPlants);
-        // 使用更简洁的方式展示起始方案
+        // 从首页跳入：自动生成布局后直接进入，不显示 summary 卡片挡住画布
         if (result.placed > 0) {
-          const currentState = usePlannerStore.getState();
-          const skippedNames = result.skipped.map(id => {
-            const p = plants.find(pl => pl.id === id);
-            return p ? p.naming.zh : id;
-          });
-          setStarterSummary({
-            placed: result.placed,
-            requested: initialPlants.length,
-            skipped: result.skipped,
-            skippedNames,
-            styleLabel: currentState.planName || '智能生成菜园',
-            styleDetail: '已按地区、季节和伴生关系自动布局',
-            reasons: ['已导入你在首页选择的作物'],
-            nextStep: '可以继续微调布局，或查看任务和采收节奏'
-          });
-        }
-        // 更新方案名称
-        const currentState = usePlannerStore.getState();
-        if (!currentState.planName.startsWith('\u6211\u7684')) {
-          // name already set by generateStarterPlan
+          setShowHeatmap(true);
+          setHeatmapLayer('companion');
+          setShowFirstPlantTip(true);
+          setRequestedInspectorTab('tasks');
+          // 调整视角让菜园整体可见
+          setTimeout(() => {
+            setViewport(current => ({
+              ...current,
+              scale: (planGridWidth || gridWidth || 12) > 10 ? 0.85 : 1.0
+            }));
+          }, 400);
         }
       }
       
