@@ -103,6 +103,7 @@ export default function WelcomePage() {
   const [gridHeight, setGridHeight] = useState(12);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isNavigating, setIsNavigating] = useState(false);
+  const [climateWarning, setClimateWarning] = useState<{ plantId: string; reasons: string[] } | null>(null);
   const [searchText, setSearchText] = useState('');
 
   const recommended = useMemo(() => getRecommendedPlants(city, month), [city, month]);
@@ -110,6 +111,12 @@ export default function WelcomePage() {
     const selectedPlants = plants.filter(p => selectedIds.has(p.id));
     return computeRelation(selectedPlants);
   }, [selectedIds]);
+
+  // 从省份+城市推断气候画像
+  const climateProfile = useMemo(() => {
+    const result = inferChinaClimateProfile(province, city);
+    return result?.profile || null;
+  }, [province, city]);
 
   const filteredRecommended = useMemo(() => {
     if (!searchText.trim()) return recommended;
@@ -121,10 +128,48 @@ export default function WelcomePage() {
 
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
+    if (next.has(id)) {
+      next.delete(id);
+      setSelectedIds(next);
+      return;
+    }
+    // 检查气候适合性（只在添加时检查）
+    if (climateProfile) {
+      const agronomy = getPlantAgronomy(id);
+      const reasons: string[] = [];
+      const zoneNumber = Number.parseInt(climateProfile.hardinessZone, 10);
+      if (Number.isFinite(zoneNumber)) {
+        const [minZone, maxZone] = agronomy.hardinessZones;
+        if (zoneNumber < minZone) {
+          reasons.push(`\u5f53\u524d\u5730\u533a\u8010\u5bd2\u533a ${climateProfile.hardinessZone}\uff0c${plants.find(p => p.id === id)?.naming.zh || id}\u66f4\u9002\u5408 ${minZone}-${maxZone} \u533a`);
+        }
+      }
+      // 如果季节不匹配（非主季）
+      if (!agronomy.seasons.includes(monthToSeason(month) as any)) {
+        const seasonName = monthToSeason(month) as any;
+        const seasonLabels: Record<string, string> = { spring: '\u6625\u5b63', summer: '\u590f\u5b63', fall: '\u79cb\u5b63', winter: '\u51ac\u5b63' };
+        reasons.push(`\u5f53\u524d\u662f${seasonLabels[seasonName]}\uff0c\u4f46${plants.find(p => p.id === id)?.naming.zh || id}\u66f4\u9002\u5408${agronomy.seasons.map((s: string) => seasonLabels[s] || s).join('\u3001')}`);
+      }
+      if (reasons.length > 0) {
+        setClimateWarning({ plantId: id, reasons });
+        return; // 等待用户确认
+      }
+    }
+    next.add(id);
     setSelectedIds(next);
   };
+
+  const confirmClimateAdd = useCallback(() => {
+    if (!climateWarning) return;
+    const next = new Set(selectedIds);
+    next.add(climateWarning.plantId);
+    setSelectedIds(next);
+    setClimateWarning(null);
+  }, [climateWarning, selectedIds]);
+
+  const cancelClimateAdd = useCallback(() => {
+    setClimateWarning(null);
+  }, []);
 
   const handleStartPlanner = useCallback(() => {
     if (isNavigating) return;
@@ -439,6 +484,45 @@ export default function WelcomePage() {
             <div className="rounded-md border border-dashed border-amber-300 bg-amber-50/50 px-3 py-2 text-[10px] font-bold leading-4 text-amber-700">
               进入规划后仍可调整作物和地块尺寸。已选作物会自动导入到你的菜园方案中。
             </div>
+
+            {/* 气候不适合弹层 */}
+            {climateWarning && (
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/28 px-4 backdrop-blur-[2px]">
+                <div className="w-full max-w-sm rounded-lg border-2 border-amber-950/20 bg-[#fff8df] p-4 text-sm shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.28)]">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">气候适应性提示</div>
+                  <div className="mt-2 text-lg font-black text-amber-950">
+                    {plants.find(p => p.id === climateWarning.plantId)?.naming.emoji}{' '}
+                    {plants.find(p => p.id === climateWarning.plantId)?.naming.zh}
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {climateWarning.reasons.map((reason, i) => (
+                      <div key={i} className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] font-bold leading-4 text-amber-900">
+                        {reason}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[10px] font-bold leading-4 text-amber-700">
+                    以上因素可能影响种植效果。你可以忽略提示继续添加，系统在规划页中会给出更详细的适应性评分。
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelClimateAdd}
+                      className="rounded-md border-2 border-amber-900/15 bg-white px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+                    >
+                      不加了
+                    </button>
+                    <button
+                      type="button"
+                      onClick={confirmClimateAdd}
+                      className="rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+                    >
+                      仍然添加
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
