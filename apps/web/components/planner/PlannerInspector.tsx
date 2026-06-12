@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { tiles } from './usePlannerStore';
 import { getPlantAgronomy, getPlantCredibilityLevel, getPlantCredibilityNotes, getPlantRegionalNotes, getPlantReviewSummary, isCoreReviewedPlant, plantMap } from './plants';
 import { getNextRotationSuggestions } from './rotation';
 import { getGardenTaskBoard, getPlantGrowthStatus, summarizeGardenTasks, type GrowthStageId } from './growth';
 import { getGardenCalendarReminders } from './calendar';
 import { getSeasonTimeline } from './timeline';
+import { estimateGardenTotalYield, type YieldEstimateResult } from './yield';
 import { getCompanionRule } from './rules';
 import { getClimateCalibrationStatus, getPlantingWindowStatus, plantingWindowBadgeClassName } from './plantingWindow';
 import type { ActivityRecord, ClimateProfile, GardenEntity, HarvestRecord, PlacementInsight, PlantEntity, PlantingRecord, PlanSeason, SynergyResult, TileStatusInfo } from './types';
 import type { HarvestInput } from './usePlannerStore';
 
-type InspectorTab = 'tasks' | 'planning' | 'harvest';
+type InspectorTab = 'tasks' | 'planning' | 'harvest' | 'yield';
 type HarvestFilter = 'season' | 'plant' | 'all';
 type ActivityFilter = 'season' | 'plant' | 'all';
 type SnapshotActionId = 'first-task' | 'tasks' | 'calendar' | 'harvest' | 'activity' | 'planning';
@@ -163,6 +164,23 @@ export function PlannerInspector({
   const taskSummary = summarizeGardenTasks(gardenTasks);
   const pressureTaskSummary = summarizeGardenTasks(gardenTaskPressure);
   const seasonalHarvests = harvestRecords.filter(record => record.year === planYear && record.season === planSeason);
+  const gardenYield = useMemo(() => estimateGardenTotalYield(entities, climateProfile), [entities, climateProfile]);
+  const yieldByCategory = useMemo(() => {
+    const categories: Record<string, { plants: string[]; totalAmount: string; unit: string; count: number }> = {};
+    for (const result of gardenYield.results) {
+      if (!result.estimate.total) continue;
+      const categoryLabel = result.estimate.total.unit === 'kg' || result.estimate.total.unit === 'lb' ? '产量' : result.estimate.total.unit === '把' || result.estimate.total.unit === '个' || result.estimate.total.unit === '棵' ? '数量' : '其他';
+      if (!categories[categoryLabel]) categories[categoryLabel] = { plants: [], totalAmount: '0', unit: result.estimate.total.unit, count: 0 };
+      if (categoryLabel === '产量') {
+        const current = parseFloat(categories[categoryLabel].totalAmount);
+        const add = parseFloat(result.estimate.total.amount);
+        categories[categoryLabel].totalAmount = String(Math.round((current + (isNaN(add) ? 0 : add)) * 10) / 10);
+      }
+      categories[categoryLabel].plants.push(result.plantName);
+      categories[categoryLabel].count += result.estimate.gridCount;
+    }
+    return categories;
+  }, [gardenYield]);
   const seasonalActivities = activityRecords.filter(record => record.year === planYear && record.season === planSeason);
   const activePlantEntities = Object.values(entities).filter(entity => entity.type === 'plant');
   const harvestReadyPlants = activePlantEntities.filter(entity => getPlantGrowthStatus(entity, growthPreviewNowMs).harvestReady);
@@ -265,7 +283,8 @@ export function PlannerInspector({
   const tabItems: Array<{ id: InspectorTab; label: string; badge: string; tone: 'neutral' | 'warning' | 'success' }> = [
     { id: 'tasks', label: '任务', badge: String(gardenTasks.length), tone: gardenTasks.length > 0 ? 'warning' : 'neutral' },
     { id: 'planning', label: '规划', badge: planningBadge, tone: planningBadge === '!' ? 'warning' : ruleResult ? 'success' : 'neutral' },
-    { id: 'harvest', label: '收获', badge: String(seasonalHarvests.length), tone: seasonalHarvests.length > 0 ? 'success' : 'neutral' }
+    { id: 'harvest', label: '收获', badge: String(seasonalHarvests.length), tone: seasonalHarvests.length > 0 ? 'success' : 'neutral' },
+    { id: 'yield', label: '产量', badge: String(activePlantEntities.length), tone: activePlantEntities.length > 0 ? 'success' : 'neutral' }
   ];
 
   useEffect(() => {
@@ -664,7 +683,21 @@ export function PlannerInspector({
                 </span>
               ))}
             </div>
-          </div>
+          
+            {selectedPlantAgronomy.yieldEstimate && (
+              <div className="mt-2 flex flex-wrap items-center gap-1">
+                <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[9px] font-black text-emerald-800">
+                  产量 · {selectedPlantAgronomy.yieldEstimate.amount} {selectedPlantAgronomy.yieldEstimate.unit}/{selectedPlantAgronomy.yieldEstimate.basis.includes("每株") ? "株" : selectedPlantAgronomy.yieldEstimate.basis.includes("每格") ? "格" : "单位"}
+                </span>
+              </div>
+            )}
+            <div className="mt-2 rounded-md border border-dashed border-amber-300/50 bg-amber-50/60 px-2 py-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] font-bold leading-4 text-amber-700">
+                <span>来源: {selectedPlantAgronomy.dataSourceLabel}</span>
+                <span>·</span>
+                <span>{selectedPlantAgronomy.lastReviewedAt} 校对</span>
+              </div>
+            </div></div>
         )}
 
         {selectedEntity && (
@@ -966,6 +999,66 @@ export function PlannerInspector({
         </>
       )}
 
+      {activeTab === 'yield' && (
+        <div className="overflow-y-auto">
+          {gardenYield.totalPlants > 0 ? (
+            <>
+              <div className="border-b-2 border-amber-900/10 p-4">
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">产量估算</div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {Object.entries(yieldByCategory).map(([category, data]) => (
+                    <div key={category} className="rounded-md border border-green-900/10 bg-green-50/80 p-2">
+                      <div className="text-xs font-black text-amber-950">{data.totalAmount} {data.unit}</div>
+                      <div className="text-[9px] font-black uppercase tracking-wider text-green-700">{category}</div>
+                      <div className="mt-1 text-[9px] font-bold leading-3 text-amber-700">{data.plants.join('、')}</div>
+                    </div>
+                  ))}
+                  <div className="rounded-md border border-amber-900/10 bg-amber-50/80 p-2">
+                    <div className="text-xs font-black text-amber-950">{gardenYield.totalPlants}</div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-amber-700">作物种类</div>
+                    <div className="mt-1 text-[9px] font-bold leading-3 text-amber-600">共 {gardenYield.totalGrids} 格</div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-3">
+                <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-800">每项明细</div>
+                <div className="flex flex-col gap-1">
+                  {gardenYield.results.filter(r => r.estimate.total).map((result, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-md border border-amber-900/10 bg-white/70 px-2.5 py-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-amber-950">{result.plantName}</span>
+                        <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-black text-amber-800">{result.gridCount}格</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-amber-950">{result.estimate.total?.amount} {result.estimate.total?.unit}</span>
+                        <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black ${
+                          result.estimate.confidence === 'reliable' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' :
+                          result.estimate.confidence === 'reference' ? 'border-amber-300 bg-amber-50 text-amber-800' :
+                          'border-slate-300 bg-slate-50 text-slate-700'
+                        }`}>
+                          {result.estimate.confidence === 'reliable' ? '可靠' : result.estimate.confidence === 'reference' ? '参考' : '估算'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 rounded-md border border-dashed border-amber-300 bg-amber-50/50 px-2 py-1.5">
+                  <div className="text-[9px] font-bold leading-4 text-amber-700">
+                    产量估算基于参考农艺数据，实际产量受品种、土壤、水肥管理等因素影响。
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="text-4xl">🧑‍🌾</div>
+              <div className="mt-2 text-sm font-black text-amber-950">还没有种下作物</div>
+              <div className="mt-1 text-xs font-bold text-amber-700">先种点东西，产量预估会自动出现</div>
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'planning' && (
         <>
           {selectedEntity?.type === 'plant' && selectedPlantAgronomy && (
@@ -1189,6 +1282,66 @@ export function PlannerInspector({
             highlight={focusCue?.area === 'activity'}
           />
         </>
+      )}
+
+      {activeTab === 'yield' && (
+        <div className="overflow-y-auto">
+          {gardenYield.totalPlants > 0 ? (
+            <>
+              <div className="border-b-2 border-amber-900/10 p-4">
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">产量估算</div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {Object.entries(yieldByCategory).map(([category, data]) => (
+                    <div key={category} className="rounded-md border border-green-900/10 bg-green-50/80 p-2">
+                      <div className="text-xs font-black text-amber-950">{data.totalAmount} {data.unit}</div>
+                      <div className="text-[9px] font-black uppercase tracking-wider text-green-700">{category}</div>
+                      <div className="mt-1 text-[9px] font-bold leading-3 text-amber-700">{data.plants.join('、')}</div>
+                    </div>
+                  ))}
+                  <div className="rounded-md border border-amber-900/10 bg-amber-50/80 p-2">
+                    <div className="text-xs font-black text-amber-950">{gardenYield.totalPlants}</div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-amber-700">作物种类</div>
+                    <div className="mt-1 text-[9px] font-bold leading-3 text-amber-600">共 {gardenYield.totalGrids} 格</div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-3">
+                <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-800">每项明细</div>
+                <div className="flex flex-col gap-1">
+                  {gardenYield.results.filter(r => r.estimate.total).map((result, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-md border border-amber-900/10 bg-white/70 px-2.5 py-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-amber-950">{result.plantName}</span>
+                        <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-black text-amber-800">{result.gridCount}格</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-amber-950">{result.estimate.total?.amount} {result.estimate.total?.unit}</span>
+                        <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black ${
+                          result.estimate.confidence === 'reliable' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' :
+                          result.estimate.confidence === 'reference' ? 'border-amber-300 bg-amber-50 text-amber-800' :
+                          'border-slate-300 bg-slate-50 text-slate-700'
+                        }`}>
+                          {result.estimate.confidence === 'reliable' ? '可靠' : result.estimate.confidence === 'reference' ? '参考' : '估算'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 rounded-md border border-dashed border-amber-300 bg-amber-50/50 px-2 py-1.5">
+                  <div className="text-[9px] font-bold leading-4 text-amber-700">
+                    产量估算基于参考农艺数据，实际产量受品种、土壤、水肥管理等因素影响。
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="text-4xl">🧑‍🌾</div>
+              <div className="mt-2 text-sm font-black text-amber-950">还没有种下作物</div>
+              <div className="mt-1 text-xs font-bold text-amber-700">先种点东西，产量预估会自动出现</div>
+            </div>
+          )}
+        </div>
       )}
 
       {activeTab === 'planning' && (

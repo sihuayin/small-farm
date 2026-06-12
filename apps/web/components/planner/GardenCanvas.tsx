@@ -11,6 +11,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Stage, Layer, Line, Group, Text, Rect, Circle, Image as KonvaImage } from 'react-konva';
 import { usePlannerStore, plants, tiles, type TileType } from './usePlannerStore';
 import type { ActivityInput, HarvestInput } from './usePlannerStore';
@@ -232,7 +233,8 @@ function useImageManager(spriteUrls: string[]) {
   const imagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const [loadedCount, setLoadedCount] = useState(0);
 
-  useEffect(() => {
+  
+useEffect(() => {
     let mounted = true;
     let loaded = 0;
     const total = spriteUrls.length;
@@ -364,14 +366,6 @@ function growthStageProgressFill(stage: GrowthStageId) {
   return '#fff7a8';
 }
 
-function GrowthPreviewMetric({ label, value, tone }: { label: string; value: number; tone: 'green' | 'amber' | 'gold' }) {
-  return (
-    <div className={`rounded-md border px-1.5 py-1 text-center ${growthPreviewMetricClassName(tone)}`}>
-      <div className="text-sm font-black leading-none">{value}</div>
-      <div className="mt-0.5 text-[9px] font-black">{label}</div>
-    </div>
-  );
-}
 
 function TileStateLegendItem({ color, label }: { color: string; label: string }) {
   return (
@@ -489,11 +483,6 @@ function FirstRunCheckItem({
   );
 }
 
-function growthPreviewMetricClassName(tone: 'green' | 'amber' | 'gold') {
-  if (tone === 'green') return 'border-green-900/10 bg-green-50 text-green-800';
-  if (tone === 'gold') return 'border-yellow-900/10 bg-yellow-50 text-yellow-800';
-  return 'border-amber-900/10 bg-amber-50 text-amber-800';
-}
 
 function getGuidedPathCopy(stepId: string) {
   const copy: Record<string, { title: string; detail: string }> = {
@@ -1180,13 +1169,26 @@ function matchesSetupQuickFilter(
 interface GardenCanvasProps {
   gridWidth?: number;
   gridHeight?: number;
+  initialProvince?: string;
+  initialCity?: string;
+  initialMonth?: number;
+  initialPlants?: string[];
+  initialWidth?: number;
+  initialHeight?: number;
+  isDemo?: boolean;
 }
 
 export default function GardenCanvas({
   gridWidth = 12,
-  gridHeight = 12
+  gridHeight = 12,
+  initialProvince = '',
+  initialCity = '',
+  initialMonth,
+  initialPlants = [],
+  initialWidth,initialHeight,isDemo = false
 }: GardenCanvasProps) {
   // ==================== Refs ====================
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<any>(null);
   const isDraggingRef = useRef(false);
@@ -1684,6 +1686,105 @@ export default function GardenCanvas({
   }, [dimensions, effectiveGridWidth, effectiveGridHeight]);
 
   // ==================== 初始化 ====================
+
+  // ==================== Apply initial params from onboarding page ====================
+  useEffect(() => {
+    if (!initialProvince && !initialCity && !initialMonth && initialPlants.length === 0 && !isDemo && !initialWidth && !initialHeight) return;
+    
+    let cancelled = false;
+    
+    async function initializeFromParams() {
+      const store = usePlannerStore.getState();
+      
+      // 1. 创建新方案
+      store.createPlan();
+      
+      // 2. 设置年份/季节
+      if (initialMonth) {
+        const now = new Date();
+        const year = now.getFullYear();
+        let season: 'spring' | 'summer' | 'fall' | 'winter' = 'spring';
+        if (initialMonth >= 3 && initialMonth <= 5) season = 'spring';
+        else if (initialMonth >= 6 && initialMonth <= 8) season = 'summer';
+        else if (initialMonth >= 9 && initialMonth <= 11) season = 'fall';
+        else season = 'winter';
+        store.setPlanTime(year, season);
+      }
+      
+      // 3. 设置地块尺寸
+      if (initialWidth && initialHeight) {
+        store.resizeGarden(initialWidth, initialHeight, 1);
+      } else if (isDemo) {
+        // demo 用默认 12x12
+      }
+      
+      // 4. 设置气候参数
+      if (initialProvince || initialCity) {
+        try {
+          const { inferChinaClimateProfile } = await import('./climate');
+          if (cancelled) return;
+          const profile = inferChinaClimateProfile(
+            initialProvince || store.climateProfile.province || "",
+            initialCity || store.climateProfile.city || ""
+          );
+          if (profile) {
+            usePlannerStore.getState().updateClimateProfile(profile.profile);
+          }
+        } catch (e) {
+          console.warn('Failed to infer climate profile', e);
+        }
+      }
+      
+      // 5. 先保存到 Garden Kit（左侧植物面板用），再生成布局
+      if (initialPlants.length > 0 && !cancelled) {
+        // 将首页选中的植物写入 localStorage，左侧面板会读取到
+        try {
+          const valid = initialPlants.filter(id => plants.some(p => p.id === id));
+          if (valid.length > 0) {
+            window.localStorage.setItem(GARDEN_KIT_STORAGE_KEY, JSON.stringify(valid));
+            setSetupPlantIds(valid);
+          }
+        } catch (e) {
+          // ignore storage error
+        }
+        // 短暂延迟确保 store 状态已更新
+        await new Promise(resolve => setTimeout(resolve, 50));
+        if (cancelled) return;
+        const result = usePlannerStore.getState().generateStarterPlan(initialPlants);
+        // 使用更简洁的方式展示起始方案
+        if (result.placed > 0) {
+          const currentState = usePlannerStore.getState();
+          const skippedNames = result.skipped.map(id => {
+            const p = plants.find(pl => pl.id === id);
+            return p ? p.naming.zh : id;
+          });
+          setStarterSummary({
+            placed: result.placed,
+            requested: initialPlants.length,
+            skipped: result.skipped,
+            skippedNames,
+            styleLabel: currentState.planName || '智能生成菜园',
+            styleDetail: '已按地区、季节和伴生关系自动布局',
+            reasons: ['已导入你在首页选择的作物'],
+            nextStep: '可以继续微调布局，或查看任务和采收节奏'
+          });
+        }
+        // 更新方案名称
+        const currentState = usePlannerStore.getState();
+        if (!currentState.planName.startsWith('\u6211\u7684')) {
+          // name already set by generateStarterPlan
+        }
+      }
+      
+      if (isDemo && !cancelled) {
+        usePlannerStore.getState().loadDemoScenario();
+      }
+    }
+    
+    initializeFromParams();
+    return () => { cancelled = true; };
+  }, []);
+  
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -2345,6 +2446,11 @@ export default function GardenCanvas({
       });
       const placed = placePlant(x, y, activeToolId);
       if (placed) {
+        // 种植后自动选中刚种下的实体，右侧检查器显示删除/旋转按钮
+        const newlyPlacedEntity = getEntityAt(x, y);
+        if (newlyPlacedEntity) {
+          selectEntity(newlyPlacedEntity.id);
+        }
         setShowEmptyPlanTip(false);
         if (supplementPlacementTip && supplementPlacementTip.plantId === activeToolId) {
           const starterTask = getPlantStarterTask(activeToolId, climateProfile, planSeason);
@@ -3897,15 +4003,17 @@ export default function GardenCanvas({
       setShowFirstPlantTip(true);
     }
   }, [isDemoMode, plantCount]);
+  // 来自首页设置页面（有 initial 参数）时跳过欢迎弹窗
+  const cameFromOnboarding = Boolean(initialProvince || initialCity || initialMonth || initialPlants.length > 0 || initialWidth || initialHeight || isDemo);
   useEffect(() => {
     if (showWelcome && (plantCount > 0 || planName === 'Demo Scenario')) {
       setShowWelcome(false);
       setHasDismissedWelcome(true);
       return;
     }
-    if (hasDismissedWelcome || plantCount > 0 || planName === 'Demo Scenario') return;
+    if (hasDismissedWelcome || plantCount > 0 || planName === 'Demo Scenario' || cameFromOnboarding) return;
     setShowWelcome(true);
-  }, [hasDismissedWelcome, planName, plantCount, showWelcome]);
+  }, [hasDismissedWelcome, planName, plantCount, showWelcome, cameFromOnboarding]);
 
   const growthPreviewSummary = useMemo(() => {
     const summary: Record<GrowthStageId, number> = {
@@ -4040,7 +4148,6 @@ export default function GardenCanvas({
   const guidedPathSteps = useMemo(() => ([
     { id: 'plant', label: '种植布局', done: plantCount > 0 },
     { id: 'rules', label: '规则解释', done: plantCount > 0 && showHeatmap },
-    { id: 'preview', label: '生长预览', done: growthPreviewDays > 0 },
     { id: 'tasks', label: '任务处理', done: seasonalActivityCount > 0 || currentGardenTasks.length === 0 && plantCount > 0 },
     { id: 'harvest', label: '采收记录', done: seasonalHarvestCount > 0 },
     { id: 'cleanup', label: '地块整理', done: resolvedCleanupKeys.length > 0 }
@@ -4389,11 +4496,7 @@ export default function GardenCanvas({
     });
     setShareExportMessage('已生成分享图：包含菜园标题、菜园评分、作物数量和任务状态。');
   }, [effectiveGridHeight, effectiveGridWidth, planName, planSeason, planYear, shareCardStats]);
-  const handleFocusPreviewHarvest = useCallback(() => {
-    if (!growthPreviewFirstHarvestId) return;
-    selectEntity(growthPreviewFirstHarvestId);
-    focusEntityInView(growthPreviewFirstHarvestId);
-  }, [focusEntityInView, growthPreviewFirstHarvestId, selectEntity]);
+
   const handleResolveTileStatus = useCallback((status: TileStatusInfo) => {
     if (status.kind !== 'cleanup') return;
     const key = `${status.gridX},${status.gridY}`;
@@ -4579,7 +4682,6 @@ export default function GardenCanvas({
       setRequestedInspectorTab('harvest');
       markDemoTourItem('harvest');
       if (growthPreviewFirstHarvestId) {
-        handleFocusPreviewHarvest();
       }
       return;
     }
@@ -4628,7 +4730,6 @@ export default function GardenCanvas({
     firstRunCurrentStep,
     focusEntityInView,
     growthPreviewFirstHarvestId,
-    handleFocusPreviewHarvest,
     handleSelectRecommendedPlant,
     handleTaskSelectEntity,
     loadDemoScenario,
@@ -4691,7 +4792,6 @@ export default function GardenCanvas({
     }
 
     if (growthPreviewFirstHarvestId) {
-      handleFocusPreviewHarvest();
       return;
     }
 
@@ -4709,7 +4809,6 @@ export default function GardenCanvas({
     growthPreviewDays,
     growthPreviewFirstHarvestId,
     guidedPathComplete,
-    handleFocusPreviewHarvest,
     handleTaskSelectEntity,
     plantCount,
     selectEntity,
@@ -4806,8 +4905,15 @@ export default function GardenCanvas({
             />
           ))}
         </div>
-        <div className="pointer-events-none absolute left-3 top-3 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/70 px-2 py-1.5 text-[10px] font-black text-amber-900 shadow-[0_3px_0_rgba(120,72,24,0.12)] md:left-8 md:top-6 md:px-3 md:py-2 md:text-xs">
-          {planName} · {planYear} · {atmosphere.label}
+        <div className="pointer-events-auto absolute left-3 top-3 flex items-center gap-2 rounded-lg border-2 border-amber-950/15 bg-[#fff8df]/70 px-2 py-1.5 text-[10px] font-black text-amber-900 shadow-[0_3px_0_rgba(120,72,24,0.12)] md:left-8 md:top-6 md:px-3 md:py-2 md:text-xs">
+          <span>{planName} · {planYear} · {atmosphere.label}</span>
+          <button
+            type="button"
+            onClick={() => router.push("/statistics")}
+            className="rounded-md border border-amber-900/20 bg-white/80 px-1.5 py-0.5 text-[9px] font-black text-amber-900 hover:bg-amber-50"
+          >
+            📊
+          </button>
         </div>
         <div className="pointer-events-none absolute left-3 top-[48px] rounded-lg border-2 border-white/35 bg-white/35 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-950 shadow-[0_3px_0_rgba(44,82,52,0.1)] backdrop-blur md:left-8 md:top-[74px] md:px-3 md:py-1.5 md:text-[10px]">
           {atmosphere.badge}
@@ -5225,6 +5331,16 @@ export default function GardenCanvas({
         <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-1 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:right-80 md:top-4">
           <button
             type="button"
+            onClick={() => router.push('/statistics')}
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-amber-900/15 bg-white text-base font-black text-amber-950 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+            aria-label="收获统计"
+            title="收获统计"
+          >
+            📊
+          </button>
+          <div className="h-6 w-px bg-amber-900/15" />
+          <button
+            type="button"
             onClick={() => zoomAt(viewport.scale / 1.14)}
             className="flex h-8 w-8 items-center justify-center rounded-md border border-amber-900/15 bg-white text-lg font-black text-amber-950 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
             aria-label="缩小"
@@ -5252,81 +5368,6 @@ export default function GardenCanvas({
           >
             重置
           </button>
-        </div>
-        <div className="absolute bottom-12 left-8 z-10 hidden w-64 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/90 p-3 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:block">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">生长预览</div>
-              <div className="mt-0.5 text-xs font-black text-amber-950">
-                {growthPreviewDays === 0 ? '今天' : `+${growthPreviewDays} 天`}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setGrowthPreviewDays(0)}
-              disabled={growthPreviewDays === 0}
-              className="h-7 rounded-md border border-amber-900/15 bg-white px-2 text-[10px] font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.1)] hover:bg-amber-50 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
-            >
-              今天
-            </button>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={120}
-            step={5}
-            value={growthPreviewDays}
-            onChange={(event) => setGrowthPreviewDays(Number(event.target.value))}
-            className="mt-3 w-full accent-green-700"
-            aria-label="生长预览天数"
-          />
-          <div className="mt-2 grid grid-cols-4 gap-1">
-            {[30, 60, 90, 120].map(day => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => setGrowthPreviewDays(day)}
-                className={`h-6 rounded-md border text-[9px] font-black shadow-[0_1px_0_rgba(120,72,24,0.1)] ${
-                  growthPreviewDays === day
-                    ? 'border-green-900/15 bg-green-100 text-green-900'
-                    : 'border-amber-900/10 bg-white/75 text-amber-800 hover:bg-amber-50'
-                }`}
-              >
-                +{day}
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 grid grid-cols-3 gap-1">
-            <GrowthPreviewMetric label="生长" value={growthPreviewSummary.growing} tone="green" />
-            <GrowthPreviewMetric label="成熟" value={growthPreviewSummary.mature} tone="amber" />
-            <GrowthPreviewMetric label="采收" value={growthPreviewSummary.harvest} tone="gold" />
-          </div>
-          <div className="mt-2 rounded-md border border-amber-900/10 bg-white/65 px-2 py-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-[9px] font-black uppercase tracking-wider text-amber-700">采收预测</div>
-              {growthPreviewFirstHarvestId && (
-                <button
-                  type="button"
-                  onClick={handleFocusPreviewHarvest}
-                  className="h-5 rounded border border-green-900/15 bg-green-100 px-1.5 text-[9px] font-black text-green-900 hover:bg-green-200"
-                >
-                  定位采收
-                </button>
-              )}
-            </div>
-            <div className="mt-1 text-[10px] font-black leading-4 text-amber-950">
-              {growthPreviewHarvestForecast.length > 0
-                ? growthPreviewHarvestForecast.map(([name, count]) => `${name} x${count}`).join(' · ')
-                : growthPreviewDays === 0
-                  ? '今天暂无集中采收'
-                  : '该时间点暂无集中采收'}
-            </div>
-          </div>
-          <div className="mt-1 flex justify-between text-[9px] font-black text-amber-700">
-            <span>0d</span>
-            <span>60d</span>
-            <span>120d</span>
-          </div>
         </div>
         {activeToolId && (
           <div className="absolute right-3 top-16 z-10 w-44 rounded-lg border-2 border-amber-950/20 bg-[#fff8df]/92 p-2 shadow-[0_4px_0_rgba(120,72,24,0.14),0_12px_22px_rgba(61,40,20,0.14)] backdrop-blur md:right-80 md:w-56">

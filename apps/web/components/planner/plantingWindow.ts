@@ -41,19 +41,44 @@ export interface SupplementCandidateResult {
 
 const refinedCityNames = new Set([
   '北京',
+  '天津',
   '上海',
+  '重庆',
   '杭州',
+  '宁波',
   '广州',
   '深圳',
+  '东莞',
+  '佛山',
   '武汉',
   '成都',
   '西安',
   '南京',
   '苏州',
   '青岛',
+  '济南',
   '郑州',
   '长沙',
-  '昆明'
+  '昆明',
+  '贵阳',
+  '南宁',
+  '海口',
+  '福州',
+  '厦门',
+  '合肥',
+  '南昌',
+  '沈阳',
+  '大连',
+  '哈尔滨',
+  '太原',
+  '石家庄',
+  '兰州',
+  '乌鲁木齐',
+  '呼和浩特',
+  '拉萨',
+  '银川',
+  '西宁',
+  '长春'
 ]);
 
 export function getClimateCalibrationStatus(climateProfile: ClimateProfile) {
@@ -764,6 +789,324 @@ function getCityWindowRefinement(
     }
   }
 
+
+  // === 东北地区 ===
+  if (city === '沈阳' || city === '大连') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber', 'yardlong_bean'].includes(plantId)) {
+      return {
+        startShiftDays: 5,
+        endShiftDays: -1,
+        detailHint: `${city}春季回暖偏慢，暖季菜更适合等地温和晴稳后再定植。`
+      };
+    }
+    if (planSeason === 'summer' && ['lettuce', 'scallion', 'shanghai_qing'].includes(plantId)) {
+      return {
+        startShiftDays: -3,
+        endShiftDays: 2,
+        detailHint: `${city}夏季昼长充足但夜间回凉快，叶菜类安排空间比内地更紧。`
+      };
+    }
+    if (planSeason === 'fall' && ['shanghai_qing', 'youmai_cai', 'cai_xin'].includes(plantId)) {
+      return {
+        startShiftDays: -5,
+        endShiftDays: -3,
+        detailHint: `${city}秋季降温快于同纬度内陆，叶菜窗口会提前收口。`
+      };
+    }
+  }
+
+  if (city === '哈尔滨') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: 8,
+        endShiftDays: -2,
+        detailHint: '哈尔滨春季冻土融化迟，暖季菜更适合在明显回暖后再安排。'
+      };
+    }
+    if (planSeason === 'summer' && ['lettuce', 'scallion', 'radish'].includes(plantId)) {
+      return {
+        startShiftDays: -5,
+        endShiftDays: 0,
+        detailHint: '哈尔滨夏季短但日照长，快菜更适合集中安排前段窗口。'
+      };
+    }
+  }
+
+  // === 华北平原扩展 ===
+  if (city === '天津') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: 1,
+        endShiftDays: 2,
+        detailHint: '天津春季沿海偏凉，暖季菜略晚一点定植更稳。'
+      };
+    }
+    if (planSeason === 'summer' && ['shanghai_qing', 'youmai_cai', 'lettuce'].includes(plantId)) {
+      return {
+        startShiftDays: 2,
+        endShiftDays: -4,
+        detailHint: '天津夏季湿热明显，叶菜窗口通常要避开最热时段。'
+      };
+    }
+  }
+
+  if (city === '济南') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: -1,
+        endShiftDays: 2,
+        detailHint: '济南春季升温偏快，暖季菜的基础窗口可以略灵活展开。'
+      };
+    }
+    if (planSeason === 'summer' && ['shanghai_qing', 'lettuce', 'youmai_cai'].includes(plantId)) {
+      return {
+        startShiftDays: 3,
+        endShiftDays: -6,
+        detailHint: '济南夏季高温显著，叶菜夏播更适合避开最热的一段。'
+      };
+    }
+    if (planSeason === 'fall' && ['cai_xin', 'scallion', 'chive'].includes(plantId)) {
+      return {
+        startShiftDays: -2,
+        endShiftDays: 3,
+        detailHint: '济南秋季回温平稳，秋菜窗口比较干脆。'
+      };
+    }
+  }
+
+  // === 华东/江淮 ===
+  if (city === '宁波') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: -1,
+        endShiftDays: 4,
+        detailHint: '宁波春季沿海回暖略缓，暖季菜前期窗口可以适当放宽。'
+      };
+    }
+    if (planSeason === 'summer' && ['lettuce', 'scallion'].includes(plantId)) {
+      return {
+        startShiftDays: 0,
+        endShiftDays: -5,
+        detailHint: '宁波夏季台风和湿热交替，叶菜窗口更适合提前收紧。'
+      };
+    }
+  }
+
+  if (city === '合肥') {
+    if (planSeason === 'spring' && ['lettuce', 'shanghai_qing', 'youmai_cai', 'cai_xin'].includes(plantId)) {
+      return {
+        startShiftDays: -2,
+        endShiftDays: -4,
+        detailHint: '合肥春末升温节奏快，叶菜窗口通常收口偏早。'
+      };
+    }
+    if (planSeason === 'summer' && ['yardlong_bean', 'loofah'].includes(plantId)) {
+      return {
+        startShiftDays: -2,
+        endShiftDays: 3,
+        detailHint: '合肥夏季热量充足，瓜豆类可以更积极安排。'
+      };
+    }
+  }
+
+  // === 华南扩展 ===
+  if (city === '东莞' || city === '佛山') {
+    if ((planSeason === 'fall' || planSeason === 'winter') && ['lettuce', 'scallion', 'kongxin_cai'].includes(plantId)) {
+      return {
+        startShiftDays: -5,
+        endShiftDays: 10,
+        detailHint: `${city}秋冬长季非常明显，叶菜窗口可以拉长连续安排。`
+      };
+    }
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'chili', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: -3,
+        endShiftDays: 5,
+        detailHint: `${city}春季回暖早，暖季作物适合更积极安排。`
+      };
+    }
+  }
+
+  if (city === '南宁') {
+    if ((planSeason === 'fall' || planSeason === 'winter') && ['lettuce', 'scallion', 'kongxin_cai'].includes(plantId)) {
+      return {
+        startShiftDays: -6,
+        endShiftDays: 12,
+        detailHint: '南宁冬季温和，叶菜窗口远比长江流域宽，可以多排几轮。'
+      };
+    }
+    if (planSeason === 'spring' && coreWarmSeasonPlants.includes(plantId)) {
+      return {
+        startShiftDays: -5,
+        endShiftDays: 5,
+        detailHint: '南宁春季早暖明显，暖季作物窗口可以更早启动。'
+      };
+    }
+  }
+
+  if (city === '海口') {
+    if ((planSeason === 'winter' || planSeason === 'spring') && ['lettuce', 'scallion', 'kongxin_cai'].includes(plantId)) {
+      return {
+        startShiftDays: -10,
+        endShiftDays: 20,
+        detailHint: '海口基本无霜冻，适合全年滚动安排叶菜和快菜。'
+      };
+    }
+    if ((planSeason === 'summer' || planSeason === 'spring') && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: -8,
+        endShiftDays: 6,
+        detailHint: '海口夏季高温多雨，暖季作物注意避雨和高畦安排。'
+      };
+    }
+  }
+
+  // === 西南扩展 ===
+  if (city === '贵阳') {
+    if (planSeason === 'spring' && ['lettuce', 'shanghai_qing', 'youmai_cai', 'cai_xin'].includes(plantId)) {
+      return {
+        startShiftDays: -2,
+        endShiftDays: 5,
+        detailHint: '贵阳春季阴雨多升温慢，叶菜窗口比同纬度略宽。'
+      };
+    }
+    if (planSeason === 'summer' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: 1,
+        endShiftDays: 3,
+        detailHint: '贵阳夏季不极端高温，暖季菜适合顺着雨热节奏平稳推进。'
+      };
+    }
+  }
+
+  if (city === '重庆') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'chili'].includes(plantId)) {
+      return {
+        startShiftDays: 2,
+        endShiftDays: 2,
+        detailHint: '重庆春季前段偏湿冷，茄果类适合当地温和晴暖后再发力。'
+      };
+    }
+    if (planSeason === 'summer' && ['lettuce', 'shanghai_qing', 'youmai_cai'].includes(plantId)) {
+      return {
+        startShiftDays: 0,
+        endShiftDays: -8,
+        detailHint: '重庆夏季高温闷热明显，叶菜窗口收口早，更适合安排耐热品种。'
+      };
+    }
+    if (planSeason === 'fall' && ['lettuce', 'scallion', 'kongxin_cai'].includes(plantId)) {
+      return {
+        startShiftDays: -2,
+        endShiftDays: 5,
+        detailHint: '重庆秋季高温逐步缓解，叶菜窗口可以平稳接上。'
+      };
+    }
+  }
+
+  // === 东南沿海 ===
+  if (city === '福州' || city === '厦门') {
+    if ((planSeason === 'fall' || planSeason === 'winter') && ['lettuce', 'scallion', 'kongxin_cai'].includes(plantId)) {
+      return {
+        startShiftDays: -5,
+        endShiftDays: 10,
+        detailHint: `${city}秋冬温度适中，叶菜和快菜适合拉成长窗口安排。`
+      };
+    }
+    if (planSeason === 'spring' && coreWarmSeasonPlants.includes(plantId)) {
+      return {
+        startShiftDays: -3,
+        endShiftDays: 4,
+        detailHint: `${city}春季回暖较早，暖季菜可以更积极启动。`
+      };
+    }
+  }
+
+  // === 西北地区 ===
+  if (city === '兰州') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: 3,
+        endShiftDays: -1,
+        detailHint: '兰州春季回温较慢且偏干，暖季菜定植略晚更稳。'
+      };
+    }
+    if (planSeason === 'summer' && ['lettuce', 'radish', 'scallion'].includes(plantId)) {
+      return {
+        startShiftDays: -3,
+        endShiftDays: 4,
+        detailHint: '兰州夏季温差大且日照充足，快菜和叶菜安排空间不错。'
+      };
+    }
+  }
+
+  if (city === '乌鲁木齐') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: 5,
+        endShiftDays: -2,
+        detailHint: '乌鲁木齐春季回温晚且偏干，暖季菜窗口需要更保守。'
+      };
+    }
+    if (planSeason === 'summer' && ['lettuce', 'radish', 'scallion'].includes(plantId)) {
+      return {
+        startShiftDays: -5,
+        endShiftDays: 2,
+        detailHint: '乌鲁木齐夏季昼夜温差大，快菜适合集中安排在前段。'
+      };
+    }
+  }
+
+  // === 华北/华中扩展 ===
+  if (city === '石家庄') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: 0,
+        endShiftDays: 2,
+        detailHint: '石家庄春季升温稳定，暖季菜可以按基础窗口安排。'
+      };
+    }
+    if (planSeason === 'summer' && ['shanghai_qing', 'youmai_cai', 'lettuce'].includes(plantId)) {
+      return {
+        startShiftDays: 2,
+        endShiftDays: -5,
+        detailHint: '石家庄夏季干热明显，叶菜窗口需避开最热时段。'
+      };
+    }
+  }
+
+  if (city === '太原') {
+    if (planSeason === 'spring' && ['tomato', 'pepper', 'cucumber'].includes(plantId)) {
+      return {
+        startShiftDays: 4,
+        endShiftDays: -1,
+        detailHint: '太原春季偏凉且干燥，暖季菜需等地温和气温稳定后再定植。'
+      };
+    }
+    if (planSeason === 'fall' && ['lettuce', 'scallion', 'cai_xin'].includes(plantId)) {
+      return {
+        startShiftDays: -4,
+        endShiftDays: 2,
+        detailHint: '太原秋季降温偏快，叶菜窗口需提前安排。'
+      };
+    }
+  }
+
+  if (city === '南昌') {
+    if (planSeason === 'spring' && ['lettuce', 'shanghai_qing', 'youmai_cai', 'cai_xin'].includes(plantId)) {
+      return {
+        startShiftDays: -2,
+        endShiftDays: -5,
+        detailHint: '南昌春季升温偏快、湿度大，叶菜窗口容易提前收口。'
+      };
+    }
+    if (planSeason === 'summer' && ['yardlong_bean', 'loofah', 'kongxin_cai'].includes(plantId)) {
+      return {
+        startShiftDays: -2,
+        endShiftDays: 4,
+        detailHint: '南昌夏季高温高湿，耐热类瓜豆适合积极安排。'
+      };
+    }
+  }
   return null;
 }
 

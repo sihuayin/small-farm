@@ -6,7 +6,16 @@
 
 import dynamic from 'next/dynamic';
 
-// 条件式客户端解析：禁用 SSR，防止 Konva 在服务端报错
+interface PlannerProps {
+  initialProvince?: string;
+  initialCity?: string;
+  initialMonth?: number;
+  initialWidth?: number;
+  initialHeight?: number;
+  initialPlants?: string[];
+  isDemo?: boolean;
+}
+
 const GardenCanvas = dynamic(
   () => import('./GardenCanvas'),
   {
@@ -22,6 +31,6 @@ const GardenCanvas = dynamic(
   }
 );
 
-export default function Planner() {
-  return <GardenCanvas />;
+export default function Planner(props: PlannerProps) {
+  return <GardenCanvas {...props} />;
 }

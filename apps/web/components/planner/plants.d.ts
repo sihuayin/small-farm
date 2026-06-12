@@ -116,6 +116,23 @@ export interface PlantAgronomy {
   harvestHabit?: PlantHarvestHabit;
   /** 若适合连续播种，建议的分批补种间隔 */
   successionIntervalDays?: [number, number];
+  /** 产量估算（每株或每 1x1 格），可选 */
+  yieldEstimate?: {
+    /** 估算值，例如 "1-2" 或 "0.5" */
+    amount: string;
+    /** 单位，例如 "kg" / "斤" / "克" / "棵" / "把" */
+    unit: string;
+    /** 估算基准注释，例如 "每株 / 每格 / 每平方米" */
+    basis: string;
+    /** 置信水平: rough=粗略估算, reference=可参考, reliable=较可靠 */
+    confidence: "rough" | "reference" | "reliable";
+    /** 影响产量的因素说明 */
+    factors?: string[];
+  };
+  /** 植株寿命（仅多年生有效），近似年数 */
+  perennialYears?: [number, number];
+  /** 建议种植密度: 每格最大株数，用于产量换算 */
+  plantsPerGrid?: number;
 }
 
 export interface Plant {
