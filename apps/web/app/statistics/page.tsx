@@ -129,6 +129,46 @@ export default function StatisticsPage() {
       }));
   }, [entities, climateProfile]);
 
+  // Yield vs actual comparison
+  const yieldComparison = useMemo(() => {
+    const actualMap: Record<string, { kg: number; count: number }> = {};
+    for (const r of harvestRecords) {
+      if (!actualMap[r.plantName]) actualMap[r.plantName] = { kg: 0, count: 0 };
+      const unit = (r.unit as string);
+      if (['kg', 'lb', 'g', '斤'].includes(unit)) {
+        let val = r.quantity;
+        if (unit === 'lb') val *= 0.4536;
+        else if (unit === 'g') val /= 1000;
+        else if (unit === '斤') val /= 2;
+        actualMap[r.plantName].kg += val;
+      } else {
+        actualMap[r.plantName].count += r.quantity;
+      }
+    }
+    return yieldEstimates
+      .map(ye => {
+        const actual = actualMap[ye.plantName];
+        if (!actual) return null;
+        const isWeightUnit = ['kg', 'lb', 'g', '斤'].includes(ye.unit as string);
+        const estimatedNum = parseFloat(ye.totalEstimated);
+        if (isNaN(estimatedNum)) return null;
+        const actualNum = isWeightUnit ? actual.kg : actual.count;
+        if (actualNum === 0) return null;
+        const maxVal = Math.max(estimatedNum, actualNum);
+        return {
+          name: ye.plantName,
+          estimated: estimatedNum.toFixed(1),
+          actual: actualNum.toFixed(1),
+          unit: isWeightUnit ? 'kg' : '个',
+          ratio: actualNum / estimatedNum,
+          estimatedPct: (estimatedNum / maxVal) * 100,
+          actualPct: (actualNum / maxVal) * 100
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .slice(0, 10);
+  }, [yieldEstimates, harvestRecords]);
+
   // Recent harvests
   const recentHarvests = useMemo(() => {
     return [...harvestRecords].slice(0, 20);
