@@ -522,6 +522,15 @@ function getGuidedPathCopy(stepId: string) {
 interface ShareCardStats {
   score: number;
   plantCount: number;
+  /** 各植物的生长状态详情，用于分享图高亮展示 */
+  growthItems?: {
+    id: string;
+    emoji: string;
+    name: string;
+    stageLabel: string;
+    progressPercent: number;
+    stageId: GrowthStageId;
+  }[];
   speciesCount: number;
   taskCount: number;
   harvestCount: number;
@@ -613,6 +622,105 @@ function getShareGardenScore(stats: Omit<ShareCardStats, 'score' | 'seasonLabel'
   return Math.max(0, Math.min(100, Math.round(64 - taskPressure + diversityBonus + activityMomentum + harvestMomentum + plantedBonus)));
 }
 
+
+/** 生长阶段的颜色映射 */
+const stageColors: Record<string, { bg: string; fg: string; bar: string }> = {
+  seed: { bg: '#fef3c7', fg: '#92400e', bar: '#d6a66b' },
+  seedling: { bg: '#dcfce7', fg: '#166534', bar: '#bef264' },
+  growing: { bg: '#f0fdf4', fg: '#15803d', bar: '#86efac' },
+  mature: { bg: '#fefce8', fg: '#92400e', bar: '#fde68a' },
+  harvest: { bg: '#fef2f2', fg: '#991b1b', bar: '#fca5a5' }
+};
+
+/**
+ * 绘制生长阶段进度条 + 图标卡片。高120，宽340。
+ */
+function drawGrowthItemCard(
+  ctx: CanvasRenderingContext2D, x: number, y: number,
+  emoji: string, name: string, stageLabel: string, progress: number, stageId: string
+) {
+  const colors = stageColors[stageId] || stageColors.growing;
+  ctx.fillStyle = '#ffffff';
+  drawRoundRect(ctx, x, y, 340, 120, 16);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120, 72, 24, 0.10)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.font = '48px system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, x + 24, y + 56);
+  ctx.fillStyle = '#3d2814';
+  ctx.font = '900 20px system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(name, x + 86, y + 42);
+  ctx.fillStyle = colors.fg;
+  ctx.font = '600 16px system-ui, sans-serif';
+  ctx.fillText(stageLabel, x + 86, y + 72);
+  ctx.fillStyle = '#f5f5f0';
+  drawRoundRect(ctx, x + 86, y + 90, 230, 10, 5);
+  ctx.fill();
+  ctx.fillStyle = colors.bar;
+  const barWidth = Math.min(230, Math.max(8, (progress / 140) * 230));
+  drawRoundRect(ctx, x + 86, y + 90, barWidth, 10, 5);
+  ctx.fill();
+  ctx.fillStyle = '#8b7355';
+  ctx.font = '500 13px system-ui, sans-serif';
+  ctx.fillText('\u8fdb\u5ea6 ' + Math.min(100, progress) + '%', x + 86 + barWidth + 6, y + 95);
+  ctx.textBaseline = 'alphabetic';
+}
+
+/**
+ * 绘制装饰性植物图标（小型，用于背景氛围）
+ */
+function drawDecoEmoji(ctx: CanvasRenderingContext2D, emoji: string, x: number, y: number, size: number, alpha: number) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = size + 'px system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.fillText(emoji, x, y);
+  ctx.restore();
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
+}
+
+/**
+ * 绘制季节装饰：小花/小太阳/小雪花等
+ */
+function drawSeasonDecorations(ctx: CanvasRenderingContext2D, seasonLabel: string, canvasW: number) {
+  const decoEmojis: Array<{ e: string; x: number; y: number; s: number; a: number }> = [];
+  if (seasonLabel.includes('\u6625')) {
+    decoEmojis.push(
+      { e: '\U0001F338', x: 180, y: 94, s: 24, a: 0.25 },
+      { e: '\U0001F331', x: 960, y: 84, s: 20, a: 0.20 },
+      { e: '\U0001F98B', x: 120, y: 158, s: 26, a: 0.18 },
+      { e: '\U0001F337', x: 1060, y: 166, s: 28, a: 0.22 }
+    );
+  } else if (seasonLabel.includes('\u590f')) {
+    decoEmojis.push(
+      { e: '\u2600\ufe0f', x: 200, y: 96, s: 22, a: 0.20 },
+      { e: '\U0001F33B', x: 1028, y: 100, s: 30, a: 0.22 },
+      { e: '\U0001F345', x: 140, y: 170, s: 22, a: 0.18 },
+      { e: '\U0001F41D', x: 1080, y: 172, s: 22, a: 0.18 }
+    );
+  } else if (seasonLabel.includes('\u79cb')) {
+    decoEmojis.push(
+      { e: '\U0001F342', x: 160, y: 92, s: 22, a: 0.22 },
+      { e: '\U0001F383', x: 990, y: 88, s: 28, a: 0.20 },
+      { e: '\U0001F33E', x: 110, y: 162, s: 24, a: 0.18 },
+      { e: '\U0001F341', x: 1060, y: 170, s: 26, a: 0.20 }
+    );
+  } else {
+    decoEmojis.push(
+      { e: '\u2744\ufe0f', x: 170, y: 94, s: 20, a: 0.20 },
+      { e: '\U0001F332', x: 1010, y: 86, s: 26, a: 0.18 },
+      { e: '\U0001F54A\ufe0f', x: 125, y: 160, s: 22, a: 0.15 },
+      { e: '\u2B50', x: 1070, y: 165, s: 22, a: 0.18 }
+    );
+  }
+  decoEmojis.forEach(d => drawDecoEmoji(ctx, d.e, d.x, d.y, d.s, d.a));
+}
+
 async function createGardenShareCard(stageDataUrl: string, title: string, stats: ShareCardStats) {
   const stageImage = await loadCanvasImage(stageDataUrl);
   const canvas = document.createElement('canvas');
@@ -621,44 +729,63 @@ async function createGardenShareCard(stageDataUrl: string, title: string, stats:
   const ctx = canvas.getContext('2d');
   if (!ctx) return stageDataUrl;
 
-  ctx.fillStyle = '#f7e8c8';
+  /* ===== 丰富的渐变背景 ===== */
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bgGrad.addColorStop(0, '#e8f5e9');
+  bgGrad.addColorStop(0.08, '#f1f8e9');
+  bgGrad.addColorStop(0.22, '#fff8e1');
+  bgGrad.addColorStop(0.50, '#fce4ec');
+  bgGrad.addColorStop(0.75, '#f3e5f5');
+  bgGrad.addColorStop(1, '#e8eaf6');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const sky = ctx.createLinearGradient(0, 0, 0, 760);
-  sky.addColorStop(0, '#9fd8ee');
-  sky.addColorStop(0.55, '#b8dfbf');
-  sky.addColorStop(1, '#f7e8c8');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, canvas.width, 760);
 
-  ctx.fillStyle = 'rgba(255, 248, 223, 0.94)';
-  drawRoundRect(ctx, 64, 64, 1072, 1472, 30);
+  /* ===== 季节氛围装饰 ===== */
+  drawSeasonDecorations(ctx, stats.seasonLabel, canvas.width);
+
+  /* ===== 主卡片容器 ===== */
+  ctx.fillStyle = 'rgba(255, 252, 240, 0.95)';
+  drawRoundRect(ctx, 48, 48, 1104, 1504, 36);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(120, 72, 24, 0.22)';
+  ctx.strokeStyle = 'rgba(120, 72, 24, 0.18)';
   ctx.lineWidth = 4;
   ctx.stroke();
 
-  ctx.fillStyle = '#2f6f3d';
-  ctx.font = '900 34px Arial, sans-serif';
-  ctx.fillText('SMALL FARM PLANNER', 104, 130);
-  ctx.fillStyle = '#3d2814';
-  ctx.font = '900 58px Arial, sans-serif';
-  drawWrappedText(ctx, title, 104, 210, 840, 64, 2);
-  ctx.fillStyle = '#7c4a18';
-  ctx.font = '800 28px Arial, sans-serif';
-  const plantText = stats.plantNames.length > 0 ? stats.plantNames.join('、') : '先规划一块小菜园';
-  drawWrappedText(ctx, `我的${stats.seasonLabel}小菜园计划：${plantText}`, 104, 315, 900, 38, 2);
-
-  drawScoreBadge(ctx, 896, 104, stats.score);
-
-  const imageBox = { x: 104, y: 405, width: 992, height: 720 };
-  ctx.fillStyle = '#fff8df';
-  drawRoundRect(ctx, imageBox.x, imageBox.y, imageBox.width, imageBox.height, 24);
+  /* ===== 顶部阴影线 ===== */
+  ctx.fillStyle = 'rgba(46, 125, 50, 0.06)';
+  ctx.fillRect(72, 48, 1056, 8);
+  drawRoundRect(ctx, 72, 48, 1056, 8, 4);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(120, 72, 24, 0.18)';
+
+  /* ===== 品牌标识 ===== */
+  ctx.fillStyle = '#1b5e20';
+  ctx.font = '900 32px system-ui, sans-serif';
+  ctx.fillText('\U0001F331 \u519c\u592b\u8ba1\u5212\u5668', 90, 124);
+
+  /* ===== 分数徽章（右上） ===== */
+  drawScoreBadge(ctx, 928, 68, stats.score);
+
+  /* ===== 标题 ===== */
+  ctx.fillStyle = '#2e2e2e';
+  ctx.font = '900 54px system-ui, sans-serif';
+  drawWrappedText(ctx, title, 90, 200, 780, 62, 2);
+
+  /* ===== 副标题：植物列表 ===== */
+  ctx.fillStyle = '#6b4f2e';
+  ctx.font = '800 26px system-ui, sans-serif';
+  const plantText = stats.plantNames.length > 0 ? stats.plantNames.join('\u3001') : '\u5148\u89c4\u5212\u4e00\u5757\u5c0f\u83dc\u56ed';
+  drawWrappedText(ctx, '\u6211\u7684' + stats.seasonLabel + '\u5c0f\u83dc\u56ed\u8ba1\u5212\uff1a' + plantText, 90, 295, 880, 34, 2);
+
+  /* ===== 花园截图区域 ===== */
+  const imageBox = { x: 90, y: 370, width: 1020, height: 560 };
+  ctx.fillStyle = '#fefcf5';
+  drawRoundRect(ctx, imageBox.x, imageBox.y, imageBox.width, imageBox.height, 20);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120, 72, 24, 0.12)';
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  const imageScale = Math.min((imageBox.width - 36) / stageImage.width, (imageBox.height - 36) / stageImage.height);
+  const imageScale = Math.min((imageBox.width - 28) / stageImage.width, (imageBox.height - 28) / stageImage.height);
   const drawWidth = stageImage.width * imageScale;
   const drawHeight = stageImage.height * imageScale;
   ctx.drawImage(
@@ -669,26 +796,59 @@ async function createGardenShareCard(stageDataUrl: string, title: string, stats:
     drawHeight
   );
 
+  /* ===== 分割装饰线 ===== */
+  ctx.strokeStyle = 'rgba(120, 72, 24, 0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(140, 960);
+  ctx.lineTo(1060, 960);
+  ctx.stroke();
+
+  /* ===== 生长状态卡片区标题 ===== */
+  ctx.fillStyle = '#3d2814';
+  ctx.font = '900 28px system-ui, sans-serif';
+  ctx.fillText('\U0001F33F \u4f5c\u7269\u751f\u957f\u72b6\u6001', 140, 1004);
+
+  /* ===== 生长卡片布局：2列，每列宽360 ===== */
+  if (stats.growthItems && stats.growthItems.length > 0) {
+    const items = stats.growthItems.slice(0, 6);
+    items.forEach((item, index) => {
+      const row = Math.floor(index / 2);
+      const col = index % 2;
+      drawGrowthItemCard(ctx, 90 + col * 360, 1030 + row * 134,
+        item.emoji, item.name, item.stageLabel, item.progressPercent, item.stageId);
+    });
+  } else {
+    ctx.fillStyle = '#8b7355';
+    ctx.font = '600 22px system-ui, sans-serif';
+    ctx.fillText('\u5148\u79cd\u4e0b\u51e0\u682a\u690d\u7269\uff0c\u5c31\u80fd\u5728\u8fd9\u91cc\u770b\u5230\u5b83\u4eec\u7684\u751f\u957f\u8fdb\u5ea6 \U0001FAB4', 140, 1080);
+  }
+
+  /* ===== 统计指标卡片 ===== */
+  const metricsY = stats.growthItems && stats.growthItems.length > 0 ? 1400 : 1220;
   const metrics = [
-    { label: '作物', value: String(stats.plantCount), tone: '#2f9e44' },
-    { label: '品种', value: String(stats.speciesCount), tone: '#b7791f' },
-    { label: '今日任务', value: String(stats.taskCount), tone: '#0284c7' },
-    { label: '本季采收', value: String(stats.harvestCount), tone: '#16a34a' }
+    { label: '\U0001F331 \u4f5c\u7269', value: String(stats.plantCount), tone: '#2e7d32' },
+    { label: '\U0001F33F \u54c1\u79cd', value: String(stats.speciesCount), tone: '#7b4f2c' },
+    { label: '\U0001F4CB \u4eca\u65e5\u4efb\u52a1', value: String(stats.taskCount), tone: '#0277bd' },
+    { label: '\U0001F9FA \u672c\u5b63\u91c7\u6536', value: String(stats.harvestCount), tone: '#2e7d32' }
   ];
   metrics.forEach((metric, index) => {
-    const x = 104 + index * 248;
-    drawMetricCard(ctx, x, 1165, 220, 150, metric.value, metric.label, metric.tone);
+    drawMetricCard(ctx, 80 + index * 260, metricsY, 240, 80, metric.value, metric.label, metric.tone);
   });
 
+  /* ===== 推荐语 ===== */
   ctx.fillStyle = '#3d2814';
-  ctx.font = '900 34px Arial, sans-serif';
-  ctx.fillText(getShareRecommendation(stats), 104, 1392);
-  ctx.fillStyle = '#7c4a18';
-  ctx.font = '800 24px Arial, sans-serif';
-  drawWrappedText(ctx, '先在规划器里试种一遍，再把真实菜园种下去。', 104, 1440, 780, 34, 2);
-  ctx.fillStyle = '#2f6f3d';
-  ctx.font = '900 24px Arial, sans-serif';
-  ctx.fillText('small-farm planner', 104, 1504);
+  ctx.font = '900 30px system-ui, sans-serif';
+  const recY = metricsY + 120;
+  ctx.fillText(getShareRecommendation(stats), 90, recY);
+
+  /* ===== 底部信息 ===== */
+  ctx.fillStyle = '#6b4f2e';
+  ctx.font = '600 22px system-ui, sans-serif';
+  drawWrappedText(ctx, '\u5148\u7528\u89c4\u5212\u5668\u8bd5\u79cd\u4e00\u904d\uff0c\u518d\u628a\u771f\u5b9e\u83dc\u56ed\u79cd\u4e0b\u53bb \U0001F331', 90, recY + 52, 720, 32, 2);
+  ctx.fillStyle = '#1b5e20';
+  ctx.font = '900 22px system-ui, sans-serif';
+  ctx.fillText('small-farm planner', 90, recY + 100);
 
   return canvas.toDataURL('image/png', 1);
 }
@@ -725,7 +885,7 @@ function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number,
     const testLine = line + char;
     const isLast = index === chars.length - 1;
     if (ctx.measureText(testLine).width > maxWidth && line) {
-      ctx.fillText(lines === maxLines - 1 ? `${line.slice(0, Math.max(0, line.length - 1))}…` : line, x, y + lines * lineHeight);
+      ctx.fillText(lines === maxLines - 1 ? line.slice(0, Math.max(0, line.length - 1)) + '\u2026' : line, x, y + lines * lineHeight);
       lines += 1;
       line = char;
       return;
@@ -737,45 +897,60 @@ function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number,
   });
 }
 
+/**
+ * 更新后的分数徽章：圆角 + 光晕效果
+ */
 function drawScoreBadge(ctx: CanvasRenderingContext2D, x: number, y: number, score: number) {
-  ctx.fillStyle = score >= 80 ? '#dcfce7' : score >= 60 ? '#fef3c7' : '#fee2e2';
-  drawRoundRect(ctx, x, y, 176, 176, 28);
+  /* 外部光晕 */
+  ctx.save();
+  const glowColor = score >= 80 ? 'rgba(46, 125, 50, 0.15)' : score >= 60 ? 'rgba(183, 121, 31, 0.15)' : 'rgba(220, 38, 38, 0.15)';
+  ctx.fillStyle = glowColor;
+  drawRoundRect(ctx, x - 4, y - 4, 180, 180, 32);
   ctx.fill();
-  ctx.strokeStyle = score >= 80 ? '#16a34a' : score >= 60 ? '#d97706' : '#dc2626';
-  ctx.lineWidth = 4;
+  ctx.restore();
+
+  ctx.fillStyle = score >= 80 ? '#e8f5e9' : score >= 60 ? '#fff8e1' : '#ffebee';
+  drawRoundRect(ctx, x, y, 172, 172, 28);
+  ctx.fill();
+  ctx.strokeStyle = score >= 80 ? '#2e7d32' : score >= 60 ? '#f57f17' : '#c62828';
+  ctx.lineWidth = 3;
   ctx.stroke();
+
   ctx.fillStyle = '#3d2814';
-  ctx.font = '900 26px Arial, sans-serif';
-  ctx.fillText('菜园', x + 52, y + 48);
-  ctx.fillText('评分', x + 52, y + 78);
-  ctx.font = '900 64px Arial, sans-serif';
-  ctx.fillText(String(score), x + 42, y + 142);
+  ctx.font = '900 22px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\u83dc\u56ed\u8bc4\u5206', x + 86, y + 48);
+  ctx.font = '900 58px system-ui, sans-serif';
+  const scoreColor = score >= 80 ? '#2e7d32' : score >= 60 ? '#e65100' : '#c62828';
+  ctx.fillStyle = scoreColor;
+  ctx.fillText(String(score), x + 86, y + 140);
+  ctx.textAlign = 'start';
 }
 
 function drawMetricCard(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, value: string, label: string, color: string) {
-  ctx.fillStyle = '#fff8df';
-  drawRoundRect(ctx, x, y, width, height, 20);
+  ctx.fillStyle = '#fefcf5';
+  drawRoundRect(ctx, x, y, width, height, 16);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(120, 72, 24, 0.16)';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(120, 72, 24, 0.10)';
+  ctx.lineWidth = 2;
   ctx.stroke();
   ctx.fillStyle = color;
-  ctx.font = '900 54px Arial, sans-serif';
-  ctx.fillText(value, x + 28, y + 72);
-  ctx.fillStyle = '#7c4a18';
-  ctx.font = '900 24px Arial, sans-serif';
-  ctx.fillText(label, x + 28, y + 118);
+  ctx.font = '900 40px system-ui, sans-serif';
+  ctx.fillText(value, x + 20, y + 52);
+  ctx.fillStyle = '#6b4f2e';
+  ctx.font = '600 20px system-ui, sans-serif';
+  ctx.fillText(label, x + 20, y + 72);
 }
 
 function getShareRecommendation(stats: ShareCardStats) {
-  if (stats.score >= 82) return '这块菜园已经很适合开种';
-  if (stats.taskCount > 0) return '先处理今日任务，菜园状态会更稳';
-  if (stats.plantCount === 0) return '从几株蔬菜、香草或花开始规划';
-  return '这是一版可以继续优化的菜园计划';
+  if (stats.score >= 82) return '\U0001F389 \u8fd9\u5757\u83dc\u56ed\u5df2\u7ecf\u5f88\u9002\u5408\u5f00\u79cd\u4e86\uff01';
+  if (stats.taskCount > 0) return '\U0001F4CC \u5148\u5904\u7406\u4eca\u65e5\u4efb\u52a1\uff0c\u83dc\u56ed\u72b6\u6001\u4f1a\u66f4\u7a33';
+  if (stats.plantCount === 0) return '\U0001F331 \u4ece\u51e0\u682a\u852c\u83dc\u3001\u9999\u8349\u6216\u82b1\u5f00\u59cb\u89c4\u5212\u5427';
+  return '\U0001F44D \u8fd9\u662f\u4e00\u7248\u53ef\u4ee5\u7ee7\u7eed\u4f18\u5316\u7684\u83dc\u56ed\u8ba1\u5212';
 }
 
 function sanitizeShareFileName(name: string) {
-  return name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'small-farm';
+  return name.replace(/[\\\\/:*?"<>|]/g, '-').trim() || 'small-farm';
 }
 
 function placementScoreLabel(result: SynergyResult) {
@@ -4071,13 +4246,27 @@ export default function GardenCanvas({
       activityCount: seasonalActivityCount
     };
 
+    /* 为每种植物收集生长状态，用于分享图 */
+    const growthItems = activePlants.map(entity => {
+      const status = getPlantGrowthStatus(entity, growthPreviewNowMs);
+      return {
+        id: entity.id,
+        emoji: entity.plant.naming.emoji,
+        name: entity.plant.naming.zh,
+        stageLabel: status.stageLabel,
+        progressPercent: status.progressPercent,
+        stageId: status.stage
+      };
+    }).filter((item, index, self) => self.findIndex(i => i.name === item.name) === index).slice(0, 8);
+
     return {
       ...baseStats,
+      growthItems,
       score: getShareGardenScore(baseStats),
       seasonLabel: seasonLabel(planSeason),
       plantNames
     };
-  }, [currentGardenTasks.length, entities, planSeason, seasonalActivityCount, seasonalHarvestCount]);
+  }, [currentGardenTasks.length, entities, growthPreviewNowMs, planSeason, seasonalActivityCount, seasonalHarvestCount]);
   const firstRunHasRules = completedDemoTourItems.has('companion') || completedDemoTourItems.has('conflict') || (plantCount > 0 && showHeatmap);
   const firstRunHasTaskFocus = seasonalActivityCount > 0 || completedDemoTourItems.has('task');
   const firstRunCheckSteps = useMemo<FirstRunCheckStep[]>(() => ([
@@ -4485,7 +4674,7 @@ export default function GardenCanvas({
       status: 'ok',
       label: '分享图'
     });
-    setShareExportMessage('已生成分享图：包含菜园标题、菜园评分、作物数量和任务状态。');
+    setShareExportMessage('已生成分享图：包含菜园标题、菜园评分、作物生长状态和任务信息。');
   }, [effectiveGridHeight, effectiveGridWidth, planName, planSeason, planYear, shareCardStats]);
 
   const handleResolveTileStatus = useCallback((status: TileStatusInfo) => {
