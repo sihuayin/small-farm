@@ -7,6 +7,24 @@ import { plants, getPlantAgronomy, getPlantRegionalNotes } from '@/components/pl
 import { inferChinaClimateProfile } from '@/components/planner/climate';
 import type { ClimateProfile } from '@/components/planner/types';
 import type { Plant } from '@/components/planner/plants.d';
+import type { GardenPlan, ClimateProfile as CP } from '@/components/planner/types';
+import { getGardenTaskBoard, getPlantGrowthStatus, summarizeGardenTasks } from '@/components/planner/growth';
+import { generateWeatherSignals } from '@/components/planner/climate';
+
+const PLAN_STORAGE_KEY = 'small-farm:garden-plan:v1';
+
+function loadSavedPlan(): GardenPlan | null {
+  try {
+    const raw = localStorage.getItem(PLAN_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function formatDate(timestamp: number) {
+  const d = new Date(timestamp);
+  return d.getMonth() + 1 + '/' + d.getDate();
+}
 
 // 月份中文名
 const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -95,7 +113,9 @@ function computeRelation(selected: Plant[]) {
 export default function WelcomePage() {
   const router = useRouter();
   const now = new Date();
+  const [plan, setPlan] = useState<GardenPlan | null>(null);
   const [step, setStep] = useState<'setup' | 'select'>('setup');
+  const [showSetup, setShowSetup] = useState(false);
   const [province, setProvince] = useState('浙江');
   const [city, setCity] = useState('杭州');
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -105,6 +125,11 @@ export default function WelcomePage() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [climateWarning, setClimateWarning] = useState<{ plantId: string; reasons: string[] } | null>(null);
   const [searchText, setSearchText] = useState('');
+
+  useEffect(() => {
+    const saved = loadSavedPlan();
+    if (saved) setPlan(saved);
+  }, []);
 
   const recommended = useMemo(() => getRecommendedPlants(city, month), [city, month]);
   const { greenIds, redIds } = useMemo(() => {
@@ -117,6 +142,32 @@ export default function WelcomePage() {
     const result = inferChinaClimateProfile(province, city);
     return result?.profile || null;
   }, [province, city]);
+
+  // 工作台数据
+  const dashboardTasks = useMemo(() => {
+    if (!plan) return [];
+    const nowMs = Date.now();
+    return getGardenTaskBoard(plan.entities, plan.climateProfile, plan.season, nowMs, 8);
+  }, [plan]);
+
+  const dashboardSummary = useMemo(() => summarizeGardenTasks(dashboardTasks), [dashboardTasks]);
+
+  const activePlants = useMemo(() => {
+    if (!plan) return [];
+    const nowMs = Date.now();
+    return Object.values(plan.entities)
+      .filter((e: any) => e.type === 'plant')
+      .slice(0, 6);
+  }, [plan]);
+
+  const weatherSignals = useMemo(() => {
+    if (!plan?.climateProfile) return [];
+    return generateWeatherSignals(plan.climateProfile, plan.season);
+  }, [plan]);
+
+  const hasPlan = !!plan;
+  const plantCount = plan ? Object.values(plan.entities).filter((e: any) => e.type === 'plant').length : 0;
+  const harvestCount = plan?.harvestRecords?.length || 0;
 
   const filteredRecommended = useMemo(() => {
     if (!searchText.trim()) return recommended;
@@ -191,14 +242,19 @@ export default function WelcomePage() {
         <div className="flex items-center gap-3">
           <span className="text-2xl">🌱</span>
           <h1 className="text-lg font-black text-green-900">农夫计划器</h1>
+          {hasPlan && (
+            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-[9px] font-black text-green-800">
+              {plantCount} 株 · {harvestCount} 次采收
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => router.push('/statistics')}
-            className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+            onClick={() => router.push('/planner')}
+            className="rounded-md border-2 border-green-700/20 bg-white px-2.5 py-1 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-50"
           >
-            📊 统计
+            🗺 菜园
           </button>
           <button
             type="button"
@@ -207,15 +263,20 @@ export default function WelcomePage() {
           >
             📅 日历
           </button>
-          <span className="rounded-full border border-green-300 bg-green-50 px-3 py-1 text-xs font-black text-green-800">
-            Alpha
-          </span>
+          <button
+            type="button"
+            onClick={() => router.push('/statistics')}
+            className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+          >
+            📊 统计
+          </button>
         </div>
       </header>
 
       {/* 主体 */}
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-6 md:px-8 md:py-10">
-        {step === 'setup' && (
+        {/* 步骤内容（无计划时显示，或从工作台"新建"弹窗中显示） */}
+        {!hasPlan && step === 'setup' && (
           <div className="flex flex-col gap-6">
             {/* 标题区 */}
             <div className="text-center">
