@@ -5094,6 +5094,13 @@ export default function GardenCanvas({
           >
             📊
           </button>
+          <button
+            type="button"
+            onClick={() => router.push("/calendar")}
+            className="rounded-md border border-amber-900/20 bg-white/80 px-1.5 py-0.5 text-[9px] font-black text-amber-900 hover:bg-amber-50"
+          >
+            📅
+          </button>
         </div>
         <div className="pointer-events-none absolute left-3 top-[48px] rounded-lg border-2 border-white/35 bg-white/35 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-950 shadow-[0_3px_0_rgba(44,82,52,0.1)] backdrop-blur md:left-8 md:top-[74px] md:px-3 md:py-1.5 md:text-[10px]">
           {atmosphere.badge}

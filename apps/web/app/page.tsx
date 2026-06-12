@@ -200,6 +200,13 @@ export default function WelcomePage() {
           >
             📊 统计
           </button>
+          <button
+            type="button"
+            onClick={() => router.push('/calendar')}
+            className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+          >
+            📅 日历
+          </button>
           <span className="rounded-full border border-green-300 bg-green-50 px-3 py-1 text-xs font-black text-green-800">
             Alpha
           </span>
