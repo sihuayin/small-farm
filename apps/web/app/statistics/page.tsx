@@ -131,11 +131,15 @@ export default function StatisticsPage() {
   // === 种植植物列表（带收获状态） ===
   const plantHarvestStatus = useMemo(() => {
     const plantEntities = Object.values(entities).filter((entity): entity is any => entity.type === 'plant');
-    const harvestByEntityId: Record<string, { totalQuantity: number; unit: string }> = {};
+    const harvestByEntityId: Record<string, { totalQuantity: number; unit: string; firstHarvestedAt?: number }> = {};
     for (const r of harvestRecords) {
-      if (!harvestByEntityId[r.entityId]) harvestByEntityId[r.entityId] = { totalQuantity: 0, unit: r.unit };
+      if (!harvestByEntityId[r.entityId]) {
+        harvestByEntityId[r.entityId] = { totalQuantity: 0, unit: r.unit, firstHarvestedAt: r.harvestedAt };
+      }
       harvestByEntityId[r.entityId].totalQuantity += r.quantity;
-      harvestByEntityId[r.entityId].unit = r.unit;
+      if (!harvestByEntityId[r.entityId].firstHarvestedAt || r.harvestedAt < harvestByEntityId[r.entityId].firstHarvestedAt!) {
+        harvestByEntityId[r.entityId].firstHarvestedAt = r.harvestedAt;
+      }
     }
 
     return plantEntities.map(entity => {
@@ -155,6 +159,13 @@ export default function StatisticsPage() {
 
       const isHarvested = !!harvest;
 
+      // 预计成熟时间
+      const daysToMaturity = agronomy.daysToMaturity || 0;
+      const createdAt = entity.createdAt || 0;
+      const maturityMs = daysToMaturity * 24 * 60 * 60 * 1000;
+      const estimatedHarvestAt = createdAt > 0 ? createdAt + maturityMs : 0;
+      const firstHarvestedAt = harvest?.firstHarvestedAt || 0;
+
       return {
         entityId: entity.id,
         emoji: entity.plant?.naming?.emoji || '🌱',
@@ -162,6 +173,10 @@ export default function StatisticsPage() {
         plantId: entity.plantId,
         gridCount: entity.spanX * entity.spanY,
         isHarvested,
+        createdAt,
+        daysToMaturity,
+        estimatedHarvestAt,
+        firstHarvestedAt,
         actualQuantity: harvest ? harvest.totalQuantity : 0,
         actualUnit: harvest ? harvest.unit : (yieldEst?.unit || ''),
         predictedAmount,
@@ -384,7 +399,22 @@ export default function StatisticsPage() {
                         <span className="text-base flex-shrink-0">{p.emoji}</span>
                         <div className="min-w-0">
                           <div className="text-xs font-black text-amber-950 truncate">{p.plantName}</div>
-                          <div className="text-[9px] font-bold text-amber-500">{p.gridCount} 格</div>
+                          <div className="flex items-center gap-1.5 text-[9px] font-bold text-amber-500">
+                            <span>{p.gridCount} 格</span>
+                            {p.daysToMaturity > 0 && (
+                              <span>· {p.daysToMaturity} 天成熟</span>
+                            )}
+                          </div>
+                          {/* 预计 / 实际收获时间 */}
+                          {p.isHarvested && p.firstHarvestedAt > 0 ? (
+                            <div className="text-[8px] font-bold text-green-700">
+                              收获于 {formatDateFull(p.firstHarvestedAt)}
+                            </div>
+                          ) : !p.isHarvested && p.estimatedHarvestAt > 0 ? (
+                            <div className="text-[8px] font-bold text-amber-600">
+                              预计 {formatDateFull(p.estimatedHarvestAt)} 成熟
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -553,6 +583,11 @@ function unitLabel(unit: string) {
 function formatDate(timestamp: number) {
   const d = new Date(timestamp);
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function formatDateFull(timestamp: number) {
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 // ==================== Export helpers ====================
