@@ -128,6 +128,52 @@ export default function StatisticsPage() {
         confidence: r.estimate.confidence
       }));
   }, [entities, climateProfile]);
+  // === 种植植物列表（带收获状态） ===
+  const plantHarvestStatus = useMemo(() => {
+    const plantEntities = Object.values(entities).filter((entity): entity is any => entity.type === 'plant');
+    const harvestByEntityId: Record<string, { totalQuantity: number; unit: string }> = {};
+    for (const r of harvestRecords) {
+      if (!harvestByEntityId[r.entityId]) harvestByEntityId[r.entityId] = { totalQuantity: 0, unit: r.unit };
+      harvestByEntityId[r.entityId].totalQuantity += r.quantity;
+      harvestByEntityId[r.entityId].unit = r.unit;
+    }
+
+    return plantEntities.map(entity => {
+      const agronomy = getPlantAgronomy(entity.plantId);
+      const yieldEst = agronomy.yieldEstimate;
+      const harvest = harvestByEntityId[entity.id];
+
+      // 单株预测产量
+      let predictedAmount = '';
+      let predictedUnit = '';
+      if (yieldEst) {
+        const match = yieldEst.amount.match(/[\d.]+/);
+        const baseVal = match ? parseFloat(match[0]) : 0;
+        predictedAmount = yieldEst.amount;
+        predictedUnit = yieldEst.unit;
+      }
+
+      const isHarvested = !!harvest;
+
+      return {
+        entityId: entity.id,
+        emoji: entity.plant?.naming?.emoji || '🌱',
+        plantName: entity.plant?.naming?.zh || entity.plantId,
+        plantId: entity.plantId,
+        gridCount: entity.spanX * entity.spanY,
+        isHarvested,
+        actualQuantity: harvest ? harvest.totalQuantity : 0,
+        actualUnit: harvest ? harvest.unit : (yieldEst?.unit || ''),
+        predictedAmount,
+        predictedUnit,
+        hasPrediction: !!yieldEst,
+      };
+    }).sort((a, b) => {
+      if (a.isHarvested !== b.isHarvested) return a.isHarvested ? 1 : -1;
+      return a.plantName.localeCompare(b.plantName);
+    });
+  }, [entities, harvestRecords]);
+
 
   // Yield vs actual comparison
   const yieldComparison = useMemo(() => {
@@ -321,6 +367,55 @@ export default function StatisticsPage() {
                 )}
               </div>
             </div>
+
+            {/* Plant List with Harvest Status */}
+            {plantHarvestStatus.length > 0 && (
+              <div className="mt-4 rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">种植植物</div>
+                  <div className="text-[9px] font-bold text-amber-500">
+                    {plantHarvestStatus.filter(p => p.isHarvested).length}/{plantHarvestStatus.length} 已收获
+                  </div>
+                </div>
+                <div className="flex flex-col gap-px bg-amber-900/5">
+                  {plantHarvestStatus.map(p => (
+                    <div key={p.entityId} className="flex items-center justify-between bg-white px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base flex-shrink-0">{p.emoji}</span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-black text-amber-950 truncate">{p.plantName}</div>
+                          <div className="text-[9px] font-bold text-amber-500">{p.gridCount} 格</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {p.isHarvested ? (
+                          <div className="rounded-md bg-green-100 px-2 py-1 text-right">
+                            <div className="text-xs font-black text-green-800">
+                              {p.actualQuantity} {p.actualUnit}
+                            </div>
+                            <div className="text-[8px] font-bold text-green-600">已收获</div>
+                          </div>
+                        ) : (
+                          <div className="rounded-md bg-amber-100 px-2 py-1 text-right">
+                            {p.hasPrediction ? (
+                              <>
+                                <div className="text-xs font-black text-amber-800">~{p.predictedAmount} {p.predictedUnit}</div>
+                                <div className="text-[8px] font-bold text-amber-600">待收获</div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-xs font-black text-amber-800">—</div>
+                                <div className="text-[8px] font-bold text-amber-600">待收获</div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Latest Activities */}
             {activityRecords.length > 0 && (
