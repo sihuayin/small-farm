@@ -181,7 +181,7 @@ export default function WelcomePage() {
     params.set('width', String(gridWidth));
     params.set('height', String(gridHeight));
     params.set('plants', Array.from(selectedIds).join(','));
-    window.location.href = `/planner?${params.toString()}`;
+    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/planner?${params.toString()}`;
   }, [isNavigating, province, city, month, gridWidth, gridHeight, selectedIds]);
 
   return (
