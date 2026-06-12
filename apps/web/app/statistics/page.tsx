@@ -234,10 +234,10 @@ export default function StatisticsPage() {
             <div className="mt-1 text-sm font-bold text-amber-700">先去菜园里种点什么吧</div>
             <button
               type="button"
-              onClick={() => router.push('/planner')}
+              onClick={() => router.push('/')}
               className="mt-6 rounded-md border-2 border-green-900/15 bg-green-100 px-6 py-2 text-sm font-black text-green-900 shadow-[0_3px_0_rgba(22,101,52,0.14)] hover:bg-green-200"
             >
-              去规划菜园
+              去选作物开始种植
             </button>
           </div>
         ) : (
@@ -288,8 +288,9 @@ export default function StatisticsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-6 text-center text-xs font-bold text-amber-600">
-                    还没有采收记录
+                  <div className="flex flex-col items-center py-4 text-center">
+                    <div className="text-xs font-bold text-amber-600">还没有采收记录</div>
+                    <div className="mt-1 text-[9px] font-bold text-amber-500">种下作物后，在这里查看收成排行</div>
                   </div>
                 )}
               </div>
@@ -313,8 +314,9 @@ export default function StatisticsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-6 text-center text-xs font-bold text-amber-600">
-                    暂无季节数据
+                      <div className="flex flex-col items-center py-4 text-center">
+                    <div className="text-xs font-bold text-amber-600">暂无季节数据</div>
+                    <div className="mt-1 text-[9px] font-bold text-amber-500">记录采收和养护后，这里会按季节汇总</div>
                   </div>
                 )}
               </div>
@@ -402,8 +404,20 @@ export default function StatisticsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="py-8 text-center text-xs font-bold text-amber-600">
-                  {filterPlant === 'all' ? '还没有采收记录' : `「${filterPlant}」暂无采收记录`}
+                <div className="flex flex-col items-center py-6 text-center">
+                  <div className="text-3xl">🥕</div>
+                  <div className="mt-1 text-xs font-bold text-amber-700">
+                    {filterPlant === 'all' ? '作物成熟后，在规划页右侧面板点击「记录采收」即可记录' : `「${filterPlant}」暂无采收记录`}
+                  </div>
+                  {filterPlant === 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => router.push('/')}
+                      className="mt-3 rounded-md border-2 border-green-900/15 bg-green-100 px-4 py-1.5 text-[10px] font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+                    >
+                      去选作物开始种植
+                    </button>
+                  )}
                 </div>
               )}
             </div>
