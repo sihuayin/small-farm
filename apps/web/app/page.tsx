@@ -280,7 +280,7 @@ export default function WelcomePage() {
       {/* 主体 */}
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-6 md:px-8 md:py-10">
         {/* 步骤内容（无计划时显示，或从工作台"新建"弹窗中显示） */}
-        {!hasPlan && step === 'setup' && (
+        {step === 'setup' && (
           <div className="flex flex-col gap-6">
             {/* 标题区 */}
             <div className="text-center">
