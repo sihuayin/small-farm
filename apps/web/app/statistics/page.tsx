@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { GardenPlan, HarvestRecord, ActivityRecord } from '@/components/planner/types';
 import { getPlantAgronomy } from '@/components/planner/plants';
@@ -236,6 +236,8 @@ export default function StatisticsPage() {
   }, [harvestRecords]);
 
   const [filterPlant, setFilterPlant] = useState('all');
+  const [showExport, setShowExport] = useState(false);
+  const [exportTab, setExportTab] = useState<'harvest' | 'planting' | 'layout'>('harvest');
   const plantOptions = useMemo(() => {
     const set = new Set(harvestRecords.map(r => r.plantName));
     return Array.from(set).sort();
@@ -267,17 +269,10 @@ export default function StatisticsPage() {
             <>
               <button
                 type="button"
-                onClick={() => exportHarvestCsv(plan)}
+                onClick={() => setShowExport(true)}
                 className="rounded-md border-2 border-green-900/20 bg-green-50 px-2.5 py-1 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-100"
               >
-                导出 Excel
-              </button>
-              <button
-                type="button"
-                onClick={() => exportPdf(plan)}
-                className="rounded-md border-2 border-amber-900/20 bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-100"
-              >
-                导出 PDF
+                📥 导出
               </button>
             </>
           )}
@@ -548,6 +543,161 @@ export default function StatisticsPage() {
             </div>
           </>
         )}
+      {/* 导出面板 */}
+      {showExport && plan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4" onClick={() => setShowExport(false)}>
+          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl border-2 border-amber-900/20 bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* 面板头部 */}
+            <div className="flex items-center justify-between border-b-2 border-amber-900/10 px-5 py-3">
+              <div className="text-sm font-black text-amber-950">📥 导出数据</div>
+              <button type="button" onClick={() => setShowExport(false)}
+                className="rounded-md border border-amber-900/20 bg-amber-50 px-2 py-0.5 text-xs font-black text-amber-700">
+                ✕
+              </button>
+            </div>
+            {/* 选项卡 */}
+            <div className="flex gap-1 border-b-2 border-amber-900/10 px-5 py-2">
+              <button type="button" onClick={() => setExportTab('harvest')}
+                className={`rounded-md px-3 py-1.5 text-xs font-black transition-colors ${exportTab === 'harvest' ? 'bg-green-100 text-green-900' : 'text-amber-700 hover:bg-amber-50'}`}>
+                📊 采收记录
+              </button>
+              <button type="button" onClick={() => setExportTab('planting')}
+                className={`rounded-md px-3 py-1.5 text-xs font-black transition-colors ${exportTab === 'planting' ? 'bg-green-100 text-green-900' : 'text-amber-700 hover:bg-amber-50'}`}>
+                🌱 种植清单
+              </button>
+              <button type="button" onClick={() => setExportTab('layout')}
+                className={`rounded-md px-3 py-1.5 text-xs font-black transition-colors ${exportTab === 'layout' ? 'bg-green-100 text-green-900' : 'text-amber-700 hover:bg-amber-50'}`}>
+                🗺 布局概览
+              </button>
+            </div>
+            {/* 预览内容 */}
+            <div className="flex-1 overflow-auto px-5 py-4">
+              {exportTab === 'harvest' && (
+                <div>
+                  <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-700">采收记录 · 共 {plan.harvestRecords?.length || 0} 条</div>
+                  <div className="flex flex-col gap-px bg-amber-900/5 text-[10px]">
+                    <div className="flex items-center bg-amber-100 px-3 py-1.5 font-black text-amber-900">
+                      <span className="w-24">日期</span>
+                      <span className="w-20">作物</span>
+                      <span className="w-16">数量</span>
+                      <span className="w-12">季节</span>
+                      <span className="flex-1">备注</span>
+                    </div>
+                    {(plan.harvestRecords || []).slice(0, 50).map(r => (
+                      <div key={r.id} className="flex items-center bg-white px-3 py-1.5 font-bold text-amber-800">
+                        <span className="w-24">{new Date(r.harvestedAt).toLocaleDateString('zh-CN')}</span>
+                        <span className="w-20">{r.plantName}</span>
+                        <span className="w-16">{r.quantity} {unitLabel(r.unit)}</span>
+                        <span className="w-12">{seasonLabel(r.season)}</span>
+                        <span className="flex-1 truncate">{r.note || ''}</span>
+                      </div>
+                    ))}
+                    {(plan.harvestRecords || []).length > 50 && (
+                      <div className="px-3 py-1.5 text-[9px] font-bold text-amber-500">
+                        ... 还有 {(plan.harvestRecords || []).length - 50} 条
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {exportTab === 'planting' && (
+                <div>
+                  <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-700">当前种植 · {Object.values(plan.entities).filter((e: any) => e.type === 'plant').length} 株</div>
+                  <div className="flex flex-col gap-px bg-amber-900/5 text-[10px]">
+                    <div className="flex items-center bg-amber-100 px-3 py-1.5 font-black text-amber-900">
+                      <span className="w-6">#</span>
+                      <span className="w-16">植物</span>
+                      <span className="w-8">格</span>
+                      <span className="w-16">位置</span>
+                      <span className="w-20">种植时间</span>
+                      <span className="w-20">预计收获</span>
+                      <span className="w-16">预测产量</span>
+                      <span className="flex-1">状态</span>
+                    </div>
+                    {Object.values(plan.entities).filter((e: any) => e.type === 'plant').map((entity: any, i: number) => {
+                      const ag = getPlantAgronomy(entity.plantId);
+                      const daysToMat = ag.daysToMaturity || 0;
+                      const harvestDate = entity.createdAt ? new Date(entity.createdAt + daysToMat * 86400000).toLocaleDateString('zh-CN') : '-';
+                      const plantDate = entity.createdAt ? new Date(entity.createdAt).toLocaleDateString('zh-CN') : '-';
+                      const est = ag.yieldEstimate;
+                      const hasHarvest = (plan.harvestRecords || []).some((r: any) => r.entityId === entity.id);
+                      const status = entity.harvestedAt ? '已采收' : hasHarvest ? '部分采收' : '生长中';
+                      return (
+                        <div key={entity.id} className="flex items-center bg-white px-3 py-1.5 font-bold text-amber-800">
+                          <span className="w-6">{i + 1}</span>
+                          <span className="w-16">{entity.plant?.naming?.zh || entity.plantId}</span>
+                          <span className="w-8">{entity.spanX * entity.spanY}</span>
+                          <span className="w-16">({entity.originX},{entity.originY})</span>
+                          <span className="w-20">{plantDate}</span>
+                          <span className="w-20">{harvestDate}</span>
+                          <span className="w-16">{est ? est.amount + ' ' + est.unit : '-'}</span>
+                          <span className="flex-1">{status}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {exportTab === 'layout' && (
+                <div className="text-center">
+                  <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-700">菜园布局 · {plan.width}x{plan.height} 格</div>
+                  {/* 简化版网格布局 */}
+                  <div className="inline-block rounded-lg border-2 border-amber-900/10 bg-amber-50/50 p-1">
+                    {Array.from({ length: Math.min(plan.height, 16) }).map((_, row) => (
+                      <div key={row} className="flex">
+                        {Array.from({ length: Math.min(plan.width, 20) }).map((_, col) => {
+                          const entity = Object.values(plan.entities).find((e: any) =>
+                            e.originX === col && e.originY === row && e.type === 'plant'
+                          );
+                          const surface = Object.values(plan.entities).find((e: any) =>
+                            e.originX === col && e.originY === row && e.type !== 'plant'
+                          );
+                          const bgColor = entity ? '#16a34a' : surface ? '#a16207' : '#fef3c7';
+                          const char = (entity as any)?.plant?.naming?.emoji || (surface ? '▦' : '·');
+                          return (
+                            <div key={col}
+                              className="flex h-6 w-6 items-center justify-center border border-amber-900/10 text-[10px]"
+                              style={{ backgroundColor: bgColor }}>
+                              {char}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                    {(plan.height > 16 || plan.width > 20) && (
+                      <div className="py-1 text-[9px] font-bold text-amber-500">
+                        ... 菜园较大，仅显示前 {(plan.height > 16 ? 16 : plan.height)}x{(plan.width > 20 ? 20 : plan.width)} 格
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-2 flex justify-center gap-4 text-[9px] font-bold">
+                    <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-600"></span> 植物</span>
+                    <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-amber-800"></span> 其他</span>
+                    <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-amber-100 border border-amber-900/20"></span> 空地</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* 底部操作 */}
+            <div className="flex items-center justify-end gap-2 border-t-2 border-amber-900/10 px-5 py-3">
+              <button type="button" onClick={() => setShowExport(false)}
+                className="rounded-md border-2 border-amber-900/20 bg-white px-3 py-1.5 text-xs font-black text-amber-900 hover:bg-amber-50">
+                取消
+              </button>
+              <button type="button" onClick={() => {
+                if (exportTab === 'harvest') exportHarvestCsv(plan);
+                else if (exportTab === 'planting') exportPlantingCsv(plan);
+                else exportPdf(plan);
+                setShowExport(false);
+              }}
+                className="rounded-md border-2 border-green-700/30 bg-green-100 px-4 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200">
+                {exportTab === 'layout' ? '🖨 打印' : '📥 下载 CSV'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       </main>
 
       <footer className="border-t-2 border-green-700/10 bg-white/50 px-4 py-3 text-center text-[10px] font-bold text-green-700">
@@ -639,6 +789,41 @@ function exportActivityCsv(plan: GardenPlan) {
   const link = document.createElement('a');
   link.href = url;
   link.download = `activity-${plan.name || 'garden'}-${plan.year}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function exportPlantingCsv(plan: GardenPlan) {
+  const entities = Object.values(plan.entities).filter((e: any) => e.type === 'plant');
+  const headers = ['植物', '位置', '格数', '种植时间', '预计收获', '预测产量', '状态'];
+  const rows = entities.map((entity: any) => {
+    const ag = getPlantAgronomy(entity.plantId);
+    const daysToMat = ag.daysToMaturity || 0;
+    const harvestDate = entity.createdAt ? new Date(entity.createdAt + daysToMat * 86400000).toLocaleDateString('zh-CN') : '-';
+    const plantDate = entity.createdAt ? new Date(entity.createdAt).toLocaleDateString('zh-CN') : '-';
+    const est = ag.yieldEstimate;
+    const hasHarvest = (plan.harvestRecords || []).some((r: any) => r.entityId === entity.id);
+    const status = entity.harvestedAt ? '已采收' : hasHarvest ? '部分采收' : '生长中';
+    return [
+      entity.plant?.naming?.zh || entity.plantId,
+      '(' + entity.originX + ',' + entity.originY + ')',
+      String(entity.spanX * entity.spanY),
+      plantDate,
+      harvestDate,
+      est ? est.amount + ' ' + est.unit : '-',
+      status
+    ];
+  });
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(','))
+    .join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'planting-' + (plan.name || 'garden') + '-' + plan.year + '.csv';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
