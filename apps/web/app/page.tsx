@@ -21,7 +21,7 @@ const CITY_PRESETS = {
   '西北': ['西安', '兰州', '乌鲁木齐', '银川', '西宁'],
   '东北': ['沈阳', '大连', '哈尔滨', '长春'],
 };
-const ALL_CITIES = Object.values(CITY_PRESETS).flat();
+const ALL_CITIES = Array.from(new Set(Object.values(CITY_PRESETS).flat()));
 const ALL_PROVINCES = ['北京','天津','上海','重庆','河北','山西','辽宁','吉林','黑龙江','江苏','浙江','安徽','福建','江西','山东','河南','湖北','湖南','广东','广西','海南','四川','贵州','云南','西藏','陕西','甘肃','青海','宁夏','新疆','内蒙古'];
 
 // 获取与 plantId 的伴生/相克植物中文名

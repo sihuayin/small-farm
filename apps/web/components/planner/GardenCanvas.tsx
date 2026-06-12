@@ -5512,11 +5512,11 @@ export default function GardenCanvas({
         )}
 
         {!showWelcome && !isDemoMode && plantCount > 0 && showFirstPlantTip && !isMaintenancePhase && (
-          <div className="absolute bottom-4 left-1/2 z-10 w-[min(360px,calc(100%-2rem))] -translate-x-1/2 rounded-lg border-2 border-green-900/15 bg-[#fff8df]/94 p-3 text-sm shadow-[0_4px_0_rgba(22,101,52,0.12),0_14px_24px_rgba(61,40,20,0.16)] backdrop-blur">
-            <div className="text-[10px] font-black uppercase tracking-wider text-green-800">第一棵已种下</div>
-            <div className="mt-1 font-black text-amber-950">可以继续布局，也可以查看今天要做什么。</div>
+          <div className="absolute bottom-4 left-1/2 z-10 w-[min(420px,calc(100%-2rem))] -translate-x-1/2 rounded-lg border-2 border-green-900/15 bg-[#fff8df]/94 p-3 text-sm shadow-[0_4px_0_rgba(22,101,52,0.12),0_14px_24px_rgba(61,40,20,0.16)] backdrop-blur">
+            <div className="text-[10px] font-black uppercase tracking-wider text-green-800">{cameFromOnboarding ? '起步布局已生成' : '第一棵已种下'}</div>
+            <div className="mt-1 font-black text-amber-950">{cameFromOnboarding ? '你的菜园已按地区、季节和伴生关系自动布局' : '可以继续布局，也可以查看今天要做什么。'}</div>
             <div className="mt-1 text-[10px] font-bold leading-4 text-amber-700">
-              任务面板会根据天气、阶段和作物状态生成浇水、覆盖、采收等操作。
+              {cameFromOnboarding ? '伴生关系已用绿色标识，右侧面板可查看本周天气和养护任务。可以先点击地块看看每棵作物的状态。' : '任务面板会根据天气、阶段和作物状态生成浇水、覆盖、采收等操作。'}
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
@@ -5524,7 +5524,7 @@ export default function GardenCanvas({
                 onClick={() => setShowFirstPlantTip(false)}
                 className="rounded-md border border-amber-900/15 bg-white/85 px-2 py-1.5 text-xs font-black text-amber-900 shadow-[0_1px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
               >
-                继续种植
+                开始微调
               </button>
               <button
                 type="button"
