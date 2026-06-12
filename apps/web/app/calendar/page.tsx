@@ -64,8 +64,20 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   useEffect(() => {
-    setPlan(loadPlan());
-  }, []);
+    const saved = loadPlan();
+    if (!saved) {
+      router.push('/');
+      return;
+    }
+    setPlan(saved);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 也没有计划时转到首页（但上面已经 redirect 了，这个是兜底）
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = loadPlan();
+    if (!saved) router.push('/');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const entities = plan?.entities || {};
   const climateProfile = plan?.climateProfile;

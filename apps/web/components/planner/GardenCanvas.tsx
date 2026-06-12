@@ -1970,6 +1970,25 @@ export default function GardenCanvas({
     loadPlan();
   }, [loadPlan]);
 
+  // 如果没有有效农场数据（不是demo、没有初始植物），重定向到首页
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (isDemo || initialPlants.length > 0 || initialProvince) return;
+    const raw = window.localStorage.getItem('small-farm:garden-plan:v1');
+    if (raw) {
+      try {
+        const plan = JSON.parse(raw);
+        const hasPlants = plan.entities && Object.values(plan.entities).some((e: any) => e.type === 'plant');
+        if (!hasPlants) {
+          router.push('/');
+          return;
+        }
+      } catch { router.push('/'); }
+    } else {
+      router.push('/');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const syncWelcomeForViewport = () => {
       if (window.innerWidth < 768) {

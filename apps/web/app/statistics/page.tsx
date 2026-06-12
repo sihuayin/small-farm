@@ -37,8 +37,27 @@ export default function StatisticsPage() {
   const [plan, setPlan] = useState<GardenPlan | null>(null);
 
   useEffect(() => {
-    setPlan(loadPlan());
-  }, []);
+    const saved = loadPlan();
+    if (!saved) {
+      router.push('/');
+      return;
+    }
+    setPlan(saved);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 兜底：没有计划时转到首页
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = loadPlan();
+    if (!saved) router.push('/');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 如果计划被其他页面删除了，也需要跳转
+  useEffect(() => {
+    if (plan === null) return;
+    const raw = localStorage.getItem('small-farm:garden-plan:v1');
+    if (!raw) { router.push('/'); }
+  }, [plan, router]);
 
   const harvestRecords = plan?.harvestRecords || [];
   const activityRecords = plan?.activityRecords || [];

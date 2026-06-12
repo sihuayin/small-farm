@@ -115,7 +115,7 @@ export default function WelcomePage() {
   const now = new Date();
   const [plan, setPlan] = useState<GardenPlan | null>(null);
   const [step, setStep] = useState<'setup' | 'select'>('setup');
-  const [showSetup, setShowSetup] = useState(false);
+  // const [showSetup, setShowSetup] = useState(false);
   const [province, setProvince] = useState('浙江');
   const [city, setCity] = useState('杭州');
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -249,27 +249,31 @@ export default function WelcomePage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => router.push('/planner')}
-            className="rounded-md border-2 border-green-700/20 bg-white px-2.5 py-1 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-50"
-          >
-            🗺 菜园
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/calendar')}
-            className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
-          >
-            📅 日历
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/statistics')}
-            className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
-          >
-            📊 统计
-          </button>
+          {hasPlan && (
+            <>
+              <button
+                type="button"
+                onClick={() => router.push('/planner')}
+                className="rounded-md border-2 border-green-700/20 bg-white px-2.5 py-1 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-50"
+              >
+                🗺 菜园
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/calendar')}
+                className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+              >
+                📅 日历
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/statistics')}
+                className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+              >
+                📊 统计
+              </button>
+            </>
+          )}
         </div>
       </header>
 
