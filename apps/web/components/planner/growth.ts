@@ -1,5 +1,5 @@
 import { getPlantAgronomy } from './plants';
-import { getMockWeatherSignals } from './climate';
+import { generateWeatherSignals } from './climate';
 import type { ClimateProfile, GardenEntity, PlantEntity, PlanSeason, WeatherSignal } from './types';
 import type { WaterNeed } from './plants.d';
 
@@ -82,7 +82,7 @@ export function getGardenTaskBoard(
   nowMs = Date.now(),
   limit = 5
 ): GardenTaskItem[] {
-  const weatherSignals = climateProfile && planSeason ? getMockWeatherSignals(climateProfile, planSeason) : [];
+  const weatherSignals = climateProfile && planSeason ? generateWeatherSignals(climateProfile, planSeason) : [];
 
   return Object.values(entities)
     .filter((entity): entity is PlantEntity => entity.type === 'plant')
@@ -126,7 +126,7 @@ export function getPlantStarterTask(
 ): GrowthTask {
   const agronomy = getPlantAgronomy(plantId);
   const defaultTask = getNextTask('seed', agronomy.waterNeed, agronomy.daysToMaturity);
-  const weatherSignals = climateProfile && planSeason ? getMockWeatherSignals(climateProfile, planSeason) : [];
+  const weatherSignals = climateProfile && planSeason ? generateWeatherSignals(climateProfile, planSeason) : [];
   return applyRegionalTaskDetail(getWeatherAdjustedTask({
     id: `starter-${plantId}`,
     type: 'plant',

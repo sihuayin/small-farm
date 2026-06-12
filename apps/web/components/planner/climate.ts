@@ -1,4 +1,4 @@
-import type { ClimateProfile, MockWeatherScenario, PlanSeason, WeatherSignal } from './types';
+import type { ClimateProfile, MockWeatherScenario, PlanSeason, WeatherSignal, WeeklyForecast, WeatherDay } from './types';
 
 interface ClimatePreset {
   name: string;
@@ -164,77 +164,258 @@ function normalizeRegionName(value: string) {
   return value.trim().replace(/(省|市|自治区|特别行政区|地区|盟)$/g, '');
 }
 
-export function getMockWeatherSignals(
+// ==================== 季节性天气引擎 ====================
+// 基于气候画像和中国省级数据模拟真实天气信号
+// 后续可替换为真实天气 API
+
+interface ClimateNormals {
+  summerTempHigh: [number, number];  // 夏季高温范围
+  summerTempLow: [number, number];   // 夏季低温范围
+  winterTempHigh: [number, number];
+  winterTempLow: [number, number];
+  springRainfall: 'low' | 'medium' | 'high';
+  summerRainfall: 'low' | 'medium' | 'high';
+  fallRainfall: 'low' | 'medium' | 'high';
+  frostRisk: 'low' | 'medium' | 'high';  // 倒春寒/早霜风险
+  typhoonRisk: boolean;
+}
+
+const climateNormalsByBand: Record<string, ClimateNormals> = {
+  north_cold: {
+    summerTempHigh: [22, 28], summerTempLow: [12, 18],
+    winterTempHigh: [-10, 0], winterTempLow: [-25, -15],
+    springRainfall: 'low', summerRainfall: 'medium', fallRainfall: 'low',
+    frostRisk: 'high', typhoonRisk: false
+  },
+  north_temperate: {
+    summerTempHigh: [28, 34], summerTempLow: [18, 23],
+    winterTempHigh: [0, 8], winterTempLow: [-8, 0],
+    springRainfall: 'low', summerRainfall: 'medium', fallRainfall: 'low',
+    frostRisk: 'high', typhoonRisk: false
+  },
+  central: {
+    summerTempHigh: [30, 36], summerTempLow: [22, 27],
+    winterTempHigh: [5, 12], winterTempLow: [-2, 5],
+    springRainfall: 'high', summerRainfall: 'high', fallRainfall: 'medium',
+    frostRisk: 'medium', typhoonRisk: false
+  },
+  east_monsoon: {
+    summerTempHigh: [32, 38], summerTempLow: [24, 28],
+    winterTempHigh: [3, 10], winterTempLow: [-3, 4],
+    springRainfall: 'high', summerRainfall: 'high', fallRainfall: 'medium',
+    frostRisk: 'medium', typhoonRisk: true
+  },
+  south_humid: {
+    summerTempHigh: [32, 36], summerTempLow: [24, 28],
+    winterTempHigh: [14, 22], winterTempLow: [8, 15],
+    springRainfall: 'high', summerRainfall: 'high', fallRainfall: 'medium',
+    frostRisk: 'low', typhoonRisk: true
+  },
+  southwest_plateau: {
+    summerTempHigh: [22, 28], summerTempLow: [14, 18],
+    winterTempHigh: [12, 18], winterTempLow: [2, 8],
+    springRainfall: 'medium', summerRainfall: 'medium', fallRainfall: 'low',
+    frostRisk: 'medium', typhoonRisk: false
+  }
+};
+
+const defaultNormals: ClimateNormals = {
+  summerTempHigh: [28, 34], summerTempLow: [18, 24],
+  winterTempHigh: [4, 12], winterTempLow: [-4, 4],
+  springRainfall: 'medium', summerRainfall: 'medium', fallRainfall: 'medium',
+  frostRisk: 'medium', typhoonRisk: false
+};
+
+function getClimateNormals(climateProfile: ClimateProfile): ClimateNormals {
+  const band = climateProfile.climateBand || 'central';
+  return climateNormalsByBand[band] || defaultNormals;
+}
+
+function getSeasonTempRange(normals: ClimateNormals, season: PlanSeason): [number, number] {
+  if (season === 'summer') return normals.summerTempHigh;
+  if (season === 'winter') return normals.winterTempHigh;
+  // spring/fall: 取夏冬中间值
+  const summerAvg = (normals.summerTempHigh[0] + normals.summerTempHigh[1]) / 2;
+  const winterAvg = (normals.winterTempHigh[0] + normals.winterTempHigh[1]) / 2;
+  const midLow = Math.min(summerAvg, winterAvg) + Math.abs(summerAvg - winterAvg) * 0.25;
+  const midHigh = Math.min(summerAvg, winterAvg) + Math.abs(summerAvg - winterAvg) * 0.75;
+  return [Math.round(midLow), Math.round(midHigh)];
+}
+
+function getSeasonLowRange(normals: ClimateNormals, season: PlanSeason): [number, number] {
+  if (season === 'summer') return normals.summerTempLow;
+  if (season === 'winter') return normals.winterTempLow;
+  const summerAvg = (normals.summerTempLow[0] + normals.summerTempLow[1]) / 2;
+  const winterAvg = (normals.winterTempLow[0] + normals.winterTempLow[1]) / 2;
+  const midLow = Math.min(summerAvg, winterAvg) + Math.abs(summerAvg - winterAvg) * 0.25;
+  const midHigh = Math.min(summerAvg, winterAvg) + Math.abs(summerAvg - winterAvg) * 0.75;
+  return [Math.round(midLow), Math.round(midHigh)];
+}
+
+function getSeasonRainfall(normals: ClimateNormals, season: PlanSeason): 'low' | 'medium' | 'high' {
+  if (season === 'summer') return normals.summerRainfall;
+  if (season === 'fall') return normals.fallRainfall;
+  return normals.springRainfall; // spring/winter
+}
+
+function randomInRange(seed: number, min: number, max: number): number {
+  const r = ((seed * 9301 + 49297) % 233280) / 233280;
+  return Math.round(min + r * (max - min));
+}
+
+function generateForecastDays(normals: ClimateNormals, season: PlanSeason, count: number): {
+  days: WeatherDay[];
+  summary: string;
+} {
+  const days: import('./types').WeatherDay[] = [];
+  const tempRange = getSeasonTempRange(normals, season);
+  const lowRange = getSeasonLowRange(normals, season);
+  const rainfall = getSeasonRainfall(normals, season);
+  const baseDate = new Date();
+  const rainfallWeights: Record<string, number> = { low: 0.1, medium: 0.3, high: 0.5 };
+
+  let rainChance = rainfallWeights[rainfall];
+  // 夏季更高概率阵雨
+  if (season === 'summer') rainChance = Math.min(1, rainChance + 0.1);
+  // 秋季稳定
+  if (season === 'fall') rainChance = Math.max(0.05, rainChance - 0.05);
+
+  for (let i = 0; i < count; i++) {
+    const d = new Date(baseDate);
+    d.setDate(d.getDate() + i);
+    const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+    const seed = i * 7 + 3;
+    const tempHigh = randomInRange(seed, tempRange[0], tempRange[1]);
+    const tempLow = randomInRange(seed + 1, lowRange[0], lowRange[1]);
+    const rainSeed = randomInRange(seed + 2, 0, 100) / 100;
+    const isRain = rainSeed < rainChance;
+    const isStorm = isRain && season === 'summer' && rainSeed < rainChance * 0.2;
+    const isCloudy = !isRain && rainSeed < rainChance + 0.25;
+    const humidity = isRain ? randomInRange(seed + 3, 70, 95) : isCloudy ? randomInRange(seed + 4, 50, 75) : randomInRange(seed + 5, 30, 55);
+    const precipitation = isRain ? (isStorm ? randomInRange(seed + 6, 10, 50) : randomInRange(seed + 7, 1, 15)) : 0;
+    const windSpeed = isStorm ? randomInRange(seed + 8, 20, 50) : randomInRange(seed + 9, 5, 20);
+
+    days.push({
+      date: dateStr,
+      tempHigh: Math.max(tempLow + 2, tempHigh),
+      tempLow: Math.min(tempLow, tempHigh - 2),
+      condition: isStorm ? 'storm' : isRain ? 'rain' : isCloudy ? 'cloudy' : 'sunny',
+      precipitation,
+      humidity,
+      windSpeed
+    });
+  }
+
+  const avgHigh = Math.round(days.reduce((s, d) => s + d.tempHigh, 0) / days.length);
+  const avgLow = Math.round(days.reduce((s, d) => s + d.tempLow, 0) / days.length);
+  const rainDays = days.filter(d => d.condition === 'rain' || d.condition === 'storm').length;
+  const summary = rainDays > 0
+    ? `${avgHigh}°/${avgLow}° · ${rainDays}/${count} 天有雨`
+    : `${avgHigh}°/${avgLow}° · 少雨`;
+
+  return { days, summary };
+}
+
+export function getSeasonWeatherForecast(
+  climateProfile: ClimateProfile,
+  planSeason: PlanSeason
+): WeeklyForecast {
+  const normals = getClimateNormals(climateProfile);
+  return generateForecastDays(normals, planSeason, 7);
+}
+
+export function generateWeatherSignals(
   climateProfile: ClimateProfile,
   planSeason: PlanSeason
 ): WeatherSignal[] {
-  const zoneNumber = Number.parseInt(climateProfile.hardinessZone, 10) || (
-    climateProfile.climateBand === 'south_humid' ? 10
-      : climateProfile.climateBand === 'east_monsoon' ? 8
-      : climateProfile.climateBand === 'central' ? 8
-      : climateProfile.climateBand === 'north_temperate' ? 6
-      : climateProfile.climateBand === 'north_cold' ? 5
-      : 7
-  );
-  const scenario = climateProfile.mockWeatherScenario || 'auto';
-  if (scenario !== 'auto') return [createWeatherSignal(scenario)];
-
+  const normals = getClimateNormals(climateProfile);
   const signals: WeatherSignal[] = [];
+  const zoneNumber = Number.parseInt(climateProfile.hardinessZone, 10) || 7;
+  const forecast = generateForecastDays(normals, planSeason, 7);
+  const avgHigh = Math.round(forecast.days.reduce((s, d) => s + d.tempHigh, 0) / forecast.days.length);
+  const avgLow = Math.round(forecast.days.reduce((s, d) => s + d.tempLow, 0) / forecast.days.length);
+  const rainDays = forecast.days.filter(d => d.condition === 'rain' || d.condition === 'storm').length;
+  const stormDays = forecast.days.filter(d => d.condition === 'storm').length;
 
-  if (planSeason === 'spring' && zoneNumber <= 7) {
-    signals.push(createWeatherSignal('cold_snap'));
-  }
-
-  if (planSeason === 'summer' && zoneNumber >= 7) {
-    signals.push(createWeatherSignal('heat'));
-  }
-
-  if (planSeason === 'fall') {
-    signals.push(createWeatherSignal('rain'));
-  }
-
-  if (signals.length === 0) {
-    signals.push(createWeatherSignal('dry'));
-  }
-
-  return signals;
-}
-
-function createWeatherSignal(scenario: Exclude<MockWeatherScenario, 'auto'>): WeatherSignal {
-  const signals: Record<Exclude<MockWeatherScenario, 'auto'>, WeatherSignal> = {
-    cold_snap: {
-      id: 'mock-cold-snap',
-      type: 'cold_snap',
-      label: '倒春寒提醒',
-      detail: '未来 3 天夜间低温接近霜点，幼苗和茄果类作物建议提前覆盖保温。',
+  // 信号 1：霜冻风险（春季 + 北方 + 秋季末）
+  if (planSeason === 'spring' && (normals.frostRisk === 'high' || zoneNumber <= 6)) {
+    signals.push({
+      id: 'season-frost',
+      type: 'frost',
+      label: '季节霜冻风险提示',
+      detail: `本季平均晚霜在 ${climateProfile.lastFrostDate} 前后，当前周最低气温约 ${avgLow}°C，嫩苗和茄果类建议盖降温前完成定植或提前覆盖。`,
       severity: 'warning',
-      startsInDays: 3
-    },
-    heat: {
-      id: 'mock-heat',
+      startsInDays: 1,
+      forecast
+    });
+  }
+
+  // 信号 2：高温提醒（夏季 + 中南部）
+  if (planSeason === 'summer' && zoneNumber >= 7) {
+    signals.push({
+      id: 'season-heat',
       type: 'heat',
-      label: '高温提醒',
-      detail: '未来 5 天白天高温偏强，瓜果和叶菜建议清晨深浇、午后避晒。',
-      severity: 'watch',
-      startsInDays: 2
-    },
-    rain: {
-      id: 'mock-rain',
+      label: '季节高温提醒',
+      detail: `本季白天高温约 ${avgHigh}°C，瓜果和叶菜建议清晨深浇、午后避暬，可考虑阳光网或遮阳罩。`,
+      severity: rainDays >= 3 ? 'info' : 'watch',
+      startsInDays: 1,
+      forecast
+    });
+  }
+
+  // 信号 3：连阴雨（春季多雨区 / 夏季 + 秋季）
+  if (rainDays >= 3) {
+    signals.push({
+      id: 'season-rain',
       type: 'rain',
-      label: '连阴雨提醒',
-      detail: '本周有连续降雨窗口，采收前后留意裂果、积水和真菌病害。',
-      severity: 'info',
-      startsInDays: 4
-    },
-    dry: {
-      id: 'mock-dry',
+      label: rainDays >= 5 ? '连阴雨警示' : '连阴雨提醒',
+      detail: rainDays >= 5
+        ? `本周 ${rainDays}/7 天有雨，降水偏多。收采前后留意裂果、积水和真菌病害，可提前开理沟排水。`
+        : `本周 ${rainDays}/7 天有雨，建议检查排水和覆盖。收采后尽快移除湿叶，减少真菌滋生。`,
+      severity: rainDays >= 5 ? 'warning' : 'info',
+      startsInDays: 0,
+      forecast
+    });
+  }
+
+  // 信号 4：台风/强风预警（夏季 + 台风区）
+  if (planSeason === 'summer' && normals.typhoonRisk && stormDays > 0) {
+    signals.push({
+      id: 'season-storm',
+      type: 'storm',
+      label: '暴风预警',
+      detail: `本周有 ${stormDays} 天强降雨/大风风险，建议提前加固支架、收回阳罩，高木类作物注意防风。`,
+      severity: 'warning',
+      startsInDays: forecast.days.findIndex(d => d.condition === 'storm'),
+      forecast
+    });
+  }
+
+  // 信号 5：少雨偏干（低降雨季节）
+  if (rainDays <= 1 && planSeason !== 'winter' && signals.length <= 1) {
+    signals.push({
+      id: 'season-dry',
       type: 'dry',
       label: '少雨偏干提醒',
-      detail: '未来一周降雨偏少，建议检查覆盖物、土壤含水量和补水频次。',
+      detail: `本周 ${rainDays}/7 天有雨，降水偏少。建议检查覆盖物、土壤含水量和补水频次，早晨深浇更益于保壤。`,
       severity: 'watch',
-      startsInDays: 1
-    }
-  };
+      startsInDays: 1,
+      forecast
+    });
+  }
 
-  return signals[scenario];
+  // 信号 6：秋季霜冻提醒
+  if (planSeason === 'fall' && (normals.frostRisk === 'high' || zoneNumber <= 6)) {
+    signals.push({
+      id: 'season-fall-frost',
+      type: 'frost',
+      label: '秋季霜冻提醒',
+      detail: `平均初霜在 ${climateProfile.firstFrostDate} 前后，怕冷作物建议在那之前尽快收完。晚熟地块提前准备小棚或覆盖材料。`,
+      severity: 'info',
+      startsInDays: Math.max(1, Math.round(14 - forecast.days[0].tempLow / 2)),
+      forecast
+    });
+  }
+
+  return signals.slice(0, 4);  // 最多返回 4 个
 }

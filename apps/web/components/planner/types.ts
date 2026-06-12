@@ -107,13 +107,30 @@ export interface ClimateProfile {
 
 export type MockWeatherScenario = 'auto' | 'cold_snap' | 'heat' | 'rain' | 'dry';
 
+export interface WeatherDay {
+  date: string;
+  tempHigh: number;
+  tempLow: number;
+  condition: 'sunny' | 'cloudy' | 'rain' | 'storm';
+  precipitation: number;
+  humidity: number;
+  windSpeed: number;
+}
+
+export interface WeeklyForecast {
+  days: WeatherDay[];
+  summary: string;
+}
+
 export interface WeatherSignal {
   id: string;
-  type: 'cold_snap' | 'heat' | 'rain' | 'dry';
+  type: 'cold_snap' | 'heat' | 'rain' | 'dry' | 'frost' | 'storm' | 'ideal';
   label: string;
   detail: string;
   severity: 'info' | 'watch' | 'warning';
   startsInDays: number;
+  /** 可选：关联的周预报数据 */
+  forecast?: WeeklyForecast;
 }
 
 export interface GardenPlan {

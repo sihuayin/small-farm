@@ -1,5 +1,5 @@
 import { getPlantAgronomy } from './plants';
-import { getMockWeatherSignals } from './climate';
+import { generateWeatherSignals } from './climate';
 import { getPlantGrowthStatus } from './growth';
 import type { ClimateProfile, GardenEntity, PlanSeason, WeatherSignal } from './types';
 
@@ -35,7 +35,7 @@ export function getGardenCalendarReminders(
   const frostReminder = getSeasonFrostReminder(climateProfile, planYear, planSeason);
   if (frostReminder) reminders.push(frostReminder);
 
-  reminders.push(...getMockWeatherSignals(climateProfile, planSeason).map(weatherSignalToReminder));
+  reminders.push(...generateWeatherSignals(climateProfile, planSeason).map(weatherSignalToReminder));
   reminders.push(...getSeasonPrepReminders(plantEntities, climateProfile, planSeason));
 
   const seasonalMismatch = plantEntities.find(entity => {
