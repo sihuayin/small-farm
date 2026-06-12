@@ -276,18 +276,18 @@ export default function StatisticsPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-green-50 via-green-50/80 to-amber-50/60">
       {/* Header */}
-      <header className="flex items-center justify-between border-b-2 border-green-700/20 bg-white/80 px-4 py-3 backdrop-blur md:px-8">
+      <header className="flex items-center justify-between border-b border-farm-100 bg-white/90 px-5 py-3 md:px-8">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => router.push('/planner')}
-            className="flex h-8 w-8 items-center justify-center rounded-md border-2 border-amber-900/20 bg-white text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-farm-200 bg-white text-sm text-farm-600 hover:bg-farm-50"
             aria-label="返回规划器"
           >
             ←
           </button>
           <span className="text-xl">📊</span>
-          <h1 className="text-lg font-black text-amber-950">收获统计</h1>
+          <h1 className="text-lg font-bold text-farm-800 font-display">收获统计</h1>
         </div>
         <div className="flex items-center gap-2">
           {plan && (
@@ -295,24 +295,24 @@ export default function StatisticsPage() {
               <button
                 type="button"
                 onClick={() => setShowExport(true)}
-                className="rounded-md border-2 border-green-900/20 bg-green-50 px-2.5 py-1 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-100"
+                className="btn-farm-primary text-xs"
               >
                 📥 导出
               </button>
             </>
           )}
-          <span className="text-[10px] font-bold text-amber-700">
+          <span className="text-xs text-farm-400">
             {plan?.name} · {plan?.year} {plan ? seasonLabel(plan.season) : ''}
           </span>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 md:px-8">
+      <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-6 md:px-8 md:py-8">
         {!plan ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="text-6xl">🧑‍🌾</div>
-            <div className="mt-4 text-lg font-black text-amber-950">还没有开始规划</div>
-            <div className="mt-1 text-sm font-bold text-amber-700">先去菜园里种点什么吧</div>
+            <div className="mt-4 text-lg font-bold text-farm-800 font-display">还没有开始规划</div>
+            <div className="mt-1 text-sm text-farm-500">先去菜园里种点什么吧</div>
             <button
               type="button"
               onClick={() => router.push('/')}
@@ -325,33 +325,33 @@ export default function StatisticsPage() {
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <div className="rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">采收记录</div>
-                <div className="mt-1 text-2xl font-black text-amber-950">{totalHarvests}</div>
-                <div className="mt-0.5 text-[10px] font-bold text-amber-600">条记录</div>
+              <div className="card-farm p-5">
+                <div className="text-xs font-semibold text-farm-500">采收记录</div>
+                <div className="mt-1 text-2xl font-bold text-farm-800 font-display">{totalHarvests}</div>
+                <div className="mt-0.5 text-xs text-farm-400">条记录</div>
               </div>
-              <div className="rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">预估产量</div>
-                <div className="mt-1 text-2xl font-black text-amber-950">{totalWeight > 0 ? `${totalWeight}` : '--'}</div>
-                <div className="mt-0.5 text-[10px] font-bold text-amber-600">{totalWeight > 0 ? '千克' : '暂无称重记录'}</div>
+              <div className="card-farm p-5">
+                <div className="text-xs font-semibold text-farm-500">预估产量</div>
+                <div className="mt-1 text-2xl font-bold text-farm-800 font-display">{totalWeight > 0 ? `${totalWeight}` : '--'}</div>
+                <div className="mt-0.5 text-xs text-farm-400">{totalWeight > 0 ? '千克' : '暂无称重记录'}</div>
               </div>
-              <div className="rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">养护操作</div>
-                <div className="mt-1 text-2xl font-black text-amber-950">{totalActivities}</div>
-                <div className="mt-0.5 text-[10px] font-bold text-amber-600">条记录</div>
+              <div className="card-farm p-5">
+                <div className="text-xs font-semibold text-farm-500">养护操作</div>
+                <div className="mt-1 text-2xl font-bold text-farm-800 font-display">{totalActivities}</div>
+                <div className="mt-0.5 text-xs text-farm-400">条记录</div>
               </div>
-              <div className="rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">种植作物</div>
-                <div className="mt-1 text-2xl font-black text-amber-950">{Object.keys(entities).filter(k => entities[k].type === 'plant').length}</div>
-                <div className="mt-0.5 text-[10px] font-bold text-amber-600">种</div>
+              <div className="card-farm p-5">
+                <div className="text-xs font-semibold text-farm-500">种植作物</div>
+                <div className="mt-1 text-2xl font-bold text-farm-800 font-display">{Object.keys(entities).filter(k => entities[k].type === 'plant').length}</div>
+                <div className="mt-0.5 text-xs text-farm-400">种</div>
               </div>
             </div>
 
             {/* Top Crops + Season Stats */}
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {/* Top Crops */}
-              <div className="rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-                <div className="mb-3 text-[10px] font-black uppercase tracking-wider text-amber-700">高产作物 TOP5</div>
+              <div className="card-farm p-5">
+                <div className="mb-3 text-xs font-semibold text-farm-500">高产作物 TOP5</div>
                 {topCrops.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {topCrops.map((crop, i) => (
@@ -360,9 +360,9 @@ export default function StatisticsPage() {
                           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[9px] font-black text-amber-800">
                             {i + 1}
                           </span>
-                          <span className="text-xs font-black text-amber-950">{crop.name}</span>
+                          <span className="text-sm font-medium text-farm-800">{crop.name}</span>
                         </div>
-                        <div className="text-xs font-bold text-amber-700">
+                        <div className="text-xs text-farm-500">
                           {crop.weight > 0 ? `${crop.weight} kg` : `${crop.count} 个/把`}
                         </div>
                       </div>
@@ -371,23 +371,23 @@ export default function StatisticsPage() {
                 ) : (
                   <div className="flex flex-col items-center py-4 text-center">
                     <div className="text-xs font-bold text-amber-600">还没有采收记录</div>
-                    <div className="mt-1 text-[9px] font-bold text-amber-500">种下作物后，在这里查看收成排行</div>
+                    <div className="mt-1 text-xs text-farm-400">种下作物后，在这里查看收成排行</div>
                   </div>
                 )}
               </div>
 
               {/* Season Stats */}
-              <div className="rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-                <div className="mb-3 text-[10px] font-black uppercase tracking-wider text-amber-700">季节分布</div>
+              <div className="card-farm p-5">
+                <div className="mb-3 text-xs font-semibold text-farm-500">季节分布</div>
                 {seasonStats.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {seasonStats.map(s => (
                       <div key={s.seasonLabel} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-amber-950">{s.seasonLabel}</span>
-                          <span className="text-[9px] font-bold text-amber-600">{s.plants.length} 种</span>
+                          <span className="text-sm font-medium text-farm-800">{s.seasonLabel}</span>
+                          <span className="text-xs text-farm-400">{s.plants.length} 种</span>
                         </div>
-                        <div className="text-xs font-bold text-amber-700">
+                        <div className="text-xs text-farm-500">
                           {s.harvestCount} 次
                           {s.totalQuantity > 0 ? ` · ${Math.round(s.totalQuantity * 10) / 10} kg` : ''}
                         </div>
@@ -397,7 +397,7 @@ export default function StatisticsPage() {
                 ) : (
                       <div className="flex flex-col items-center py-4 text-center">
                     <div className="text-xs font-bold text-amber-600">暂无季节数据</div>
-                    <div className="mt-1 text-[9px] font-bold text-amber-500">记录采收和养护后，这里会按季节汇总</div>
+                    <div className="mt-1 text-xs text-farm-400">记录采收和养护后，这里会按季节汇总</div>
                   </div>
                 )}
               </div>
@@ -405,21 +405,21 @@ export default function StatisticsPage() {
 
             {/* Plant List with Harvest Status */}
             {plantHarvestStatus.length > 0 && (
-              <div className="mt-4 rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
+              <div className="mt-4 card-farm p-5">
                 <div className="mb-3 flex items-center justify-between">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">种植植物</div>
-                  <div className="text-[9px] font-bold text-amber-500">
+                  <div className="text-xs font-semibold text-farm-500">种植植物</div>
+                  <div className="text-xs text-farm-400">
                     {plantHarvestStatus.filter(p => p.isHarvested).length}/{plantHarvestStatus.length} 已收获
                   </div>
                 </div>
-                <div className="flex flex-col gap-px bg-amber-900/5">
+                <div className="flex flex-col gap-px bg-farm-100/30">
                   {plantHarvestStatus.map(p => (
                     <div key={p.entityId} className="flex items-center justify-between bg-white px-3 py-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-base flex-shrink-0">{p.emoji}</span>
                         <div className="min-w-0">
-                          <div className="text-xs font-black text-amber-950 truncate">{p.plantName}</div>
-                          <div className="flex items-center gap-1.5 text-[9px] font-bold text-amber-500">
+                          <div className="text-sm font-medium text-farm-800 truncate">{p.plantName}</div>
+                          <div className="flex items-center gap-1.5 text-xs text-farm-400">
                             <span>{p.gridCount} 格</span>
                             {p.daysToMaturity > 0 && (
                               <span>· {p.daysToMaturity} 天成熟</span>
@@ -427,11 +427,11 @@ export default function StatisticsPage() {
                           </div>
                           {/* 预计 / 实际收获时间 */}
                           {p.isHarvested && p.firstHarvestedAt > 0 ? (
-                            <div className="text-[8px] font-bold text-green-700">
+                            <div className="text-xs text-farm-green/70">
                               收获于 {formatDateFull(p.firstHarvestedAt)}
                             </div>
                           ) : !p.isHarvested && p.estimatedHarvestAt > 0 ? (
-                            <div className="text-[8px] font-bold text-amber-600">
+                            <div className="text-xs text-farm-400">
                               预计 {formatDateFull(p.estimatedHarvestAt)} 成熟
                             </div>
                           ) : null}
@@ -439,23 +439,23 @@ export default function StatisticsPage() {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {p.isHarvested ? (
-                          <div className="rounded-md bg-green-100 px-2 py-1 text-right">
-                            <div className="text-xs font-black text-green-800">
+                          <div className="rounded-lg bg-farm-green-light px-2.5 py-1.5 text-right">
+                            <div className="text-sm font-semibold text-farm-green">
                               {p.actualQuantity} {p.actualUnit}
                             </div>
-                            <div className="text-[8px] font-bold text-green-600">已收获</div>
+                            <div className="text-xs text-farm-green/70">已收获</div>
                           </div>
                         ) : (
-                          <div className="rounded-md bg-amber-100 px-2 py-1 text-right">
+                          <div className="rounded-lg bg-farm-100 px-2.5 py-1.5 text-right">
                             {p.hasPrediction ? (
                               <>
-                                <div className="text-xs font-black text-amber-800">~{p.predictedAmount} {p.predictedUnit}</div>
-                                <div className="text-[8px] font-bold text-amber-600">待收获</div>
+                                <div className="text-sm font-semibold text-farm-600">~{p.predictedAmount} {p.predictedUnit}</div>
+                                <div className="text-xs text-farm-400">待收获</div>
                               </>
                             ) : (
                               <>
-                                <div className="text-xs font-black text-amber-800">—</div>
-                                <div className="text-[8px] font-bold text-amber-600">待收获</div>
+                                <div className="text-sm font-semibold text-farm-600">—</div>
+                                <div className="text-xs text-farm-400">待收获</div>
                               </>
                             )}
                           </div>
@@ -469,18 +469,18 @@ export default function StatisticsPage() {
 
             {/* Latest Activities */}
             {activityRecords.length > 0 && (
-              <div className="mt-4 rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-                <div className="mb-3 text-[10px] font-black uppercase tracking-wider text-amber-700">最近养护操作</div>
+              <div className="mt-4 card-farm p-5">
+                <div className="mb-3 text-xs font-semibold text-farm-500">最近养护操作</div>
                 <div className="flex flex-col gap-1">
                   {activityRecords.slice(0, 8).map(a => (
-                    <div key={a.id} className="flex items-center justify-between rounded-md border border-amber-900/10 bg-amber-50/50 px-3 py-1.5">
+                    <div key={a.id} className="flex items-center justify-between rounded-lg bg-farm-50 px-3.5 py-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-amber-950">{a.taskLabel}</span>
-                        <span className="text-[10px] font-bold text-amber-700">{a.plantName}</span>
+                        <span className="text-sm font-medium text-farm-800">{a.taskLabel}</span>
+                        <span className="text-xs text-farm-400">{a.plantName}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-amber-600">{formatDate(a.completedAt)}</span>
-                        {a.note && <span className="max-w-24 truncate text-[9px] text-amber-500">{a.note}</span>}
+                        <span className="text-xs text-farm-400">{formatDate(a.completedAt)}</span>
+                        {a.note && <span className="max-w-24 truncate text-xs text-farm-400">{a.note}</span>}
                       </div>
                     </div>
                   ))}
@@ -490,17 +490,17 @@ export default function StatisticsPage() {
 
             {/* Yield Estimates */}
             {yieldEstimates.length > 0 && (
-              <div className="mt-4 rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-                <div className="mb-3 text-[10px] font-black uppercase tracking-wider text-amber-700">产量预估（当前种植）</div>
+              <div className="mt-4 card-farm p-5">
+                <div className="mb-3 text-xs font-semibold text-farm-500">产量预估（当前种植）</div>
                 <div className="flex flex-col gap-1">
                   {yieldEstimates.map((ye, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-md border border-amber-900/10 bg-amber-50/50 px-3 py-1.5">
+                    <div key={i} className="flex items-center justify-between rounded-lg bg-farm-50 px-3.5 py-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-amber-950">{ye.plantName}</span>
-                        <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-black text-amber-800">{ye.gridCount}\u683c</span>
+                        <span className="text-sm font-medium text-farm-800">{ye.plantName}</span>
+                        <span className="tag-farm bg-farm-100 text-farm-600 text-amber-800">{ye.gridCount}\u683c</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-amber-950">{ye.totalEstimated} {ye.unit}</span>
+                        <span className="text-sm font-medium text-farm-800">{ye.totalEstimated} {ye.unit}</span>
                         <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black ${
                           ye.confidence === 'reliable' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' :
                           ye.confidence === 'reference' ? 'border-amber-300 bg-amber-50 text-amber-800' :
@@ -516,13 +516,13 @@ export default function StatisticsPage() {
             )}
 
             {/* Harvest History */}
-            <div className="mt-4 rounded-xl border-2 border-amber-900/15 bg-white shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-              <div className="flex items-center justify-between border-b-2 border-amber-900/10 px-4 py-3">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">采收记录</div>
+            <div className="mt-4 card-farm">
+              <div className="flex items-center justify-between border-b border-farm-100 px-5 py-3">
+                <div className="text-xs font-semibold text-farm-500">采收记录</div>
                 <select
                   value={filterPlant}
                   onChange={(e) => setFilterPlant(e.target.value)}
-                  className="no-print rounded-md border-2 border-amber-900/15 bg-white px-2 py-1 text-[10px] font-black text-amber-900 outline-none"
+                  className="no-print select-farm text-xs"
                 >
                   <option value="all">全部作物</option>
                   {plantOptions.map(name => (
@@ -531,17 +531,17 @@ export default function StatisticsPage() {
                 </select>
               </div>
               {filteredHarvests.length > 0 ? (
-                <div className="flex flex-col gap-px bg-amber-900/5">
+                <div className="flex flex-col gap-px bg-farm-100/30">
                   {filteredHarvests.map(r => (
                     <div key={r.id} className="flex items-center justify-between bg-white px-4 py-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-amber-950">{r.plantName}</span>
-                        <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-black text-amber-800">
+                        <span className="text-sm font-medium text-farm-800">{r.plantName}</span>
+                        <span className="tag-farm bg-farm-100 text-farm-600 text-amber-800">
                           {r.quantity} {unitLabel(r.unit)}
                         </span>
-                        {r.note && <span className="max-w-32 truncate text-[9px] text-amber-500">{r.note}</span>}
+                        {r.note && <span className="max-w-32 truncate text-xs text-farm-400">{r.note}</span>}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-amber-700">
+                      <div className="flex items-center gap-2 text-xs text-farm-400">
                         <span>{r.season ? seasonLabel(r.season) : ''} {r.year}</span>
                         <span>{formatDate(r.harvestedAt)}</span>
                       </div>
@@ -551,7 +551,7 @@ export default function StatisticsPage() {
               ) : (
                 <div className="flex flex-col items-center py-6 text-center">
                   <div className="text-3xl">🥕</div>
-                  <div className="mt-1 text-xs font-bold text-amber-700">
+                  <div className="mt-1 text-xs text-farm-500">
                     {filterPlant === 'all' ? '作物成熟后，在规划页右侧面板点击「记录采收」即可记录' : `「${filterPlant}」暂无采收记录`}
                   </div>
                   {filterPlant === 'all' && (
@@ -571,27 +571,27 @@ export default function StatisticsPage() {
       {/* 导出面板 */}
       {showExport && plan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4" onClick={() => setShowExport(false)}>
-          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl border-2 border-amber-900/20 bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col card-farm shadow-soft-xl" onClick={e => e.stopPropagation()}>
             {/* 面板头部 */}
-            <div className="flex items-center justify-between border-b-2 border-amber-900/10 px-5 py-3">
-              <div className="text-sm font-black text-amber-950">📥 导出数据</div>
+            <div className="flex items-center justify-between border-b border-farm-100 px-5 py-3">
+              <div className="text-base font-semibold text-farm-800 font-display">📥 导出数据</div>
               <button type="button" onClick={() => setShowExport(false)}
-                className="rounded-md border border-amber-900/20 bg-amber-50 px-2 py-0.5 text-xs font-black text-amber-700">
+                className="btn-farm-ghost text-xs">
                 ✕
               </button>
             </div>
             {/* 选项卡 */}
             <div className="flex gap-1 border-b-2 border-amber-900/10 px-5 py-2">
               <button type="button" onClick={() => setExportTab('harvest')}
-                className={`rounded-md px-3 py-1.5 text-xs font-black transition-colors ${exportTab === 'harvest' ? 'bg-green-100 text-green-900' : 'text-amber-700 hover:bg-amber-50'}`}>
+                className={`btn-farm text-sm transition-colors ${exportTab === 'harvest' ? 'bg-farm-green-light text-farm-green' : 'text-farm-600 hover:bg-farm-50'}`}>
                 📊 采收记录
               </button>
               <button type="button" onClick={() => setExportTab('planting')}
-                className={`rounded-md px-3 py-1.5 text-xs font-black transition-colors ${exportTab === 'planting' ? 'bg-green-100 text-green-900' : 'text-amber-700 hover:bg-amber-50'}`}>
+                className={`btn-farm text-sm transition-colors ${exportTab === 'planting' ? 'bg-farm-green-light text-farm-green' : 'text-farm-600 hover:bg-farm-50'}`}>
                 🌱 种植清单
               </button>
               <button type="button" onClick={() => setExportTab('layout')}
-                className={`rounded-md px-3 py-1.5 text-xs font-black transition-colors ${exportTab === 'layout' ? 'bg-green-100 text-green-900' : 'text-amber-700 hover:bg-amber-50'}`}>
+                className={`btn-farm text-sm transition-colors ${exportTab === 'layout' ? 'bg-farm-green-light text-farm-green' : 'text-farm-600 hover:bg-farm-50'}`}>
                 🗺 布局概览
               </button>
             </div>
@@ -599,9 +599,9 @@ export default function StatisticsPage() {
             <div className="flex-1 overflow-auto px-5 py-4">
               {exportTab === 'harvest' && (
                 <div>
-                  <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-700">采收记录 · 共 {plan.harvestRecords?.length || 0} 条</div>
-                  <div className="flex flex-col gap-px bg-amber-900/5 text-[10px]">
-                    <div className="flex items-center bg-amber-100 px-3 py-1.5 font-black text-amber-900">
+                  <div className="mb-2 text-xs font-semibold text-farm-500">采收记录 · 共 {plan.harvestRecords?.length || 0} 条</div>
+                  <div className="flex flex-col gap-px bg-farm-100/30 text-[10px]">
+                    <div className="flex items-center bg-farm-50 px-3 py-1.5 font-semibold text-farm-600 text-xs">
                       <span className="w-24">日期</span>
                       <span className="w-20">作物</span>
                       <span className="w-16">数量</span>
@@ -609,7 +609,7 @@ export default function StatisticsPage() {
                       <span className="flex-1">备注</span>
                     </div>
                     {(plan.harvestRecords || []).slice(0, 50).map(r => (
-                      <div key={r.id} className="flex items-center bg-white px-3 py-1.5 font-bold text-amber-800">
+                      <div key={r.id} className="flex items-center bg-white px-3 py-1.5 text-sm text-farm-700">
                         <span className="w-24">{new Date(r.harvestedAt).toLocaleDateString('zh-CN')}</span>
                         <span className="w-20">{r.plantName}</span>
                         <span className="w-16">{r.quantity} {unitLabel(r.unit)}</span>
@@ -618,7 +618,7 @@ export default function StatisticsPage() {
                       </div>
                     ))}
                     {(plan.harvestRecords || []).length > 50 && (
-                      <div className="px-3 py-1.5 text-[9px] font-bold text-amber-500">
+                      <div className="px-3 py-1.5 text-xs text-farm-400">
                         ... 还有 {(plan.harvestRecords || []).length - 50} 条
                       </div>
                     )}
@@ -627,9 +627,9 @@ export default function StatisticsPage() {
               )}
               {exportTab === 'planting' && (
                 <div>
-                  <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-700">当前种植 · {Object.values(plan.entities).filter((e: any) => e.type === 'plant').length} 株</div>
-                  <div className="flex flex-col gap-px bg-amber-900/5 text-[10px]">
-                    <div className="flex items-center bg-amber-100 px-3 py-1.5 font-black text-amber-900">
+                  <div className="mb-2 text-xs font-semibold text-farm-500">当前种植 · {Object.values(plan.entities).filter((e: any) => e.type === 'plant').length} 株</div>
+                  <div className="flex flex-col gap-px bg-farm-100/30 text-[10px]">
+                    <div className="flex items-center bg-farm-50 px-3 py-1.5 font-semibold text-farm-600 text-xs">
                       <span className="w-6">#</span>
                       <span className="w-16">植物</span>
                       <span className="w-8">格</span>
@@ -648,7 +648,7 @@ export default function StatisticsPage() {
                       const hasHarvest = (plan.harvestRecords || []).some((r: any) => r.entityId === entity.id);
                       const status = entity.harvestedAt ? '已采收' : hasHarvest ? '部分采收' : '生长中';
                       return (
-                        <div key={entity.id} className="flex items-center bg-white px-3 py-1.5 font-bold text-amber-800">
+                        <div key={entity.id} className="flex items-center bg-white px-3 py-1.5 text-sm text-farm-700">
                           <span className="w-6">{i + 1}</span>
                           <span className="w-16">{entity.plant?.naming?.zh || entity.plantId}</span>
                           <span className="w-8">{entity.spanX * entity.spanY}</span>
@@ -665,9 +665,9 @@ export default function StatisticsPage() {
               )}
               {exportTab === 'layout' && (
                 <div className="text-center">
-                  <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-700">菜园布局 · {plan.width}x{plan.height} 格</div>
+                  <div className="mb-2 text-xs font-semibold text-farm-500">菜园布局 · {plan.width}x{plan.height} 格</div>
                   {/* 简化版网格布局 */}
-                  <div className="inline-block rounded-lg border-2 border-amber-900/10 bg-amber-50/50 p-1">
+                  <div className="inline-block rounded-lg border border-farm-200 bg-farm-50 p-1">
                     {Array.from({ length: Math.min(plan.height, 16) }).map((_, row) => (
                       <div key={row} className="flex">
                         {Array.from({ length: Math.min(plan.width, 20) }).map((_, col) => {
@@ -690,7 +690,7 @@ export default function StatisticsPage() {
                       </div>
                     ))}
                     {(plan.height > 16 || plan.width > 20) && (
-                      <div className="py-1 text-[9px] font-bold text-amber-500">
+                      <div className="py-1 text-xs text-farm-400">
                         ... 菜园较大，仅显示前 {(plan.height > 16 ? 16 : plan.height)}x{(plan.width > 20 ? 20 : plan.width)} 格
                       </div>
                     )}
@@ -704,9 +704,9 @@ export default function StatisticsPage() {
               )}
             </div>
             {/* 底部操作 */}
-            <div className="flex items-center justify-end gap-2 border-t-2 border-amber-900/10 px-5 py-3">
+            <div className="flex items-center justify-end gap-2 border-t border-farm-100 px-5 py-3">
               <button type="button" onClick={() => setShowExport(false)}
-                className="rounded-md border-2 border-amber-900/20 bg-white px-3 py-1.5 text-xs font-black text-amber-900 hover:bg-amber-50">
+                className="btn-farm-ghost">
                 取消
               </button>
               <button type="button" onClick={() => {
@@ -715,7 +715,7 @@ export default function StatisticsPage() {
                 else exportPdf(plan);
                 setShowExport(false);
               }}
-                className="rounded-md border-2 border-green-700/30 bg-green-100 px-4 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200">
+                className="btn-farm-primary">
                 {exportTab === 'layout' ? '🖨 打印' : '📥 下载 CSV'}
               </button>
             </div>
@@ -725,7 +725,7 @@ export default function StatisticsPage() {
 
       </main>
 
-      <footer className="border-t-2 border-green-700/10 bg-white/50 px-4 py-3 text-center text-[10px] font-bold text-green-700">
+      <footer className="border-t border-farm-100 bg-white/70 px-5 py-4 text-center text-xs text-farm-400">
         农夫计划器 · 收获统计
       </footer>
     </div>

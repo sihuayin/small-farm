@@ -2,41 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #fefefe;
-  --foreground: #1a1a1a;
+@layer base {
+  body {
+    @apply text-farm-800 bg-farm-50;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button, input, select, textarea {
+    @apply font-body;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  overflow: hidden;
-  overscroll-behavior: none;
+@layer components {
+  .card-farm {
+    @apply bg-white rounded-farm shadow-soft border border-farm-100;
+  }
+
+  .card-farm-hover {
+    @apply card-farm transition-all duration-200 hover:shadow-soft-lg hover:-translate-y-0.5;
+  }
+
+  .btn-farm {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-150;
+  }
+
+  .btn-farm-primary {
+    @apply btn-farm bg-farm-green text-white hover:bg-farm-green-dark active:scale-[0.98];
+  }
+
+  .btn-farm-secondary {
+    @apply btn-farm bg-farm-green-light text-farm-green hover:bg-farm-green/10 active:scale-[0.98];
+  }
+
+  .btn-farm-ghost {
+    @apply btn-farm text-farm-600 hover:bg-farm-100 active:scale-[0.98];
+  }
+
+  .tag-farm {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
+  }
+
+  .input-farm {
+    @apply w-full rounded-lg border-2 border-farm-200 bg-white px-3 py-2 text-sm font-medium text-farm-800 placeholder:text-farm-400 focus:border-farm-green focus:outline-none focus:ring-2 focus:ring-farm-green/20;
+  }
+
+  .select-farm {
+    @apply input-farm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22none%22%20stroke%3D%22%23403424%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-8;
+  }
+
+  .progress-bar-farm {
+    @apply h-1.5 rounded-full bg-farm-100 overflow-hidden;
+  }
+
+  .progress-bar-fill-farm {
+    @apply h-full rounded-full transition-all duration-500;
+  }
 }
 
-html,
-body {
-  min-height: 100%;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-* {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* ==================== Print styles for statistics page ==================== */
+/* Print styles */
 @media print {
   body { overflow: visible !important; }
   header, footer, button, .no-print { display: none !important; }
   .print-area { display: block !important; }
   main { max-width: 100% !important; padding: 0 !important; }
-  .rounded-xl { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
-  .grid { break-inside: avoid; }
+  .card-farm { border: 1px solid #e5e0d6 !important; box-shadow: none !important; break-inside: avoid; }
   @page { margin: 1cm; }
 }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D6CBB8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #B8A88E; }

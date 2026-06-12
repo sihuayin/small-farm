@@ -252,50 +252,50 @@ export default function CalendarPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-green-50 via-green-50/80 to-amber-50/60">
       {/* 顶部导航 */}
-      <header className="flex items-center justify-between border-b-2 border-green-700/20 bg-white/80 px-4 py-3 backdrop-blur md:px-8">
+      <header className="flex items-center justify-between border-b border-farm-100 bg-white/90 px-5 py-3 md:px-8">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🌱</span>
-          <h1 className="text-lg font-black text-green-900">农夫计划器</h1>
+          <h1 className="text-lg font-bold text-farm-green font-display">农夫计划器</h1>
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => router.push('/')}
-            className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50">
+            className="btn-farm-ghost text-sm">
             首页
           </button>
           <button type="button" onClick={() => router.push('/planner')}
-            className="rounded-md border-2 border-green-700/20 bg-white px-2.5 py-1 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-50">
+            className="btn-farm-ghost text-sm">
             规划
           </button>
           <button type="button" onClick={() => router.push('/statistics')}
-            className="rounded-md border-2 border-amber-900/20 bg-white px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50">
+            className="btn-farm-ghost text-sm">
             统计
           </button>
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-4 md:px-8 md:py-6">
+      <main className="flex-1 px-5 py-5 md:px-8 md:py-8">
         {/* 日历头部 */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button type="button" onClick={goPrev}
-              className="rounded-md border-2 border-amber-900/20 bg-white px-3 py-1.5 text-sm font-black text-amber-900 hover:bg-amber-50">
+              className="btn-farm-ghost">
               ←
             </button>
-            <h2 className="text-xl font-black text-green-900">{viewYear} 年 {MONTH_NAMES[viewMonth]}</h2>
+            <h2 className="text-xl font-bold text-farm-800 font-display">{viewYear} 年 {MONTH_NAMES[viewMonth]}</h2>
             <button type="button" onClick={goNext}
-              className="rounded-md border-2 border-amber-900/20 bg-white px-3 py-1.5 text-sm font-black text-amber-900 hover:bg-amber-50">
+              className="btn-farm-ghost">
               →
             </button>
             <button type="button" onClick={goToday}
-              className="rounded-md border-2 border-green-700/30 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 hover:bg-green-200">
+              className="btn-farm-secondary">
               今天
             </button>
           </div>
-          <div className="text-xs font-bold text-amber-600">{allEvents.length} 个事件</div>
+          <div className="text-xs text-farm-400">{allEvents.length} 个事件</div>
         </div>
 
         {/* 事件类型颜色图例 */}
-        <div className="mb-3 flex flex-wrap gap-2 text-[9px] font-bold">
+        <div className="mb-3 flex flex-wrap gap-2 text-xs">
           <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-blue-500"></span> 浇水</span>
           <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-600"></span> 种植/育苗</span>
           <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-amber-500"></span> 收获</span>
@@ -304,11 +304,11 @@ export default function CalendarPage() {
         </div>
 
         {/* 月视图日历网格 */}
-        <div className="rounded-xl border-2 border-amber-900/15 bg-white shadow-[0_3px_0_rgba(120,72,24,0.08)]">
+        <div className="card-farm">
           {/* 星期行 */}
-          <div className="grid grid-cols-7 border-b-2 border-amber-900/10">
+          <div className="grid grid-cols-7 border-b border-farm-100">
             {WEEKDAYS.map(w => (
-              <div key={w} className="px-2 py-2 text-center text-[10px] font-black uppercase tracking-wider text-amber-700">
+              <div key={w} className="px-2 py-2 text-center text-xs font-semibold text-farm-400">
                 {w}
               </div>
             ))}
@@ -317,7 +317,7 @@ export default function CalendarPage() {
           <div className="grid grid-cols-7">
             {/* 空白占位 */}
             {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-              <div key={`empty-${i}`} className="min-h-[80px] border-b border-r border-amber-900/5 bg-amber-50/30 px-1.5 py-1 md:min-h-[100px]" />
+              <div key={`empty-${i}`} className="min-h-[90px] border-b border-r border-farm-100 bg-farm-50/40 px-2 py-1.5 md:min-h-[110px]" />
             ))}
             {/* 日期单元格 */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -328,9 +328,9 @@ export default function CalendarPage() {
 
               return (
                 <div key={day}
-                  className={`min-h-[80px] border-b border-r border-amber-900/5 px-1.5 py-1 transition-colors md:min-h-[100px] ${isToday ? 'bg-green-50' : 'hover:bg-amber-50/50'}`}>
+                  className={`min-h-[90px] border-b border-r border-farm-100 px-2 py-1.5 transition-colors md:min-h-[110px] ${isToday ? 'bg-farm-green-light' : 'hover:bg-farm-50'}`}>
                   {/* 日期号 */}
-                  <div className={`mb-1 text-center text-[10px] font-black ${isToday ? 'rounded-full bg-green-600 text-white w-5 h-5 flex items-center justify-center mx-auto' : 'text-amber-800'}`}>
+                  <div className={`mb-1 text-center text-[10px] font-black ${isToday ? 'rounded-full bg-farm-green text-white w-6 h-6 flex items-center justify-center mx-auto text-xs' : 'text-amber-800'}`}>
                     {day}
                   </div>
                   {/* 事件列表 */}
@@ -338,17 +338,17 @@ export default function CalendarPage() {
                     {dayEvents.slice(0, 3).map(e => (
                       <button key={e.id}
                         onClick={() => setSelectedEvent(e)}
-                        className={`w-full truncate rounded px-1 py-0.5 text-left text-[8px] font-bold leading-tight transition-colors hover:opacity-80
-                          ${e.type === 'water' ? 'bg-blue-100 text-blue-800' :
-                            e.type === 'sow' || e.type === 'transplant' ? 'bg-green-100 text-green-800' :
-                            e.type === 'harvest' ? 'bg-amber-100 text-amber-800' :
-                            e.type === 'inspect' ? 'bg-purple-100 text-purple-700' :
-                            'bg-red-100 text-red-800'}`}>
+                        className={`w-full truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium leading-tight transition-colors hover:opacity-80
+                          ${e.type === 'water' ? 'bg-blue-50 text-blue-700' :
+                            e.type === 'sow' || e.type === 'transplant' ? 'bg-farm-green-light text-farm-green' :
+                            e.type === 'harvest' ? 'bg-farm-100 text-farm-600' :
+                            e.type === 'inspect' ? 'bg-purple-50 text-purple-700' :
+                            'bg-tomato-light text-tomato'}`}>
                         {e.emoji} {e.label}
                       </button>
                     ))}
                     {dayEvents.length > 3 && (
-                      <div className="text-center text-[8px] font-bold text-amber-500">
+                      <div className="text-center text-[10px] text-farm-400">
                         +{dayEvents.length - 3} 更多
                       </div>
                     )}
@@ -360,8 +360,8 @@ export default function CalendarPage() {
         </div>
 
         {/* 当日事件摘要 */}
-        <div className="mt-4 rounded-xl border-2 border-amber-900/15 bg-white p-4 shadow-[0_3px_0_rgba(120,72,24,0.08)]">
-          <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-700">
+        <div className="mt-4 card-farm p-5">
+          <div className="mb-2 text-xs font-semibold text-farm-400">
             📋 当月事件摘要 · {monthEvents.length} 项
           </div>
           <div className="flex flex-col gap-1">
@@ -374,9 +374,9 @@ export default function CalendarPage() {
                 inspect: '巡检', frost: '防霜冻', heat: '防高温', rain: '防雨', cover: '覆盖', drainage: '排水', fertilize: '施肥'
               };
               return types.filter(t => countByType[t]).map(t => (
-                <div key={t} className="flex items-center justify-between rounded-md border border-amber-900/10 bg-amber-50/50 px-3 py-1.5">
-                  <span className="text-xs font-bold text-amber-700">{labels[t] || t}</span>
-                  <span className="text-xs font-black text-amber-950">{countByType[t]} 项</span>
+                <div key={t} className="flex items-center justify-between rounded-lg bg-farm-50 px-3.5 py-2">
+                  <span className="text-xs text-farm-500">{labels[t] || t}</span>
+                  <span className="text-xs font-semibold text-farm-800">{countByType[t]} 项</span>
                 </div>
               ));
             })()}
@@ -386,39 +386,39 @@ export default function CalendarPage() {
 
       {/* 事件详情弹窗 */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4" onClick={() => setSelectedEvent(null)}>
-          <div className="w-full max-w-sm rounded-xl border-2 border-amber-900/20 bg-white p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-farm-800/20 px-4 backdrop-blur-sm" onClick={() => setSelectedEvent(null)}>
+          <div className="w-full max-w-sm card-farm p-5" onClick={e => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{selectedEvent.emoji}</span>
                 <div>
-                  <div className="text-base font-black text-amber-950">{selectedEvent.label}</div>
-                  <div className="text-xs font-bold text-amber-600">{selectedEvent.plantName}</div>
+                  <div className="text-base font-bold text-farm-800">{selectedEvent.label}</div>
+                  <div className="text-xs text-farm-400">{selectedEvent.plantName}</div>
                 </div>
               </div>
               <button type="button" onClick={() => setSelectedEvent(null)}
-                className="rounded-md border border-amber-900/20 bg-amber-50 px-2 py-0.5 text-xs font-black text-amber-700">
+                className="btn-farm-ghost text-xs">
                 ✕
               </button>
             </div>
-            <div className="mb-1 text-xs font-bold text-amber-600">日期：{formatDate(selectedEvent.date)}</div>
+            <div className="mb-1 text-xs text-farm-400">日期：{formatDate(selectedEvent.date)}</div>
             {selectedEvent.gridX >= 0 && (
-              <div className="mb-1 text-xs font-bold text-amber-600">
+              <div className="mb-1 text-xs text-farm-400">
                 地块：({selectedEvent.gridX}, {selectedEvent.gridY})
               </div>
             )}
-            <div className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+            <div className="mb-4 rounded-lg bg-farm-50 px-3.5 py-2.5 text-xs leading-relaxed text-farm-700">
               {selectedEvent.detail}
             </div>
             <div className="flex gap-2">
               {selectedEvent.plantId && (
                 <button type="button" onClick={() => { setSelectedEvent(null); router.push('/planner'); }}
-                  className="rounded-md border-2 border-green-700/30 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 hover:bg-green-200">
+                  className="btn-farm-secondary">
                   到规划页查看
                 </button>
               )}
               <button type="button" onClick={() => setSelectedEvent(null)}
-                className="rounded-md border-2 border-amber-900/20 bg-white px-3 py-1.5 text-xs font-black text-amber-900 hover:bg-amber-50">
+                className="btn-farm-ghost text-xs">
                 关闭
               </button>
             </div>
@@ -430,16 +430,16 @@ export default function CalendarPage() {
       {!plan && (
         <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
           <div className="text-5xl">📅</div>
-          <div className="mt-4 text-sm font-bold text-amber-700">还没有花园规划</div>
-          <div className="mt-1 text-xs font-bold text-amber-500">先在首页设置你的菜园并开始规划吧</div>
+          <div className="mt-4 text-base text-farm-500">还没有花园规划</div>
+          <div className="mt-1 text-sm text-farm-400">先在首页设置你的菜园并开始规划吧</div>
           <button type="button" onClick={() => router.push('/')}
-            className="mt-4 rounded-md border-2 border-green-900/15 bg-green-100 px-4 py-2 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200">
+            className="mt-4 btn-farm-primary">
             去设置菜园
           </button>
         </div>
       )}
 
-      <footer className="border-t-2 border-green-700/10 bg-white/50 px-4 py-3 text-center text-[10px] font-bold text-green-700">
+      <footer className="border-t border-farm-100 bg-white/70 px-5 py-4 text-center text-xs text-farm-400">
         农夫计划器 · 任务日历
       </footer>
     </div>

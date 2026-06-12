@@ -236,14 +236,14 @@ export default function WelcomePage() {
   }, [isNavigating, province, city, month, gridWidth, gridHeight, selectedIds]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-green-50 via-green-50/80 to-amber-50/60">
+    <div className="flex min-h-screen flex-col bg-farm-50">
       {/* 顶部 */}
-      <header className="flex items-center justify-between border-b-2 border-green-700/20 bg-white/80 px-4 py-3 backdrop-blur md:px-8">
+      <header className="flex items-center justify-between border-b border-farm-100 bg-white/90 px-5 py-3 md:px-8">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🌱</span>
-          <h1 className="text-lg font-black text-green-900">农夫计划器</h1>
+          <h1 className="text-lg font-bold text-farm-green font-display">农夫计划器</h1>
           {hasPlan && (
-            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-[9px] font-black text-green-800">
+            <span className="tag-farm bg-farm-green-light text-farm-green">
               {plantCount} 株 · {harvestCount} 次采收
             </span>
           )}
@@ -254,7 +254,7 @@ export default function WelcomePage() {
               <button
                 type="button"
                 onClick={() => router.push('/planner')}
-                className="rounded-md border-2 border-green-700/20 bg-white px-2.5 py-1 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-50"
+                className="btn-farm-ghost text-sm"
               >
                 🗺 菜园
               </button>
@@ -290,41 +290,41 @@ export default function WelcomePage() {
 
             {/* 参数卡片 */}
             <div className="rounded-xl border-2 border-amber-900/15 bg-white shadow-[0_4px_0_rgba(120,72,24,0.12)]">
-              <div className="border-b-2 border-amber-900/10 bg-[#fff8df] px-4 py-3">
-                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">菜园设置</div>
+              <div className="border-b border-farm-100 bg-[#fff8df] px-4 py-3">
+                <div className="text-xs font-semibold text-farm-500">菜园设置</div>
               </div>
               <div className="grid gap-4 p-4 md:grid-cols-2">
                 {/* 省份 */}
-                <label className="text-xs font-bold text-amber-800">
+                <label className="text-xs font-medium text-farm-600">
                   省份
                   <select
                     value={province}
                     onChange={e => setProvince(e.target.value)}
-                    className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-3 py-2 text-sm font-bold text-amber-950 shadow-inner"
+                    className="mt-1 w-full input-farm"
                   >
                     {ALL_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </label>
 
                 {/* 城市 */}
-                <label className="text-xs font-bold text-amber-800">
+                <label className="text-xs font-medium text-farm-600">
                   城市
                   <select
                     value={city}
                     onChange={e => setCity(e.target.value)}
-                    className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-3 py-2 text-sm font-bold text-amber-950 shadow-inner"
+                    className="mt-1 w-full input-farm"
                   >
                     {ALL_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </label>
 
                 {/* 月份 */}
-                <label className="text-xs font-bold text-amber-800">
+                <label className="text-xs font-medium text-farm-600">
                   预计种植月份
                   <select
                     value={month}
                     onChange={e => setMonth(Number(e.target.value))}
-                    className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-3 py-2 text-sm font-bold text-amber-950 shadow-inner"
+                    className="mt-1 w-full input-farm"
                   >
                     {MONTHS.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
                   </select>
@@ -332,20 +332,20 @@ export default function WelcomePage() {
 
                 {/* 地块尺寸 */}
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="text-xs font-bold text-amber-800">
+                  <label className="text-xs font-medium text-farm-600">
                     宽（格）
                     <input type="number" min={4} max={64} value={gridWidth}
                       onChange={e => setGridWidth(Math.max(4, Math.min(64, Number(e.target.value))))}
-                      className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-3 py-2 text-sm font-bold text-amber-950 shadow-inner" />
+                      className="mt-1 w-full input-farm" />
                   </label>
-                  <label className="text-xs font-bold text-amber-800">
+                  <label className="text-xs font-medium text-farm-600">
                     长（格）
                     <input type="number" min={4} max={64} value={gridHeight}
                       onChange={e => setGridHeight(Math.max(4, Math.min(64, Number(e.target.value))))}
-                      className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-3 py-2 text-sm font-bold text-amber-950 shadow-inner" />
+                      className="mt-1 w-full input-farm" />
                   </label>
                 </div>
-                <div className="rounded-md bg-green-50 px-3 py-2 text-[10px] font-bold leading-4 text-green-800">
+                <div className="rounded-lg bg-farm-green-light px-3 py-2 text-xs leading-relaxed text-farm-green">
                   每格约 0.3x0.3 米 · 菜园约 {(gridWidth * 0.3).toFixed(1)}x{(gridHeight * 0.3).toFixed(1)} 米（{(gridWidth * gridHeight * 0.09).toFixed(1)} m²）
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function WelcomePage() {
                 <button
                   type="button"
                   onClick={() => setStep('select')}
-                  className="w-full rounded-md border-2 border-green-700 bg-green-600 px-4 py-2.5 text-sm font-black text-white shadow-[0_3px_0_rgba(22,101,52,0.4)] hover:bg-green-700 active:translate-y-0.5"
+                  className="w-full btn-farm-primary py-2.5"
                 >
                   选择作物
                 </button>
@@ -362,13 +362,13 @@ export default function WelcomePage() {
             </div>
 
             {/* 快速入口 */}
-            <div className="flex flex-col gap-3 rounded-xl border-2 border-dashed border-green-300 bg-green-50/50 p-4">
-              <div className="text-xs font-black uppercase tracking-wider text-green-800">不想选？可以直接开始</div>
+            <div className="flex flex-col gap-3 rounded-farm border border-dashed border-farm-200 bg-farm-50 p-5">
+              <div className="text-xs font-semibold text-farm-green">不想选？可以直接开始</div>
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => router.push('/planner?demo=true')}
-                  className="rounded-md border-2 border-amber-900/20 bg-white px-4 py-2 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+                  className="btn-farm-ghost"
                 >
                   3 分钟体验 Demo
                 </button>
@@ -383,7 +383,7 @@ export default function WelcomePage() {
                     p.set('height', String(gridHeight));
                     router.push(`/planner?${p.toString()}`);
                   }}
-                  className="rounded-md border-2 border-green-700/30 bg-green-100 px-4 py-2 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+                  className="btn-farm-secondary"
                 >
                   跳过选择，直接进规划
                 </button>
@@ -424,7 +424,7 @@ export default function WelcomePage() {
             </div>
 
             {/* 地区+月份提示 */}
-            <div className="rounded-md border-2 border-amber-900/10 bg-[#fff8df] px-3 py-2 text-xs font-bold text-amber-800">
+            <div className="rounded-md border-2 border-amber-900/10 bg-[#fff8df] px-3 py-2 text-xs font-medium text-farm-600">
               {city} · {MONTHS[month - 1]} · 地块 {gridWidth}x{gridHeight} 格
             </div>
 
@@ -434,7 +434,7 @@ export default function WelcomePage() {
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
               placeholder="搜索作物..."
-              className="w-full rounded-md border-2 border-amber-900/20 bg-white px-3 py-2 text-sm font-bold text-amber-950 shadow-inner placeholder:text-amber-400"
+              className="w-full input-farm placeholder:text-amber-400"
             />
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -504,9 +504,9 @@ export default function WelcomePage() {
               )}
 
               {/* 可选作物列表 */}
-              <div className={`rounded-xl border-2 border-amber-900/15 bg-white shadow-[0_3px_0_rgba(120,72,24,0.08)] ${selectedIds.size > 0 ? '' : 'md:col-span-2'}`}>
-                <div className="border-b-2 border-amber-900/10 bg-[#fff8df] px-3 py-2">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">
+              <div className={`card-farm ${selectedIds.size > 0 ? '' : 'md:col-span-2'}`}>
+                <div className="border-b border-farm-100 bg-[#fff8df] px-3 py-2">
+                  <div className="text-xs font-semibold text-farm-500">
                     推荐作物 · {MONTHS[month-1]} · {city}
                   </div>
                   <div className="text-[9px] font-bold text-amber-700">{filteredRecommended.length} 种适合本季</div>
@@ -520,25 +520,25 @@ export default function WelcomePage() {
                         key={plant.id}
                         type="button"
                         onClick={() => toggleSelect(plant.id)}
-                        className={`flex items-center justify-between rounded-md border-2 px-3 py-2 text-left transition ${
+                        className={`flex items-center justify-between rounded-lg px-3.5 py-2.5 text-left transition-all ${
                           isSelected
-                            ? 'border-green-400 bg-green-50'
-                            : 'border-transparent bg-white/50 hover:border-amber-300 hover:bg-amber-50/60'
+                            ? 'border-farm-green bg-farm-green-light'
+                            : 'border-transparent hover:border-farm-200 hover:bg-farm-50'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
                           <span className="text-lg">{plant.naming.emoji}</span>
                           <div>
-                            <div className="text-xs font-black text-amber-950">{plant.naming.zh}</div>
-                            <div className="text-[9px] font-bold text-amber-600">
+                            <div className="text-sm font-medium text-farm-800">{plant.naming.zh}</div>
+                            <div className="text-xs font-mono text-farm-400">
                               {agronomy.daysToMaturity} 天 · {agronomy.waterNeed === 'low' ? '低需水' : agronomy.waterNeed === 'high' ? '高需水' : '中等需水'} · {agronomy.startMethod === 'direct_sow' ? '直播' : agronomy.startMethod === 'transplant' ? '移栽' : '直播/移栽'}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          {isSelected && <span className="text-xs font-black text-green-700">已选</span>}
+                          {isSelected && <span className="text-xs font-semibold">已选</span>}
                           {!isSelected && (
-                            <span className="rounded-md border border-green-300 bg-green-50 px-2 py-0.5 text-[9px] font-black text-green-700">
+                            <span className="tag-farm bg-farm-green-light text-farm-green">
                               加入
                             </span>
                           )}
@@ -547,7 +547,7 @@ export default function WelcomePage() {
                     );
                   })}
                   {filteredRecommended.length === 0 && (
-                    <div className="py-6 text-center text-xs font-bold text-amber-600">
+                    <div className="py-8 text-center text-sm text-farm-400">
                       没有匹配的作物，试试其他搜索词
                     </div>
                   )}
@@ -556,41 +556,41 @@ export default function WelcomePage() {
             </div>
 
             {/* 底部提示 */}
-            <div className="rounded-md border border-dashed border-amber-300 bg-amber-50/50 px-3 py-2 text-[10px] font-bold leading-4 text-amber-700">
+            <div className="rounded-lg border border-dashed border-farm-200 bg-farm-50 px-3.5 py-2.5 text-xs leading-relaxed text-farm-500">
               进入规划后仍可调整作物和地块尺寸。已选作物会自动导入到你的菜园方案中。
             </div>
 
             {/* 气候不适合弹层 */}
             {climateWarning && (
-              <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/28 px-4 backdrop-blur-[2px]">
-                <div className="w-full max-w-sm rounded-lg border-2 border-amber-950/20 bg-[#fff8df] p-4 text-sm shadow-[0_8px_0_rgba(120,72,24,0.16),0_24px_44px_rgba(61,40,20,0.28)]">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">气候适应性提示</div>
-                  <div className="mt-2 text-lg font-black text-amber-950">
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-farm-800/20 px-4 backdrop-blur-sm">
+                <div className="w-full max-w-sm card-farm p-5">
+                  <div className="text-xs font-semibold text-farm-500">气候适应性提示</div>
+                  <div className="mt-2 text-lg font-bold text-farm-800 font-display">
                     {plants.find(p => p.id === climateWarning.plantId)?.naming.emoji}{' '}
                     {plants.find(p => p.id === climateWarning.plantId)?.naming.zh}
                   </div>
                   <div className="mt-2 space-y-1">
                     {climateWarning.reasons.map((reason, i) => (
-                      <div key={i} className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] font-bold leading-4 text-amber-900">
+                      <div key={i} className="rounded-lg border border-farm-200 bg-farm-50 px-3 py-2 text-xs leading-relaxed text-farm-700">
                         {reason}
                       </div>
                     ))}
                   </div>
-                  <div className="mt-2 text-[10px] font-bold leading-4 text-amber-700">
+                  <div className="mt-2 text-xs leading-relaxed text-farm-500">
                     以上因素可能影响种植效果。你可以忽略提示继续添加，系统在规划页中会给出更详细的适应性评分。
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={cancelClimateAdd}
-                      className="rounded-md border-2 border-amber-900/15 bg-white px-3 py-1.5 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-50"
+                      className="btn-farm-ghost"
                     >
                       不加了
                     </button>
                     <button
                       type="button"
                       onClick={confirmClimateAdd}
-                      className="rounded-md border-2 border-green-900/15 bg-green-100 px-3 py-1.5 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-200"
+                      className="btn-farm-primary"
                     >
                       仍然添加
                     </button>
@@ -603,7 +603,7 @@ export default function WelcomePage() {
       </main>
 
       {/* 页脚 */}
-      <footer className="border-t-2 border-green-700/10 bg-white/50 px-4 py-3 text-center text-[10px] font-bold text-green-700">
+      <footer className="border-t border-farm-100 bg-white/70 px-5 py-4 text-center text-xs text-farm-400">
         农夫计划器 · 给后院农夫的数字菜园规划工具
       </footer>
     </div>
