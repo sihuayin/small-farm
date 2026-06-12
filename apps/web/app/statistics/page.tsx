@@ -186,7 +186,7 @@ export default function StatisticsPage() {
   }, [recentHarvests, filterPlant]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 via-green-50/80 to-amber-50/60">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-green-50 via-green-50/80 to-amber-50/60">
       {/* Header */}
       <header className="flex items-center justify-between border-b-2 border-green-700/20 bg-white/80 px-4 py-3 backdrop-blur md:px-8">
         <div className="flex items-center gap-3">
@@ -201,14 +201,32 @@ export default function StatisticsPage() {
           <span className="text-xl">📊</span>
           <h1 className="text-lg font-black text-amber-950">收获统计</h1>
         </div>
-        {plan && (
-          <div className="text-[10px] font-bold text-amber-700">
-            {plan.name} · {plan.year} {seasonLabel(plan.season)}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {plan && (
+            <>
+              <button
+                type="button"
+                onClick={() => exportHarvestCsv(plan)}
+                className="rounded-md border-2 border-green-900/20 bg-green-50 px-2.5 py-1 text-xs font-black text-green-900 shadow-[0_2px_0_rgba(22,101,52,0.12)] hover:bg-green-100"
+              >
+                导出 Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => exportPdf(plan)}
+                className="rounded-md border-2 border-amber-900/20 bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-900 shadow-[0_2px_0_rgba(120,72,24,0.12)] hover:bg-amber-100"
+              >
+                导出 PDF
+              </button>
+            </>
+          )}
+          <span className="text-[10px] font-bold text-amber-700">
+            {plan?.name} · {plan?.year} {plan ? seasonLabel(plan.season) : ''}
+          </span>
+        </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 md:px-8">
         {!plan ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="text-6xl">🧑‍🌾</div>
@@ -357,7 +375,7 @@ export default function StatisticsPage() {
                 <select
                   value={filterPlant}
                   onChange={(e) => setFilterPlant(e.target.value)}
-                  className="rounded-md border-2 border-amber-900/15 bg-white px-2 py-1 text-[10px] font-black text-amber-900 outline-none"
+                  className="no-print rounded-md border-2 border-amber-900/15 bg-white px-2 py-1 text-[10px] font-black text-amber-900 outline-none"
                 >
                   <option value="all">全部作物</option>
                   {plantOptions.map(name => (
@@ -426,4 +444,63 @@ function unitLabel(unit: string) {
 function formatDate(timestamp: number) {
   const d = new Date(timestamp);
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+// ==================== Export helpers ====================
+
+function exportHarvestCsv(plan: GardenPlan) {
+  const records = plan.harvestRecords || [];
+  const headers = ['日期', '作物', '数量', '单位', '年份', '季节', '位置', '备注'];
+  const rows = records.map(r => [
+    new Date(r.harvestedAt).toLocaleDateString('zh-CN'),
+    r.plantName,
+    String(r.quantity),
+    unitLabel(r.unit),
+    String(r.year),
+    seasonLabel(r.season),
+    `${r.originX},${r.originY}`,
+    r.note
+  ]);
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `harvest-${plan.name || 'garden'}-${plan.year}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function exportActivityCsv(plan: GardenPlan) {
+  const records = plan.activityRecords || [];
+  const headers = ['日期', '作物', '操作', '年份', '季节', '位置', '备注'];
+  const rows = records.map(r => [
+    new Date(r.completedAt).toLocaleDateString('zh-CN'),
+    r.plantName,
+    r.taskLabel,
+    String(r.year),
+    seasonLabel(r.season),
+    `${r.originX},${r.originY}`,
+    r.note
+  ]);
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `activity-${plan.name || 'garden'}-${plan.year}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function exportPdf(plan: GardenPlan | null) {
+  window.print();
 }
