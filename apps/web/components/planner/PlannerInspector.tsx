@@ -5,6 +5,7 @@ import { getNextRotationSuggestions } from './rotation';
 import { getGardenTaskBoard, getPlantGrowthStatus, summarizeGardenTasks, type GrowthStageId } from './growth';
 import { getGardenCalendarReminders } from './calendar';
 import { getSeasonTimeline } from './timeline';
+import { getSeasonWeatherForecast } from './climate';
 import { estimateGardenTotalYield, type YieldEstimateResult } from './yield';
 import { getCompanionRule } from './rules';
 import { getClimateCalibrationStatus, getPlantingWindowStatus, plantingWindowBadgeClassName } from './plantingWindow';
@@ -185,6 +186,7 @@ export function PlannerInspector({
   const activePlantEntities = Object.values(entities).filter(entity => entity.type === 'plant');
   const harvestReadyPlants = activePlantEntities.filter(entity => getPlantGrowthStatus(entity, growthPreviewNowMs).harvestReady);
   const rawCalendarReminders = getGardenCalendarReminders(entities, climateProfile, planYear, planSeason);
+  const weeklyForecast = climateProfile.climateBand ? getSeasonWeatherForecast(climateProfile, planSeason) : null;
   const [activeTab, setActiveTab] = useState<InspectorTab>(placementInsight ? 'planning' : 'tasks');
   const [harvestFilter, setHarvestFilter] = useState<HarvestFilter>(selectedEntity?.type === 'plant' ? 'plant' : 'season');
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>(selectedEntity?.type === 'plant' ? 'plant' : 'season');
@@ -966,6 +968,29 @@ export function PlannerInspector({
               <p className="mt-3 rounded-md bg-white/60 p-2 text-xs leading-5 text-amber-800">完成采收后，这里会显示本季收获。</p>
             )}
           </div>
+
+          {weeklyForecast && (
+            <div className="border-b-2 border-amber-900/10 p-4">
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">本周天气</div>
+              <div className="mt-1 text-[10px] font-bold text-amber-700">{weeklyForecast.summary}</div>
+              <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
+                {weeklyForecast.days.map((day, i) => {
+                  const icons: Record<string, string> = { sunny: '☀️', cloudy: '☁️', rain: '🌧️', storm: '⛈️' };
+                  const icon = icons[day.condition] || '☁️';
+                  return (
+                    <div key={i} className={`flex shrink-0 flex-col items-center rounded-md border px-2 py-1.5 text-center ${
+                      i === 0 ? 'border-green-300 bg-green-50' : 'border-amber-900/10 bg-white/70'
+                    }`} style={{ minWidth: '52px' }}>
+                      <div className="text-[9px] font-black text-amber-700">{day.date}</div>
+                      <div className="mt-0.5 text-sm">{icon}</div>
+                      <div className="mt-0.5 text-[10px] font-black text-amber-950">{day.tempHigh}°</div>
+                      <div className="text-[8px] font-bold text-amber-600">{day.tempLow}°</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className={`border-b-2 border-amber-900/10 p-4 ${focusCueClassName(focusCue?.area === 'calendar')}`}>
             <div className="flex items-center justify-between">
