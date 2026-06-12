@@ -42,17 +42,23 @@ export default function StatisticsPage() {
       router.push('/');
       return;
     }
+    // 验证有实际内容
+    const hasPlants = Object.values(saved.entities || {}).some((e: any) => e.type === 'plant');
+    if (!hasPlants) {
+      router.push('/');
+      return;
+    }
     setPlan(saved);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 兜底：没有计划时转到首页
+  // 兜底检查：localStorage 是否被外部删除
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const saved = loadPlan();
     if (!saved) router.push('/');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 如果计划被其他页面删除了，也需要跳转
+  // 监听 localStorage 变化
   useEffect(() => {
     if (plan === null) return;
     const raw = localStorage.getItem('small-farm:garden-plan:v1');

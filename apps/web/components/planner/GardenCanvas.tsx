@@ -1978,14 +1978,21 @@ export default function GardenCanvas({
     if (raw) {
       try {
         const plan = JSON.parse(raw);
+        const hasEntities = plan.entities && typeof plan.entities === 'object' && Object.keys(plan.entities).length > 0;
         const hasPlants = plan.entities && Object.values(plan.entities).some((e: any) => e.type === 'plant');
-        if (!hasPlants) {
+        if (!hasEntities && !hasPlants) {
           router.push('/');
           return;
         }
       } catch { router.push('/'); }
     } else {
-      router.push('/');
+      // 也检查 library（兼容旧数据）
+      const libRaw = window.localStorage.getItem('small-farm:garden-plan-library:v1');
+      if (!libRaw) { router.push('/'); return; }
+      try {
+        const lib = JSON.parse(libRaw);
+        if (!lib.plans || lib.plans.length === 0) { router.push('/'); return; }
+      } catch { router.push('/'); return; }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -69,10 +69,16 @@ export default function CalendarPage() {
       router.push('/');
       return;
     }
+    // 验证有实际内容
+    const hasPlants = Object.values(saved.entities || {}).some((e: any) => e.type === 'plant');
+    if (!hasPlants) {
+      router.push('/');
+      return;
+    }
     setPlan(saved);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 也没有计划时转到首页（但上面已经 redirect 了，这个是兜底）
+  // 兜底检查：localStorage 是否被外部删除
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const saved = loadPlan();
