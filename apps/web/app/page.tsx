@@ -273,6 +273,9 @@ export default function WelcomePage() {
                       className="mt-1 w-full rounded-md border-2 border-amber-900/20 bg-white px-3 py-2 text-sm font-bold text-amber-950 shadow-inner" />
                   </label>
                 </div>
+                <div className="rounded-md bg-green-50 px-3 py-2 text-[10px] font-bold leading-4 text-green-800">
+                  每格约 0.3x0.3 米 · 菜园约 {(gridWidth * 0.3).toFixed(1)}x{(gridHeight * 0.3).toFixed(1)} 米（{(gridWidth * gridHeight * 0.09).toFixed(1)} m²）
+                </div>
               </div>
 
               <div className="border-t-2 border-amber-900/10 px-4 py-3">
