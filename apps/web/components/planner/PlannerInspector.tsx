@@ -2437,7 +2437,7 @@ function getTilePrimaryAction(status: TileStatusInfo) {
   if (status.kind === 'cleanup') {
     return {
       icon: '*',
-      label: '整理地块',
+      label: '翻松补肥（整理）',
       className: 'border-amber-700 bg-amber-500 text-amber-950 hover:bg-amber-400'
     };
   }

@@ -1476,8 +1476,8 @@ export default function GardenCanvas({
       return {
         ...base,
         label: '待整理地块',
-        detail: '这块地刚完成采收并移除了作物，土壤需要整理后再进入下一轮种植。',
-        recommendation: '建议补肥、翻土或覆盖堆肥，再查看轮作建议。',
+        detail: '这块地刚采收完，土壤需要翻松和补肥后才能再次种植。',
+        recommendation: '点击右侧「整理地块」按钮完成整理，之后地块恢复可用状态，系统会给出下一轮补种建议。',
         tone: 'amber'
       };
     }
@@ -1538,8 +1538,8 @@ export default function GardenCanvas({
     return {
       ...base,
       label: '空闲地块',
-      detail: '这块地当前没有作物或待处理状态。',
-      recommendation: '可以放置新作物，或结合热力图查看适合种植的位置。',
+      detail: '这块地当前没有种东西。',
+      recommendation: '点击左侧植物，再点击这里种下，或查看热力图找最佳位置。',
       tone: 'green'
     };
   }, [occupancyIndex, tileStatusByKey]);
