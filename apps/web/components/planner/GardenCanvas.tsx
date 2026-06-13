@@ -2799,8 +2799,9 @@ export default function GardenCanvas({
   // ==================== 渲染函数 ====================
 
   const getTileImage = useCallback((tileId: string) => {
-    return null;
-  }, []);
+    const tileConfig = tiles.find(t => t.id === tileId);
+    return tileConfig?.sprite ? getImage(tileConfig.sprite) : null;
+  }, [getImage]);
 
   const tileNoise = useCallback((gridX: number, gridY: number, salt = 0) => {
     const raw = Math.sin(gridX * 127.1 + gridY * 311.7 + salt * 59.3) * 43758.5453;
@@ -3156,8 +3157,6 @@ export default function GardenCanvas({
                   scaleX={fenceScaleX}
                   listening={false}
                 />
-                {renderTileBlend(effectiveTile, x, y, pos)}
-                {renderTileDetails(effectiveTile, x, y, pos)}
                 {renderTileStatusOverlay(x, y, pos, points)}
               </>
             ) : (
