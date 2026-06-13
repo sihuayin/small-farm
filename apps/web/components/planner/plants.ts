@@ -70,6 +70,7 @@ export const plants: Plant[] = [
     naming: { en: 'Carrot', zh: '胡萝卜', emoji: '🥕' },
     dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 3 },
     styling: { bg_color: '#ea580c', border_color: '#c2410c' },
+    sprite: withBasePath('/assets/carrot.png'),
     relationships: { companions: ['tomato', 'onion', 'lettuce'], enemies: ['dill'] }
   },
   {
@@ -87,6 +88,7 @@ export const plants: Plant[] = [
     naming: { en: 'Bell Pepper', zh: '甜椒', emoji: '🫑' },
     dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 18 },
     styling: { bg_color: '#eab308', border_color: '#ca8a04' },
+    sprite: withBasePath('/assets/pepper.png'),
     relationships: { companions: ['basil', 'tomato', 'carrot'], enemies: ['fennel'] }
   },
   {
@@ -95,6 +97,7 @@ export const plants: Plant[] = [
     naming: { en: 'Onion', zh: '洋葱', emoji: '🧅' },
     dimensions: { grid_span_x: 1, grid_span_y: 1, spacing_inch: 4 },
     styling: { bg_color: '#f5f5dc', border_color: '#d4c896' },
+    sprite: withBasePath('/assets/onion.png'),
     relationships: { companions: ['carrot', 'lettuce', 'tomato'], enemies: ['bean'] }
   },
   {
@@ -103,6 +106,7 @@ export const plants: Plant[] = [
     naming: { en: 'Cabbage', zh: '卷心菜', emoji: '🥬' },
     dimensions: { grid_span_x: 2, grid_span_y: 2, spacing_inch: 18 },
     styling: { bg_color: '#84cc16', border_color: '#65a30d' },
+    sprite: withBasePath('/assets/cabbage.png'),
     relationships: { companions: ['dill', 'onion'], enemies: ['tomato', 'strawberry'] }
   },
   {

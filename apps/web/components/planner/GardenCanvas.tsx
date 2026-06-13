@@ -257,23 +257,9 @@ useEffect(() => {
       img.src = url;
       img.onload = () => {
         if (!mounted) return;
-        // 处理白色背景
-        const canvas = removeWhiteBackground(img);
-        const processedImg = new window.Image();
-        processedImg.src = canvas.toDataURL();
-        processedImg.onload = () => {
-          if (mounted) {
-            imagesRef.current.set(url, processedImg);
-            checkComplete();
-          }
-        };
-        processedImg.onerror = () => {
-          if (mounted) {
-            // 处理失败，使用原图
-            imagesRef.current.set(url, img);
-            checkComplete();
-          }
-        };
+        // 素材已包含透明背景，直接使用
+        imagesRef.current.set(url, img);
+        checkComplete();
       };
       img.onerror = () => {
         if (mounted) {
@@ -2080,7 +2066,7 @@ export default function GardenCanvas({
   }, [activeTileId, activeToolId, isEntityDragging, isPanning, setStageCursor]);
 
   // 地块精灵图裁切区域：1024x1024 素材中菱形内容约在 x:100~924, y:250~774
-  const TILE_CROP = useMemo(() => ({ x: 100, y: 255, width: 824, height: 514 }), []);
+  const TILE_CROP = useMemo(() => ({ x: 0, y: 0, width: 64, height: 32 }), []);
   const gridToCanvas = useCallback((gridX: number, gridY: number) => {
     const { screenX, screenY } = gridToScreen(gridX, gridY, TILE_SIZE);
     return {
@@ -3454,7 +3440,7 @@ export default function GardenCanvas({
   const renderPlantSprite = useCallback((plant: any, x: number, y: number, opacity: number = 1, visualState: PlantVisualState = defaultPlantVisualState, pulse: number = 0) => {
     const spriteUrl = plant.sprite;
     const img = spriteUrl ? getImage(spriteUrl) : null;
-    const preferProceduralSprite = true;
+    const preferProceduralSprite = false;
 
     if (!img || preferProceduralSprite) {
       return renderProceduralPlantSprite(plant, x, y, opacity, visualState, pulse);
